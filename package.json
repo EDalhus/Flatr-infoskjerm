@@ -5,11 +5,11 @@
   "type": "module",
   "description": "Infoskjerm-webapp for arrangementer – Viewer + Admin på Cloudflare Pages, Functions og D1.",
   "scripts": {
-    "dev": "wrangler pages dev --proxy 5173 --port 8788 -- npm run dev:client",
+    "dev": "npm run build && wrangler dev",
     "dev:client": "vite",
     "build": "vite build",
-    "preview": "npm run build && wrangler pages dev dist --port 8788",
-    "deploy": "npm run build && wrangler pages deploy dist",
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
     "db:create": "wrangler d1 create event-infoscreen-db",
     "db:local": "wrangler d1 execute event-infoscreen-db --local --file=./schema.sql",
     "db:remote": "wrangler d1 execute event-infoscreen-db --remote --file=./schema.sql"

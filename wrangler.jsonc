@@ -1,16 +1,25 @@
 {
-  // Cloudflare Pages-prosjekt med Functions + D1.
-  // Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+  // Cloudflare Worker med statiske assets + D1.
+  // Docs: https://developers.cloudflare.com/workers/static-assets/
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "event-infoscreen",
+
+  // MÅ være likt navnet på Worker-prosjektet du koblet til GitHub
+  // (se dashboardet). Ellers lager `wrangler deploy` en ny Worker.
+  "name": "flatr-infoskjerm",
+
+  "main": "src/worker.js",
   "compatibility_date": "2025-01-01",
   "compatibility_flags": ["nodejs_compat"],
 
-  // Byggekatalogen (./dist) sendes eksplisitt på kommandolinjen ved deploy
-  // (`wrangler pages deploy dist`) slik at `wrangler pages dev` kan kjøre
-  // Vite som proxy under utvikling uten å kollidere med en fast katalog.
+  // Vite-bygget. `binding: ASSETS` gjør at Worker-en kan svare med index.html
+  // for SPA-ruter (/admin, /display/:id).
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
 
-  // D1-binding. `env.DB` er tilgjengelig i alle Functions under /functions.
+  // D1-binding. `env.DB` er tilgjengelig i src/api/*.
   // Kjør `npm run db:create` og lim inn database_id du får tilbake.
   "d1_databases": [
     {
@@ -20,8 +29,8 @@
     }
   ],
 
-  // Ikke-hemmelige variabler. Hemmeligheter (f.eks. ADMIN_TOKEN) settes med
-  // `wrangler pages secret put ADMIN_TOKEN` eller i .dev.vars lokalt.
+  // Ikke-hemmelige variabler. Hemmeligheter (ADMIN_TOKEN) settes med
+  // `wrangler secret put ADMIN_TOKEN` eller i .dev.vars lokalt.
   "vars": {
     "SSE_POLL_MS": "3000"
   }
