@@ -1,47 +1,48 @@
 {
-  // Cloudflare Worker med statiske assets + D1.
-  // Docs: https://developers.cloudflare.com/workers/static-assets/
-  "$schema": "node_modules/wrangler/config-schema.json",
-
-  // MÅ være likt navnet på Worker-prosjektet du koblet til GitHub
-  // (se dashboardet). Ellers lager `wrangler deploy` en ny Worker.
-  "name": "flatr-infoskjerm",
-
-  "main": "src/worker.js",
-  "compatibility_date": "2025-01-01",
-  "compatibility_flags": ["nodejs_compat"],
-
-  // Vite-bygget. `binding: ASSETS` gjør at Worker-en kan svare med index.html
-  // for SPA-ruter (/admin, /display/:id).
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
-  },
-
-  // D1-binding. `env.DB` er tilgjengelig i src/api/*.
-  // Kjør `npm run db:create` og lim inn database_id du får tilbake.
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "event-infoscreen-db",
-      "database_id": "7174473a-1167-457d-9af1-5c0333417786"
-    }
-  ],
-
-  // Mediebibliotek. Opprett bucketen først:
-  //   npx wrangler r2 bucket create flatr-infoscreen-media
-  // (Appen fungerer uten – Bibliotek-fanen viser da bare en melding.)
-  "r2_buckets": [
-    {
-      "binding": "MEDIA",
-      "bucket_name": "flatr-infoscreen-media"
-    }
-  ],
-
-  // Ikke-hemmelige variabler. Hemmeligheter (ADMIN_TOKEN) settes med
-  // `wrangler secret put ADMIN_TOKEN` eller i .dev.vars lokalt.
-  "vars": {
-    "SSE_POLL_MS": "3000"
-  }
+	// Cloudflare Worker med statiske assets + D1.
+	// Docs: https://developers.cloudflare.com/workers/static-assets/
+	"$schema": "node_modules/wrangler/config-schema.json",
+	// MÅ være likt navnet på Worker-prosjektet du koblet til GitHub
+	// (se dashboardet). Ellers lager `wrangler deploy` en ny Worker.
+	"name": "flatr-infoskjerm",
+	"main": "src/worker.js",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// Vite-bygget. `binding: ASSETS` gjør at Worker-en kan svare med index.html
+	// for SPA-ruter (/admin, /display/:id).
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application"
+	},
+	// D1-binding. `env.DB` er tilgjengelig i src/api/*.
+	// Kjør `npm run db:create` og lim inn database_id du får tilbake.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "event-infoscreen-db",
+			"database_id": "7174473a-1167-457d-9af1-5c0333417786"
+		}
+	],
+	// Mediebibliotek. Opprett bucketen først:
+	//   npx wrangler r2 bucket create flatr-infoscreen-media
+	// (Appen fungerer uten – Bibliotek-fanen viser da bare en melding.)
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "flatr-infoscreen-media"
+		},
+		{
+			"bucket_name": "flatr-infoscreen-media",
+			"binding": "flatr_infoscreen_media",
+			"remote": true
+		}
+	],
+	// Ikke-hemmelige variabler. Hemmeligheter (ADMIN_TOKEN) settes med
+	// `wrangler secret put ADMIN_TOKEN` eller i .dev.vars lokalt.
+	"vars": {
+		"SSE_POLL_MS": "3000"
+	}
 }
