@@ -39,6 +39,10 @@ Krever en R2-bucket – se «Mediebibliotek» under.
 **Maler** (admin → Maler): «Lagre som mal» på en slide eller en hel skjerm, og
 «Fra mal» når du legger til slides / oppretter en skjerm.
 
+**Live forhåndsvisning:** slide-editoren rendrer den ekte Viewer-komponenten
+skalert ned ved siden av feltene og oppdaterer mens du skriver. På en fri slide
+kan du dra elementene rett på forhåndsvisningen.
+
 **Auto-status:** programposter med `auto_status = 1` flipper `planlagt → pågår →
 ferdig` automatisk etter klokka. `avlyst` overstyrer alltid.
 

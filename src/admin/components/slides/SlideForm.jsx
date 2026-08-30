@@ -1,21 +1,92 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   PROGRAM_MODES,
   MESSAGE_EMPHASIS,
   defaultConfig,
   newLayoutElement
 } from '../../../lib/slides.js';
+import { api } from '../../../lib/api.js';
+import { useNow } from '../../../hooks/useNow.js';
 import { Icon, Field, Input, Select, Textarea, Button } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
+import SlidePreview from './SlidePreview.jsx';
 
-/* ---------- fri «layout»-slide ---------- */
+/* Delt, mellomlagret forhåndsvisnings-data (program/sponsorer/kategorier). */
+let ctxCache = null;
+let ctxPromise = null;
+function usePreviewData() {
+  const [data, setData] = useState(ctxCache);
+  useEffect(() => {
+    if (ctxCache) return;
+    ctxPromise = ctxPromise || api.getState().catch(() => ({}));
+    ctxPromise.then((s) => {
+      ctxCache = {
+        schedule: s?.schedule || [],
+        sponsors: s?.sponsors || [],
+        categories: s?.categories || []
+      };
+      setData(ctxCache);
+    });
+  }, []);
+  return data || { schedule: [], sponsors: [], categories: [] };
+}
 
-function LayoutEditor({ config, setCfg }) {
-  const elements = Array.isArray(config.elements) ? config.elements : [];
-  const [selId, setSelId] = useState(elements[0]?.id || null);
-  const boardRef = useRef(null);
+/* ---------- drag-håndtak for fri «layout»-slide ---------- */
+
+function LayoutOverlay({ elements, selId, onSelect, onMove }) {
+  const areaRef = useRef(null);
   const drag = useRef(null);
 
+  const down = (e, el) => {
+    onSelect(el.id);
+    drag.current = {
+      id: el.id,
+      rect: areaRef.current.getBoundingClientRect(),
+      sx: e.clientX,
+      sy: e.clientY,
+      ox: el.x,
+      oy: el.y
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const move = (e) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = ((e.clientX - d.sx) / d.rect.width) * 100;
+    const dy = ((e.clientY - d.sy) / d.rect.height) * 100;
+    onMove(d.id, {
+      x: Math.max(0, Math.min(100, Math.round(d.ox + dx))),
+      y: Math.max(0, Math.min(100, Math.round(d.oy + dy)))
+    });
+  };
+  const up = () => {
+    drag.current = null;
+  };
+
+  return (
+    <div className="pointer-events-none absolute inset-0 p-3">
+      <div ref={areaRef} className="pointer-events-auto relative h-full w-full">
+        {elements.map((el) => (
+          <div
+            key={el.id}
+            onPointerDown={(e) => down(e, el)}
+            onPointerMove={move}
+            onPointerUp={up}
+            className={`absolute cursor-move ${
+              el.id === selId
+                ? 'outline outline-[6px] outline-brand'
+                : 'outline outline-2 outline-brand/30 hover:outline-brand/60'
+            }`}
+            style={{ left: `${el.x}%`, top: `${el.y}%`, width: `${el.w}%`, height: `${el.h}%` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LayoutControls({ config, setCfg, selId, setSelId }) {
+  const elements = Array.isArray(config.elements) ? config.elements : [];
   const patchEl = (id, patch) =>
     setCfg({ elements: elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
   const addEl = (kind) => {
@@ -27,27 +98,6 @@ function LayoutEditor({ config, setCfg }) {
     setCfg({ elements: elements.filter((e) => e.id !== id) });
     setSelId(null);
   };
-
-  const onPointerDown = (e, el) => {
-    setSelId(el.id);
-    const rect = boardRef.current.getBoundingClientRect();
-    drag.current = { id: el.id, rect, startX: e.clientX, startY: e.clientY, ox: el.x, oy: el.y };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e) => {
-    const d = drag.current;
-    if (!d) return;
-    const dx = ((e.clientX - d.startX) / d.rect.width) * 100;
-    const dy = ((e.clientY - d.startY) / d.rect.height) * 100;
-    patchEl(d.id, {
-      x: Math.max(0, Math.min(100, Math.round(d.ox + dx))),
-      y: Math.max(0, Math.min(100, Math.round(d.oy + dy)))
-    });
-  };
-  const onPointerUp = () => {
-    drag.current = null;
-  };
-
   const sel = elements.find((e) => e.id === selId) || null;
 
   return (
@@ -70,51 +120,34 @@ function LayoutEditor({ config, setCfg }) {
             className="h-8 w-10 cursor-pointer rounded border border-line bg-white"
           />
         </label>
+        <span className="text-xs text-muted">Dra elementene på forhåndsvisningen for å flytte.</span>
       </div>
 
-      <div
-        ref={boardRef}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        className="relative aspect-video w-full overflow-hidden rounded-lg border border-line"
-        style={{ backgroundColor: config.background === 'transparent' ? '#fff' : config.background || '#fff' }}
-      >
-        {elements.map((el) => (
-          <div
-            key={el.id}
-            onPointerDown={(e) => onPointerDown(e, el)}
-            className={`absolute cursor-move overflow-hidden ${
-              el.id === selId ? 'outline outline-2 outline-brand' : 'outline outline-1 outline-line'
-            }`}
-            style={{ left: `${el.x}%`, top: `${el.y}%`, width: `${el.w}%`, height: `${el.h}%` }}
-          >
-            {el.kind === 'image' ? (
-              el.url ? (
-                <img src={el.url} alt="" className="pointer-events-none h-full w-full object-contain" />
-              ) : (
-                <div className="grid h-full w-full place-items-center bg-hair text-[10px] text-muted">
-                  bilde
-                </div>
-              )
-            ) : (
-              <div
-                className="pointer-events-none flex h-full w-full items-center overflow-hidden"
-                style={{ color: el.color }}
-              >
-                <span
-                  className="block w-full truncate"
-                  style={{ fontSize: Math.max(8, el.size / 6), fontWeight: el.weight, textAlign: el.align }}
-                >
-                  {el.text || 'Tekst'}
-                </span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      {elements.length === 0 && (
+        <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-sm text-muted">
+          Ingen elementer. Legg til tekst eller bilde.
+        </p>
+      )}
+
+      {elements.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {elements.map((e, i) => (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => setSelId(e.id)}
+              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                e.id === selId ? 'border-brand bg-brand-tint text-brand' : 'border-line text-muted'
+              }`}
+            >
+              {e.kind === 'image' ? 'Bilde' : 'Tekst'} {i + 1}
+            </button>
+          ))}
+        </div>
+      )}
 
       {sel && (
-        <div className="mt-3 rounded-lg border border-hair bg-paper p-3">
+        <div className="mt-3 rounded-lg border border-hair bg-card p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wide text-muted">
               {sel.kind === 'image' ? 'Bilde-element' : 'Tekst-element'}
@@ -164,7 +197,10 @@ function LayoutEditor({ config, setCfg }) {
               </label>
               <label className="text-xs text-muted">
                 Vekt
-                <Select value={sel.weight} onChange={(e) => patchEl(sel.id, { weight: Number(e.target.value) })}>
+                <Select
+                  value={sel.weight}
+                  onChange={(e) => patchEl(sel.id, { weight: Number(e.target.value) })}
+                >
                   <option value={400}>Normal</option>
                   <option value={600}>Halvfet</option>
                   <option value={800}>Fet</option>
@@ -190,11 +226,7 @@ function LayoutEditor({ config, setCfg }) {
             </div>
           ) : (
             <div className="mt-2 grid gap-2">
-              <MediaField
-                label="Bilde"
-                value={sel.url}
-                onChange={(url) => patchEl(sel.id, { url })}
-              />
+              <MediaField label="Bilde" value={sel.url} onChange={(url) => patchEl(sel.id, { url })} />
               <label className="text-xs text-muted">
                 Tilpasning
                 <Select value={sel.fit} onChange={(e) => patchEl(sel.id, { fit: e.target.value })}>
@@ -210,15 +242,18 @@ function LayoutEditor({ config, setCfg }) {
   );
 }
 
-/* ---------- generisk slide-skjema (skjerm-slide og spilleliste-element) ---------- */
+/* ---------- generisk slide-skjema med live forhåndsvisning ---------- */
 
 export default function SlideForm({ slide, categories = [], onSave, onCancel, onSaveTemplate }) {
+  const preview = usePreviewData();
+  const now = useNow(1000);
   const [form, setForm] = useState({
     title: slide.title || '',
     duration_seconds: slide.duration_seconds,
     enabled: slide.enabled !== 0,
     config: { ...defaultConfig(slide.type), ...(slide.config || {}) }
   });
+  const [selEl, setSelEl] = useState(form.config.elements?.[0]?.id || null);
   const [busy, setBusy] = useState(false);
   const setCfg = (patch) => setForm((f) => ({ ...f, config: { ...f.config, ...patch } }));
 
@@ -243,157 +278,201 @@ export default function SlideForm({ slide, categories = [], onSave, onCancel, on
     }
   };
 
+  const draft = { type: slide.type, title: form.title, config: form.config };
+  const ctx = {
+    schedule: preview.schedule,
+    sponsors: preview.sponsors,
+    categories: categories.length ? categories : preview.categories,
+    now
+  };
+  const moveEl = (id, patch) =>
+    setCfg({
+      elements: (form.config.elements || []).map((e) => (e.id === id ? { ...e, ...patch } : e))
+    });
+
   return (
     <div className="border-t border-hair bg-paper px-4 py-4 sm:px-5">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Tittel (valgfri)">
-          <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        </Field>
-        <Field label="Varighet (sek)">
-          <Input
-            type="number"
-            min={3}
-            value={form.duration_seconds}
-            onChange={(e) => setForm({ ...form, duration_seconds: e.target.value })}
-          />
-        </Field>
+      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        {/* felter */}
+        <div className="order-2 grid content-start gap-3 sm:grid-cols-2 lg:order-1">
+          <Field label="Tittel (valgfri)">
+            <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </Field>
+          <Field label="Varighet (sek)">
+            <Input
+              type="number"
+              min={3}
+              value={form.duration_seconds}
+              onChange={(e) => setForm({ ...form, duration_seconds: e.target.value })}
+            />
+          </Field>
 
-        {slide.type === 'program' && (
-          <>
-            <Field label="Visning">
-              <Select value={form.config.mode} onChange={(e) => setCfg({ mode: e.target.value })}>
-                {PROGRAM_MODES.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Maks antall poster">
-              <Input
-                type="number"
-                min={1}
-                value={form.config.max}
-                onChange={(e) => setCfg({ max: Number(e.target.value) || 10 })}
-              />
-            </Field>
-            <Field label="Kun scene (valgfri)">
-              <Input
-                value={form.config.stage || ''}
-                onChange={(e) => setCfg({ stage: e.target.value })}
-                placeholder="Alle scener"
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                Kategorier (ingen valgt = alle)
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {categories.length === 0 && <span className="text-sm text-muted">Ingen kategorier.</span>}
-                {categories.map((c) => {
-                  const on = (form.config.categoryIds || []).includes(c.id);
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => toggleCat(c.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-semibold ${
-                        on ? 'border-transparent text-white' : 'border-line bg-card text-muted'
-                      }`}
-                      style={on ? { backgroundColor: c.color } : undefined}
-                    >
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: on ? '#fff' : c.color }}
-                      />
-                      {c.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-ink sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={form.config.showCategory !== false}
-                onChange={(e) => setCfg({ showCategory: e.target.checked })}
-                className="h-4 w-4 rounded border-line text-brand"
-              />
-              Vis kategori-merke på skjermen
-            </label>
-          </>
-        )}
-
-        {slide.type === 'message' && (
-          <>
-            <div className="sm:col-span-2">
-              <Field label="Tekst">
-                <Textarea
-                  rows={2}
-                  value={form.config.text}
-                  onChange={(e) => setCfg({ text: e.target.value })}
+          {slide.type === 'program' && (
+            <>
+              <Field label="Visning">
+                <Select value={form.config.mode} onChange={(e) => setCfg({ mode: e.target.value })}>
+                  {PROGRAM_MODES.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Maks antall poster">
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.config.max}
+                  onChange={(e) => setCfg({ max: Number(e.target.value) || 10 })}
                 />
               </Field>
-            </div>
-            <Field label="Uttrykk">
-              <Select value={form.config.emphasis} onChange={(e) => setCfg({ emphasis: e.target.value })}>
-                {MESSAGE_EMPHASIS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </>
-        )}
+              <Field label="Kun scene (valgfri)">
+                <Input
+                  value={form.config.stage || ''}
+                  onChange={(e) => setCfg({ stage: e.target.value })}
+                  placeholder="Alle scener"
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                  Kategorier (ingen valgt = alle)
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(categories.length ? categories : preview.categories).map((c) => {
+                    const on = (form.config.categoryIds || []).includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => toggleCat(c.id)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-semibold ${
+                          on ? 'border-transparent text-white' : 'border-line bg-card text-muted'
+                        }`}
+                        style={on ? { backgroundColor: c.color } : undefined}
+                      >
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: on ? '#fff' : c.color }}
+                        />
+                        {c.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-ink sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={form.config.showCategory !== false}
+                  onChange={(e) => setCfg({ showCategory: e.target.checked })}
+                  className="h-4 w-4 rounded border-line text-brand"
+                />
+                Vis kategori-merke på skjermen
+              </label>
+            </>
+          )}
 
-        {slide.type === 'image' && (
-          <>
-            <div className="sm:col-span-2">
-              <MediaField value={form.config.url} onChange={(url) => setCfg({ url })} />
-            </div>
-            <Field label="Tilpasning">
-              <Select value={form.config.fit} onChange={(e) => setCfg({ fit: e.target.value })}>
-                <option value="contain">Vis hele bildet</option>
-                <option value="cover">Fyll flaten</option>
-              </Select>
-            </Field>
-            <Field label="Bildetekst (valgfri)">
-              <Input value={form.config.caption} onChange={(e) => setCfg({ caption: e.target.value })} />
-            </Field>
-          </>
-        )}
+          {slide.type === 'message' && (
+            <>
+              <div className="sm:col-span-2">
+                <Field label="Tekst">
+                  <Textarea
+                    rows={2}
+                    value={form.config.text}
+                    onChange={(e) => setCfg({ text: e.target.value })}
+                  />
+                </Field>
+              </div>
+              <Field label="Uttrykk">
+                <Select
+                  value={form.config.emphasis}
+                  onChange={(e) => setCfg({ emphasis: e.target.value })}
+                >
+                  {MESSAGE_EMPHASIS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </>
+          )}
 
-        {slide.type === 'clock' && (
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="flex items-center gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={form.config.showDate !== false}
-                onChange={(e) => setCfg({ showDate: e.target.checked })}
-                className="h-4 w-4 rounded border-line text-brand"
-              />
-              Vis dato
-            </label>
-            <label className="flex items-center gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={form.config.showSeconds !== false}
-                onChange={(e) => setCfg({ showSeconds: e.target.checked })}
-                className="h-4 w-4 rounded border-line text-brand"
-              />
-              Vis sekunder
-            </label>
+          {slide.type === 'image' && (
+            <>
+              <div className="sm:col-span-2">
+                <MediaField value={form.config.url} onChange={(url) => setCfg({ url })} />
+              </div>
+              <Field label="Tilpasning">
+                <Select value={form.config.fit} onChange={(e) => setCfg({ fit: e.target.value })}>
+                  <option value="contain">Vis hele bildet</option>
+                  <option value="cover">Fyll flaten</option>
+                </Select>
+              </Field>
+              <Field label="Bildetekst (valgfri)">
+                <Input
+                  value={form.config.caption}
+                  onChange={(e) => setCfg({ caption: e.target.value })}
+                />
+              </Field>
+            </>
+          )}
+
+          {slide.type === 'clock' && (
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={form.config.showDate !== false}
+                  onChange={(e) => setCfg({ showDate: e.target.checked })}
+                  className="h-4 w-4 rounded border-line text-brand"
+                />
+                Vis dato
+              </label>
+              <label className="flex items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={form.config.showSeconds !== false}
+                  onChange={(e) => setCfg({ showSeconds: e.target.checked })}
+                  className="h-4 w-4 rounded border-line text-brand"
+                />
+                Vis sekunder
+              </label>
+            </div>
+          )}
+
+          {slide.type === 'sponsors' && (
+            <p className="text-sm text-muted sm:col-span-2">
+              Viser alle sponsorer fra «Sponsorer». Hver sponsor roterer i sin egen varighet.
+            </p>
+          )}
+
+          {slide.type === 'layout' && (
+            <LayoutControls
+              config={form.config}
+              setCfg={setCfg}
+              selId={selEl}
+              setSelId={setSelEl}
+            />
+          )}
+        </div>
+
+        {/* live forhåndsvisning */}
+        <div className="order-1 lg:order-2">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+            Forhåndsvisning
           </div>
-        )}
-
-        {slide.type === 'sponsors' && (
-          <p className="text-sm text-muted sm:col-span-2">
-            Viser alle sponsorer fra «Sponsorer». Hver sponsor roterer i sin egen varighet.
-          </p>
-        )}
-
-        {slide.type === 'layout' && <LayoutEditor config={form.config} setCfg={setCfg} />}
+          <SlidePreview slide={draft} ctx={ctx}>
+            {slide.type === 'layout' && (
+              <LayoutOverlay
+                elements={form.config.elements || []}
+                selId={selEl}
+                onSelect={setSelEl}
+                onMove={moveEl}
+              />
+            )}
+          </SlidePreview>
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
