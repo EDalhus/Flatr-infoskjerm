@@ -1,14 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
-import { Field, Input, Button, Card, ErrorText } from './ui.jsx';
+import {
+  Icon,
+  Field,
+  Input,
+  Button,
+  IconButton,
+  Card,
+  GroupCard,
+  Row,
+  MediaTile,
+  NumberBadge,
+  MetaValue,
+  PageHeader,
+  ErrorText
+} from './ui.jsx';
 
 const emptyForm = { name: '', image_url: '', duration_seconds: 10 };
 
 export default function SponsorsManager({ onChange }) {
   const [sponsors, setSponsors] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const formRef = useRef(null);
 
   const load = () =>
     api.sponsors
@@ -20,17 +36,31 @@ export default function SponsorsManager({ onChange }) {
     load();
   }, []);
 
-  const create = async (e) => {
+  const resetForm = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setError('');
+  };
+
+  const focusForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const startNew = () => {
+    resetForm();
+    focusForm();
+  };
+
+  const submit = async (e) => {
     e.preventDefault();
     setError('');
     setBusy(true);
+    const payload = {
+      name: form.name,
+      image_url: form.image_url,
+      duration_seconds: Number(form.duration_seconds) || 10
+    };
     try {
-      await api.sponsors.create({
-        name: form.name,
-        image_url: form.image_url,
-        duration_seconds: Number(form.duration_seconds) || 10
-      });
-      setForm(emptyForm);
+      if (editingId) await api.sponsors.update(editingId, payload);
+      else await api.sponsors.create(payload);
+      resetForm();
       await load();
       onChange?.();
     } catch (err) {
@@ -40,10 +70,22 @@ export default function SponsorsManager({ onChange }) {
     }
   };
 
+  const edit = (s) => {
+    setEditingId(s.id);
+    setError('');
+    setForm({
+      name: s.name || '',
+      image_url: s.image_url || '',
+      duration_seconds: s.duration_seconds ?? 10
+    });
+    focusForm();
+  };
+
   const remove = async (id) => {
     if (!confirm('Slette sponsoren?')) return;
     try {
       await api.sponsors.remove(id);
+      if (editingId === id) resetForm();
       await load();
       onChange?.();
     } catch (err) {
@@ -52,73 +94,97 @@ export default function SponsorsManager({ onChange }) {
   };
 
   return (
-    <div className="space-y-6">
-      <Card title="Ny sponsor">
-        <form onSubmit={create} className="grid gap-4 sm:grid-cols-2">
-          <Field label="Navn">
-            <Input
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Acme AS"
-            />
-          </Field>
-          <Field label="Visningsvarighet (sek)">
-            <Input
-              type="number"
-              min={2}
-              value={form.duration_seconds}
-              onChange={(e) => setForm({ ...form, duration_seconds: e.target.value })}
-            />
-          </Field>
-          <div className="sm:col-span-2">
-            <Field label="Bilde-URL" hint="Direktelenke til logo/bilde (PNG, SVG, JPG).">
-              <Input
-                required
-                type="url"
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                placeholder="https://…/logo.png"
-              />
-            </Field>
-          </div>
-          <div className="sm:col-span-2">
-            <Button type="submit" disabled={busy}>
-              {busy ? 'Lagrer …' : 'Legg til sponsor'}
-            </Button>
-          </div>
-        </form>
-        <div className="mt-3">
-          <ErrorText>{error}</ErrorText>
-        </div>
-      </Card>
+    <>
+      <PageHeader
+        crumbs={['Administrer', 'Sponsorer']}
+        action={
+          <Button onClick={startNew}>
+            <Icon name="plus" className="h-4 w-4" />
+            Ny sponsor
+          </Button>
+        }
+      />
 
-      <Card title={`Sponsorer (${sponsors.length})`}>
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {sponsors.length === 0 && (
-            <li className="text-slate-500">Ingen sponsorer.</li>
-          )}
-          {sponsors.map((s) => (
-            <li
-              key={s.id}
-              className="flex items-center gap-4 rounded-lg border border-slate-800 bg-slate-900 p-3"
-            >
-              <img
-                src={s.image_url}
-                alt={s.name}
-                className="h-14 w-24 shrink-0 rounded bg-white object-contain p-1"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold text-slate-100">{s.name}</div>
-                <div className="text-sm text-slate-400">{s.duration_seconds}s</div>
+      <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
+        <div ref={formRef}>
+          <Card title={editingId ? 'Rediger sponsor' : 'Ny sponsor'}>
+            <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+              <Field label="Navn">
+                <Input
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Acme AS"
+                />
+              </Field>
+              <Field label="Visningsvarighet (sek)">
+                <Input
+                  type="number"
+                  min={2}
+                  value={form.duration_seconds}
+                  onChange={(e) => setForm({ ...form, duration_seconds: e.target.value })}
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Bilde-URL" hint="Direktelenke til logo/bilde (PNG, SVG, JPG).">
+                  <Input
+                    required
+                    type="url"
+                    value={form.image_url}
+                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                    placeholder="https://…/logo.png"
+                  />
+                </Field>
               </div>
-              <Button variant="danger" onClick={() => remove(s.id)}>
-                Slett
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </Card>
-    </div>
+              <div className="flex gap-3 sm:col-span-2">
+                <Button type="submit" disabled={busy}>
+                  {busy ? 'Lagrer …' : editingId ? 'Lagre endringer' : 'Legg til sponsor'}
+                </Button>
+                {editingId && (
+                  <Button type="button" variant="outline" onClick={resetForm}>
+                    Avbryt
+                  </Button>
+                )}
+              </div>
+            </form>
+            <div className="mt-3">
+              <ErrorText>{error}</ErrorText>
+            </div>
+          </Card>
+        </div>
+
+        {sponsors.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-line px-5 py-8 text-center text-muted">
+            Ingen sponsorer ennå.
+          </p>
+        ) : (
+          <GroupCard label={`Sponsorer · ${sponsors.length}`} icon="image">
+            {sponsors.map((s, i) => (
+              <Row
+                key={s.id}
+                media={<MediaTile src={s.image_url} alt={s.name} />}
+                title={s.name}
+                meta={
+                  <>
+                    <Icon name="clock" className="h-3.5 w-3.5" />
+                    <span>Roterer hvert {s.duration_seconds}. sekund</span>
+                  </>
+                }
+                actions={
+                  <>
+                    <IconButton name="x" label="Slett" tone="danger" onClick={() => remove(s.id)} />
+                    <MetaValue>{s.duration_seconds} sek</MetaValue>
+                    <NumberBadge>{i + 1}</NumberBadge>
+                    <Button size="sm" variant="outline" onClick={() => edit(s)}>
+                      Endre
+                    </Button>
+                  </>
+                }
+              />
+            ))}
+          </GroupCard>
+        )}
+      </div>
+    </>
   );
 }

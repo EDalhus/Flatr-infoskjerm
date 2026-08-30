@@ -10,7 +10,6 @@ export default function AlertOverlay({ alerts }) {
   const [active, setActive] = useState(null);
   const seen = useRef(new Set());
 
-  // Ny, usett melding -> vis den.
   useEffect(() => {
     const fresh = alerts.find((a) => !seen.current.has(a.id));
     if (!fresh) return undefined;
@@ -20,7 +19,6 @@ export default function AlertOverlay({ alerts }) {
     return () => clearTimeout(id);
   }, [alerts]);
 
-  // Skjul dersom meldingen ikke lenger er aktiv fra serveren.
   useEffect(() => {
     if (active && !alerts.some((a) => a.id === active.id)) setActive(null);
   }, [alerts, active]);
@@ -28,9 +26,9 @@ export default function AlertOverlay({ alerts }) {
   if (!active) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-12 backdrop-blur-sm">
-      <div className="w-full max-w-5xl animate-alert-in rounded-[2rem] border-4 border-red-400/60 bg-red-600 p-14 text-center shadow-2xl">
-        <div className="text-2xl font-black uppercase tracking-[0.4em] text-red-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/75 p-12 backdrop-blur-sm">
+      <div className="w-full max-w-5xl animate-alert-in rounded-[2rem] border-4 border-white/50 bg-danger p-14 text-center shadow-pop">
+        <div className="text-2xl font-black uppercase tracking-[0.4em] text-white/85">
           Viktig beskjed
         </div>
         <div className="mt-6 text-6xl font-extrabold leading-tight text-white portrait:text-4xl">

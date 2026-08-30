@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 export default function SponsorCarousel({ sponsors }) {
   const [index, setIndex] = useState(0);
 
-  // Hold indeksen innenfor lista når den endrer lengde.
   useEffect(() => {
     if (index >= sponsors.length && sponsors.length > 0) setIndex(0);
   }, [sponsors.length, index]);
@@ -12,16 +11,13 @@ export default function SponsorCarousel({ sponsors }) {
     if (sponsors.length < 2) return undefined;
     const current = sponsors[index % sponsors.length];
     const seconds = Math.max(2, Number(current?.duration_seconds) || 10);
-    const id = setTimeout(
-      () => setIndex((i) => (i + 1) % sponsors.length),
-      seconds * 1000
-    );
+    const id = setTimeout(() => setIndex((i) => (i + 1) % sponsors.length), seconds * 1000);
     return () => clearTimeout(id);
   }, [sponsors, index]);
 
   if (sponsors.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl bg-slate-800/40 text-slate-500">
+      <div className="flex flex-1 items-center justify-center rounded-2xl border border-hair bg-card text-muted shadow-card">
         Ingen sponsorer
       </div>
     );
@@ -30,8 +26,8 @@ export default function SponsorCarousel({ sponsors }) {
   const sponsor = sponsors[index % sponsors.length];
 
   return (
-    <div className="flex flex-1 flex-col rounded-2xl bg-white/95 p-4">
-      <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+    <div className="flex flex-1 flex-col rounded-2xl border border-hair bg-card p-4 shadow-card">
+      <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-muted">
         Takk til våre sponsorer
       </div>
       <div className="flex flex-1 items-center justify-center overflow-hidden">
@@ -42,16 +38,14 @@ export default function SponsorCarousel({ sponsors }) {
           className="max-h-full max-w-full animate-fade-in object-contain"
         />
       </div>
-      <div className="mt-2 text-center text-sm font-semibold text-slate-700">
-        {sponsor.name}
-      </div>
+      <div className="mt-2 text-center text-sm font-semibold text-ink">{sponsor.name}</div>
       {sponsors.length > 1 && (
         <div className="mt-2 flex justify-center gap-1.5">
           {sponsors.map((s, i) => (
             <span
               key={s.id}
               className={`h-1.5 w-1.5 rounded-full ${
-                i === index % sponsors.length ? 'bg-slate-800' : 'bg-slate-300'
+                i === index % sponsors.length ? 'bg-brand' : 'bg-hair'
               }`}
             />
           ))}

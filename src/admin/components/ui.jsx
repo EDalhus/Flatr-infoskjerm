@@ -1,49 +1,189 @@
-export function Field({ label, children, hint }) {
+/* Delte UI-byggeklosser for admin – varm palett, gruppekort og listerader. */
+import { forwardRef } from 'react';
+
+const ICONS = {
+  calendar: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+      <path d="M3.5 10h17M8 3.5v3M16 3.5v3" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="3.5" y="4" width="17" height="16" rx="2" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="m4 18 5-5 4 4 3-3 4 4" />
+    </>
+  ),
+  monitor: (
+    <>
+      <rect x="2.5" y="4" width="19" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" />
+    </>
+  ),
+  megaphone: (
+    <>
+      <path d="M4 9v6l13 5V4L4 9Z" />
+      <path d="M4 9H2.5v6H4" />
+      <path d="M17.5 9.5a3.5 3.5 0 0 1 0 5" />
+    </>
+  ),
+  plus: <path d="M12 5v14M5 12h14" />,
+  x: <path d="M17 7 7 17M7 7l10 10" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5v5l3.5 2" />
+    </>
+  ),
+  check: <path d="M20 7 10 17l-5-5" />,
+  play: <path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none" />,
+  chevron: <path d="m9 6 6 6-6 6" />,
+  external: (
+    <>
+      <path d="M14 4h6v6M20 4l-8.5 8.5" />
+      <path d="M19 13.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5.5" />
+    </>
+  ),
+  logout: (
+    <>
+      <path d="M9 20H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4" />
+      <path d="m16 17 5-5-5-5M21 12H9" />
+    </>
+  ),
+  pin: (
+    <>
+      <path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </>
+  ),
+  grip: (
+    <>
+      {[6, 12, 18].flatMap((y) =>
+        [9, 15].map((x) => (
+          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.4" fill="currentColor" stroke="none" />
+        ))
+      )}
+    </>
+  )
+};
+
+export function Icon({ name, className = 'h-4 w-4' }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-slate-300">{label}</span>
-      {children}
-      {hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
-    </label>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {ICONS[name] ?? null}
+    </svg>
+  );
+}
+
+/* ---------- knapper og felt ---------- */
+
+export function Button({ variant = 'primary', size = 'md', className = '', ...props }) {
+  const base =
+    'inline-flex items-center justify-center gap-2 font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none';
+  const sizes = {
+    sm: 'rounded-lg px-3 py-1.5 text-xs uppercase tracking-[0.08em]',
+    md: 'rounded-full px-4 py-2 text-sm'
+  };
+  const variants = {
+    primary: 'bg-brand text-card hover:bg-brand-dark',
+    outline: 'border border-line bg-card text-ink hover:bg-hair',
+    ghost: 'text-brand hover:bg-brand-tint',
+    danger: 'bg-danger-tint text-danger hover:bg-danger-hover'
+  };
+  return <button {...props} className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} />;
+}
+
+export function IconButton({ name, label, tone = 'muted', className = '', ...props }) {
+  const tones = {
+    muted: 'text-muted hover:bg-hair hover:text-ink',
+    brand: 'text-brand hover:bg-brand-tint',
+    danger: 'text-danger hover:bg-danger-tint'
+  };
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      {...props}
+      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hair transition-colors ${tones[tone]} ${className}`}
+    >
+      <Icon name={name} className="h-4 w-4" />
+    </button>
   );
 }
 
 const inputBase =
-  'w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 ' +
-  'placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500';
+  'w-full rounded-lg border border-line bg-white px-3 py-2 text-ink placeholder:text-muted/70 ' +
+  'focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20';
 
-export function Input(props) {
-  return <input {...props} className={`${inputBase} ${props.className || ''}`} />;
-}
+export const Input = forwardRef(function Input({ className = '', ...props }, ref) {
+  return <input ref={ref} {...props} className={`${inputBase} ${className}`} />;
+});
+export const Textarea = forwardRef(function Textarea({ className = '', ...props }, ref) {
+  return <textarea ref={ref} {...props} className={`${inputBase} ${className}`} />;
+});
+export const Select = forwardRef(function Select({ className = '', ...props }, ref) {
+  return <select ref={ref} {...props} className={`${inputBase} ${className}`} />;
+});
 
-export function Textarea(props) {
-  return <textarea {...props} className={`${inputBase} ${props.className || ''}`} />;
-}
-
-export function Select(props) {
-  return <select {...props} className={`${inputBase} ${props.className || ''}`} />;
-}
-
-export function Button({ variant = 'primary', className = '', ...props }) {
-  const variants = {
-    primary: 'bg-sky-600 hover:bg-sky-500 text-white',
-    ghost: 'bg-slate-800 hover:bg-slate-700 text-slate-200',
-    danger: 'bg-red-600/90 hover:bg-red-600 text-white'
-  };
+export function Field({ label, children, hint }) {
   return (
-    <button
-      {...props}
-      className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${variants[variant]} ${className}`}
-    />
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+        {label}
+      </span>
+      {children}
+      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
+    </label>
   );
 }
 
-export function Card({ title, actions, children }) {
+export function ErrorText({ children }) {
+  if (!children) return null;
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/50">
+    <p className="rounded-lg border border-danger/30 bg-danger-tint px-3 py-2 text-sm font-medium text-danger">
+      {children}
+    </p>
+  );
+}
+
+/* ---------- layout / kort ---------- */
+
+export function PageHeader({ crumbs = [], action }) {
+  return (
+    <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-line bg-paper/85 px-6 py-4 backdrop-blur sm:px-8">
+      <nav className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-brand">
+        {crumbs.map((c, i) => (
+          <span key={c} className="flex items-center gap-1.5">
+            {i > 0 && <Icon name="chevron" className="h-3 w-3 text-muted" />}
+            <span className={i === crumbs.length - 1 ? 'text-ink' : ''}>{c}</span>
+          </span>
+        ))}
+      </nav>
+      {action}
+    </div>
+  );
+}
+
+export function Card({ id, title, actions, children }) {
+  return (
+    <section
+      id={id}
+      className="scroll-mt-24 overflow-hidden rounded-xl border border-hair bg-card shadow-card"
+    >
       {(title || actions) && (
-        <header className="flex items-center justify-between border-b border-slate-800 px-5 py-3">
-          <h2 className="text-lg font-bold text-slate-100">{title}</h2>
+        <header className="flex items-center justify-between gap-3 border-b border-hair px-5 py-3">
+          <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-ink">{title}</h2>
           {actions}
         </header>
       )}
@@ -52,11 +192,76 @@ export function Card({ title, actions, children }) {
   );
 }
 
-export function ErrorText({ children }) {
-  if (!children) return null;
+export function GroupCard({ label, icon, right, children }) {
   return (
-    <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+    <section className="overflow-hidden rounded-xl border border-hair bg-card shadow-card">
+      <header className="flex items-center justify-between gap-3 bg-zone px-5 py-2.5">
+        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-zoneink">
+          {icon && <Icon name={icon} className="h-3.5 w-3.5" />}
+          {label}
+        </div>
+        {right}
+      </header>
+      <div className="divide-y divide-hair">{children}</div>
+    </section>
+  );
+}
+
+export function Row({ media, title, meta, actions, highlight }) {
+  return (
+    <div
+      className={`flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5 ${
+        highlight ? 'bg-brand-tint/50' : ''
+      }`}
+    >
+      <Icon name="grip" className="hidden h-4 w-4 shrink-0 cursor-grab text-muted/50 sm:block" />
+      {media}
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-semibold text-ink">{title}</div>
+        {meta && (
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">{meta}</div>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">{actions}</div>
+    </div>
+  );
+}
+
+export function MediaTile({ src, alt, tone = 'brand', children }) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className="h-11 w-16 shrink-0 rounded-md border border-hair bg-white object-contain p-1"
+      />
+    );
+  }
+  const tones = {
+    brand: 'bg-brand-tint text-brand',
+    ok: 'bg-ok-tint text-ok',
+    danger: 'bg-danger-tint text-danger',
+    muted: 'bg-hair text-muted'
+  };
+  return (
+    <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-md ${tones[tone]}`}>
       {children}
-    </p>
+    </div>
+  );
+}
+
+export function NumberBadge({ children }) {
+  return (
+    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-badge text-xs font-bold text-badge-ink">
+      {children}
+    </span>
+  );
+}
+
+export function MetaValue({ children }) {
+  return (
+    <span className="hidden text-xs font-semibold uppercase tracking-wide text-muted sm:inline">
+      {children}
+    </span>
   );
 }
