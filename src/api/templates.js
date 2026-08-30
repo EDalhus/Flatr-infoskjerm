@@ -7,7 +7,8 @@ import {
   readJson,
   requireAdmin,
   toIntOrNull,
-  safeJson
+  safeJson,
+  moveToTrash
 } from './_shared.js';
 
 const KINDS = ['slide', 'screen'];
@@ -54,7 +55,11 @@ export async function onRequestDelete(context) {
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
-  await context.env.DB.prepare('DELETE FROM templates WHERE id = ?').bind(id).run();
+  const row = await context.env.DB.prepare('SELECT * FROM templates WHERE id = ?').bind(id).first();
+  if (row) {
+    await moveToTrash(context.env, 'template', row.name, { row });
+    await context.env.DB.prepare('DELETE FROM templates WHERE id = ?').bind(id).run();
+  }
   return noContent();
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { SLIDE_TYPES, SLIDE_TYPE_LABEL, SLIDE_TYPE_ICON, defaultConfig } from '../../lib/slides.js';
+import { useListDnd } from '../../hooks/useListDnd.js';
 import {
   Icon,
   Field,
@@ -32,6 +33,9 @@ function PlaylistEditor({ playlistId, onBack, onChange }) {
   const [openId, setOpenId] = useState(null);
   const [adding, setAdding] = useState('message');
   const [error, setError] = useState('');
+
+  const list = [...items].sort((a, b) => a.position - b.position || a.id - b.id);
+  const { rowProps } = useListDnd((from, to) => move(list, from, to));
 
   const reloadItems = () => api.playlistItems.list(playlistId).then((r) => setItems(r || []));
   const reloadTpls = () => api.templates.list('slide').then((r) => setSlideTemplates(r || []));
@@ -113,6 +117,22 @@ function PlaylistEditor({ playlistId, onBack, onChange }) {
       setError(e.message);
     }
   };
+  const move = async (list, from, to) => {
+    if (from === to) return;
+    const reordered = [...list];
+    const [it] = reordered.splice(from, 1);
+    reordered.splice(to, 0, it);
+    try {
+      await Promise.all(
+        reordered
+          .map((s, i) => (s.position === i ? null : api.playlistItems.update(s.id, { position: i })))
+          .filter(Boolean)
+      );
+      await after();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   const saveTemplate = async (payload) => {
     const name = window.prompt('Navn på slide-mal:');
@@ -134,8 +154,6 @@ function PlaylistEditor({ playlistId, onBack, onChange }) {
       </>
     );
   }
-
-  const list = [...items].sort((a, b) => a.position - b.position || a.id - b.id);
 
   return (
     <>
@@ -212,6 +230,7 @@ function PlaylistEditor({ playlistId, onBack, onChange }) {
           )}
           {list.map((s, i) => (
             <div key={s.id}>
+              <div {...rowProps(i)}>
               <Row
                 media={
                   <MediaTile tone={s.enabled === 0 ? 'muted' : 'brand'}>
@@ -255,6 +274,7 @@ function PlaylistEditor({ playlistId, onBack, onChange }) {
                   </>
                 }
               />
+              </div>
               {openId === s.id && (
                 <SlideForm
                   slide={s}

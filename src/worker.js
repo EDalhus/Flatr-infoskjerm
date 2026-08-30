@@ -15,6 +15,8 @@ import * as playlists from './api/playlists.js';
 import * as playlistItems from './api/playlistItems.js';
 import * as media from './api/media.js';
 import * as templates from './api/templates.js';
+import * as trash from './api/trash.js';
+import * as health from './api/health.js';
 import * as heartbeat from './api/heartbeat.js';
 import * as state from './api/state.js';
 import * as stream from './api/stream.js';
@@ -30,6 +32,8 @@ const ROUTES = {
   '/api/playlist-items': playlistItems,
   '/api/media': media,
   '/api/templates': templates,
+  '/api/trash': trash,
+  '/api/health': health,
   '/api/heartbeat': heartbeat,
   '/api/state': state,
   '/api/stream': stream

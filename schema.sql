@@ -65,6 +65,11 @@ CREATE TABLE IF NOT EXISTS playlist_items (
   duration_seconds INTEGER NOT NULL DEFAULT 15,
   enabled          INTEGER NOT NULL DEFAULT 1,
   config           TEXT NOT NULL DEFAULT '{}',
+  active_from      TEXT,
+  active_to        TEXT,
+  active_days      TEXT,
+  active_from_date TEXT,
+  active_to_date   TEXT,
   created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
@@ -75,12 +80,17 @@ CREATE TABLE IF NOT EXISTS screen_slides (
   screen_id        INTEGER NOT NULL REFERENCES screens(id) ON DELETE CASCADE,
   zone             TEXT NOT NULL DEFAULT 'a',
   position         INTEGER NOT NULL DEFAULT 0,
-  type             TEXT NOT NULL DEFAULT 'program',  -- program | sponsors | message | clock | image | layout | playlist
+  type             TEXT NOT NULL DEFAULT 'program',  -- program|sponsors|message|clock|image|layout|web|video|qr|countdown|playlist
   title            TEXT,
   duration_seconds INTEGER NOT NULL DEFAULT 15,
   enabled          INTEGER NOT NULL DEFAULT 1,
   config           TEXT NOT NULL DEFAULT '{}',
   playlist_id      INTEGER REFERENCES playlists(id) ON DELETE SET NULL,
+  active_from      TEXT,
+  active_to        TEXT,
+  active_days      TEXT,
+  active_from_date TEXT,
+  active_to_date   TEXT,
   created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
@@ -104,6 +114,15 @@ CREATE TABLE IF NOT EXISTS templates (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+-- Papirkurv – slettede rader kan gjenopprettes en periode.
+CREATE TABLE IF NOT EXISTS trash (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind       TEXT NOT NULL,
+  label      TEXT NOT NULL,
+  payload    TEXT NOT NULL,
+  deleted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
 -- Hastemeldinger / live alerts.
 CREATE TABLE IF NOT EXISTS alerts (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,6 +139,7 @@ CREATE INDEX IF NOT EXISTS idx_alerts_target     ON alerts (target_screen_id);
 CREATE INDEX IF NOT EXISTS idx_slides_screen     ON screen_slides (screen_id, zone, position);
 CREATE INDEX IF NOT EXISTS idx_playlist_items    ON playlist_items (playlist_id, position);
 CREATE INDEX IF NOT EXISTS idx_media_folder      ON media (folder);
+CREATE INDEX IF NOT EXISTS idx_trash_deleted     ON trash (deleted_at);
 
 -- ---------------------------------------------------------------------------
 -- Demo-data (valgfritt – fjern hele blokken for tom database)

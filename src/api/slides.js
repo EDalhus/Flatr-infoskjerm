@@ -7,11 +7,33 @@ import {
   readJson,
   requireAdmin,
   toIntOrNull,
-  safeJson
+  safeJson,
+  moveToTrash
 } from './_shared.js';
 
-const TYPES = ['program', 'sponsors', 'message', 'clock', 'image', 'layout', 'playlist'];
+const TYPES = [
+  'program',
+  'sponsors',
+  'message',
+  'clock',
+  'image',
+  'layout',
+  'video',
+  'web',
+  'qr',
+  'countdown',
+  'playlist'
+];
 const normType = (v) => (TYPES.includes(v) ? v : 'program');
+
+const DAYPART = ['active_from', 'active_to', 'active_days', 'active_from_date', 'active_to_date'];
+const daypartFrom = (b, cur = {}) => {
+  const out = {};
+  for (const k of DAYPART) {
+    out[k] = b?.[k] !== undefined ? (b[k] ? String(b[k]).trim() : null) : (cur[k] ?? null);
+  }
+  return out;
+};
 const normZone = (v) => {
   const z = String(v || 'a')
     .trim()
@@ -74,11 +96,14 @@ export async function onRequestPost(context) {
 
   const playlistId = toIntOrNull(b?.playlist_id);
   const type = playlistId ? 'playlist' : normType(b?.type);
+  const dp = daypartFrom(b);
 
   const row = await context.env.DB
     .prepare(
-      `INSERT INTO screen_slides (screen_id, zone, position, type, title, duration_seconds, enabled, config, playlist_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+      `INSERT INTO screen_slides
+         (screen_id, zone, position, type, title, duration_seconds, enabled, config, playlist_id,
+          active_from, active_to, active_days, active_from_date, active_to_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
     )
     .bind(
       screenId,
@@ -89,7 +114,12 @@ export async function onRequestPost(context) {
       Math.max(3, toIntOrNull(b?.duration_seconds) ?? 15),
       b?.enabled === false ? 0 : 1,
       serializeConfig(b?.config),
-      playlistId
+      playlistId,
+      dp.active_from,
+      dp.active_to,
+      dp.active_days,
+      dp.active_from_date,
+      dp.active_to_date
     )
     .first();
   return json({ ...row, config: safeJson(row.config, {}) }, { status: 201 });
@@ -112,6 +142,7 @@ export async function onRequestPut(context) {
     .first();
   if (!cur) return notFound('Slide finnes ikke');
 
+  const dp = daypartFrom(b, cur);
   const merged = {
     zone: b.zone !== undefined ? normZone(b.zone) : cur.zone,
     position: b.position !== undefined ? toIntOrNull(b.position) ?? cur.position : cur.position,
@@ -128,7 +159,8 @@ export async function onRequestPut(context) {
   const row = await context.env.DB
     .prepare(
       `UPDATE screen_slides
-          SET zone = ?, position = ?, type = ?, title = ?, duration_seconds = ?, enabled = ?, config = ?
+          SET zone = ?, position = ?, type = ?, title = ?, duration_seconds = ?, enabled = ?, config = ?,
+              active_from = ?, active_to = ?, active_days = ?, active_from_date = ?, active_to_date = ?
         WHERE id = ? RETURNING *`
     )
     .bind(
@@ -139,6 +171,11 @@ export async function onRequestPut(context) {
       merged.duration_seconds,
       merged.enabled,
       merged.config,
+      dp.active_from,
+      dp.active_to,
+      dp.active_days,
+      dp.active_from_date,
+      dp.active_to_date,
       id
     )
     .first();
@@ -153,7 +190,11 @@ export async function onRequestDelete(context) {
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
-  await context.env.DB.prepare('DELETE FROM screen_slides WHERE id = ?').bind(id).run();
+  const row = await context.env.DB.prepare('SELECT * FROM screen_slides WHERE id = ?').bind(id).first();
+  if (row) {
+    await moveToTrash(context.env, 'screen_slide', row.title || row.type, { row });
+    await context.env.DB.prepare('DELETE FROM screen_slides WHERE id = ?').bind(id).run();
+  }
   return noContent();
 }
 

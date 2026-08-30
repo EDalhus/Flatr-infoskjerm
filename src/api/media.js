@@ -6,7 +6,8 @@ import {
   handleOptions,
   requireAdmin,
   toIntOrNull,
-  corsHeaders
+  corsHeaders,
+  moveToTrash
 } from './_shared.js';
 
 const noBucket = () =>
@@ -84,15 +85,13 @@ export async function onRequestDelete(context) {
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
+  // Behold R2-objektet så fila kan gjenopprettes fra papirkurven; R2 ryddes
+  // først når trash-raden slettes permanent (se trash.js).
   const row = await context.env.DB.prepare('SELECT * FROM media WHERE id = ?').bind(id).first();
-  if (row && context.env.MEDIA) {
-    try {
-      await context.env.MEDIA.delete(row.r2_key);
-    } catch {
-      /* ignore */
-    }
+  if (row) {
+    await moveToTrash(context.env, 'media', row.name, { row });
+    await context.env.DB.prepare('DELETE FROM media WHERE id = ?').bind(id).run();
   }
-  await context.env.DB.prepare('DELETE FROM media WHERE id = ?').bind(id).run();
   return noContent();
 }
 

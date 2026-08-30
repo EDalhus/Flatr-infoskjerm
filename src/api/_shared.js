@@ -68,6 +68,30 @@ export function effectiveStatus(item, now = Date.now()) {
   return 'done';
 }
 
+/** Legger en slettet rad i papirkurven. `payload` må være nok til å gjenopprette. */
+export async function moveToTrash(env, kind, label, payload) {
+  try {
+    await env.DB.prepare('INSERT INTO trash (kind, label, payload) VALUES (?, ?, ?)')
+      .bind(kind, String(label || kind).slice(0, 200), JSON.stringify(payload))
+      .run();
+  } catch {
+    /* papirkurv er best-effort */
+  }
+}
+
+const DAYPART_FIELDS = [
+  'active_from',
+  'active_to',
+  'active_days',
+  'active_from_date',
+  'active_to_date'
+];
+const pickDaypart = (row) => {
+  const out = {};
+  for (const k of DAYPART_FIELDS) out[k] = row[k] ?? null;
+  return out;
+};
+
 /** Oppdaterer last_seen for en skjerm (online-status i admin). */
 export async function touchScreen(env, screenId) {
   const id = toIntOrNull(screenId);
@@ -150,7 +174,8 @@ export async function buildState(env, screenId) {
           title: it.title,
           duration_seconds: it.duration_seconds,
           enabled: 1,
-          config: safeJson(it.config, {})
+          config: safeJson(it.config, {}),
+          ...pickDaypart(it)
         });
       }
       continue; // tom / slettet spilleliste → hopp over raden

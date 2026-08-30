@@ -70,9 +70,10 @@ export default function Viewer() {
       schedule: state.schedule,
       sponsors: state.sponsors,
       categories: state.categories,
+      screenId,
       now
     }),
-    [state.schedule, state.sponsors, state.categories, now]
+    [state.schedule, state.sponsors, state.categories, screenId, now]
   );
 
   const rotation = state.screen?.rotation_seconds || 15;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { LAYOUT_OPTIONS, LANDSCAPE_PRESETS, zonesForScreen } from '../../lib/layouts.js';
 import { SLIDE_TYPES, SLIDE_TYPE_LABEL, SLIDE_TYPE_ICON, defaultConfig } from '../../lib/slides.js';
+import { useListDnd } from '../../hooks/useListDnd.js';
 import {
   Icon,
   Field,
@@ -462,6 +463,7 @@ function ZonePlaylist({
   onUpdate,
   onDelete,
   onReorder,
+  onMove,
   onSaveTemplate
 }) {
   const [openId, setOpenId] = useState(null);
@@ -469,6 +471,7 @@ function ZonePlaylist({
   const list = slides
     .filter((s) => s.zone === zone)
     .sort((a, b) => a.position - b.position || a.id - b.id);
+  const { rowProps } = useListDnd((from, to) => onMove(list, from, to));
 
   const doAdd = async () => {
     let created = null;
@@ -536,6 +539,7 @@ function ZonePlaylist({
         const isPlaylist = s.type === 'playlist';
         return (
           <div key={s.id}>
+            <div {...rowProps(i)}>
             <Row
               media={
                 <MediaTile tone={s.enabled === 0 ? 'muted' : isPlaylist ? 'ok' : 'brand'}>
@@ -588,6 +592,7 @@ function ZonePlaylist({
                 </>
               }
             />
+            </div>
             {openId === s.id && !isPlaylist && (
               <SlideForm
                 slide={s}
@@ -724,6 +729,23 @@ function ScreenEditor({ screenId, onBack, onChange }) {
     }
   };
 
+  const moveSlide = async (list, from, to) => {
+    if (from === to) return;
+    const reordered = [...list];
+    const [item] = reordered.splice(from, 1);
+    reordered.splice(to, 0, item);
+    try {
+      await Promise.all(
+        reordered
+          .map((s, i) => (s.position === i ? null : api.slides.update(s.id, { position: i })))
+          .filter(Boolean)
+      );
+      await afterMutate();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
   const saveScreenTemplate = () => {
     const zones = {};
     for (const s of slides) {
@@ -802,6 +824,7 @@ function ScreenEditor({ screenId, onBack, onChange }) {
               onUpdate={updateSlide}
               onDelete={deleteSlide}
               onReorder={reorder}
+              onMove={moveSlide}
               onSaveTemplate={(payload) => saveAsTemplate('slide', payload, reloadTemplates)}
             />
           ))}

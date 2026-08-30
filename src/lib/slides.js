@@ -6,6 +6,10 @@ export const SLIDE_TYPES = [
   { value: 'message', label: 'Melding', icon: 'megaphone' },
   { value: 'clock', label: 'Klokke', icon: 'clock' },
   { value: 'image', label: 'Bilde', icon: 'image' },
+  { value: 'video', label: 'Video', icon: 'play' },
+  { value: 'web', label: 'Nettside', icon: 'external' },
+  { value: 'qr', label: 'QR-kode', icon: 'tag' },
+  { value: 'countdown', label: 'Nedtelling', icon: 'clock' },
   { value: 'layout', label: 'Fri slide', icon: 'layers' }
 ];
 
@@ -36,6 +40,10 @@ export const DEFAULT_CONFIG = {
   message: { text: '', emphasis: 'info' },
   clock: { showDate: true, showSeconds: true },
   image: { url: '', fit: 'contain', caption: '' },
+  video: { url: '', loop: false, mute: true, fit: 'contain' },
+  web: { url: '', refreshMinutes: 0 },
+  qr: { mode: 'url', url: '', label: '', caption: '' },
+  countdown: { mode: 'fixed', target: '', title: '', doneText: 'Nå kjører vi!', emphasis: 'info' },
   layout: { background: '#ffffff', elements: [] },
   playlist: {}
 };

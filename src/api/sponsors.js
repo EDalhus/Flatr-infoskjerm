@@ -6,7 +6,8 @@ import {
   handleOptions,
   readJson,
   requireAdmin,
-  toIntOrNull
+  toIntOrNull,
+  moveToTrash
 } from './_shared.js';
 
 // GET /api/sponsors
@@ -83,7 +84,11 @@ export async function onRequestDelete(context) {
   const id = toIntOrNull(url.searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
-  await context.env.DB.prepare('DELETE FROM sponsors WHERE id = ?').bind(id).run();
+  const row = await context.env.DB.prepare('SELECT * FROM sponsors WHERE id = ?').bind(id).first();
+  if (row) {
+    await moveToTrash(context.env, 'sponsor', row.name, { row });
+    await context.env.DB.prepare('DELETE FROM sponsors WHERE id = ?').bind(id).run();
+  }
   return noContent();
 }
 

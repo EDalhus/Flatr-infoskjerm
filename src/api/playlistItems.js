@@ -7,12 +7,33 @@ import {
   readJson,
   requireAdmin,
   toIntOrNull,
-  safeJson
+  safeJson,
+  moveToTrash
 } from './_shared.js';
 
-const TYPES = ['program', 'sponsors', 'message', 'clock', 'image', 'layout'];
+const TYPES = [
+  'program',
+  'sponsors',
+  'message',
+  'clock',
+  'image',
+  'layout',
+  'video',
+  'web',
+  'qr',
+  'countdown'
+];
 const normType = (v) => (TYPES.includes(v) ? v : 'program');
 const serializeConfig = (v) => JSON.stringify(safeJson(v, {}));
+
+const DAYPART = ['active_from', 'active_to', 'active_days', 'active_from_date', 'active_to_date'];
+const daypartFrom = (b, cur = {}) => {
+  const out = {};
+  for (const k of DAYPART) {
+    out[k] = b?.[k] !== undefined ? (b[k] ? String(b[k]).trim() : null) : (cur[k] ?? null);
+  }
+  return out;
+};
 
 // GET /api/playlist-items?playlist=1
 export async function onRequestGet({ request, env }) {
@@ -25,7 +46,7 @@ export async function onRequestGet({ request, env }) {
   return json((results ?? []).map((r) => ({ ...r, config: safeJson(r.config, {}) })));
 }
 
-// POST /api/playlist-items  { playlist_id, type?, title?, duration_seconds?, config?, position? }
+// POST /api/playlist-items  { playlist_id, type?, title?, duration_seconds?, config?, position?, active_* }
 export async function onRequestPost(context) {
   const denied = requireAdmin(context);
   if (denied) return denied;
@@ -44,11 +65,14 @@ export async function onRequestPost(context) {
       .first();
     position = (max?.m ?? -1) + 1;
   }
+  const dp = daypartFrom(b);
 
   const row = await context.env.DB
     .prepare(
-      `INSERT INTO playlist_items (playlist_id, position, type, title, duration_seconds, enabled, config)
-       VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`
+      `INSERT INTO playlist_items
+         (playlist_id, position, type, title, duration_seconds, enabled, config,
+          active_from, active_to, active_days, active_from_date, active_to_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
     )
     .bind(
       playlistId,
@@ -57,7 +81,12 @@ export async function onRequestPost(context) {
       b?.title ? String(b.title).trim() : null,
       Math.max(3, toIntOrNull(b?.duration_seconds) ?? 15),
       b?.enabled === false ? 0 : 1,
-      serializeConfig(b?.config)
+      serializeConfig(b?.config),
+      dp.active_from,
+      dp.active_to,
+      dp.active_days,
+      dp.active_from_date,
+      dp.active_to_date
     )
     .first();
   return json({ ...row, config: safeJson(row.config, {}) }, { status: 201 });
@@ -74,6 +103,7 @@ export async function onRequestPut(context) {
   const cur = await context.env.DB.prepare('SELECT * FROM playlist_items WHERE id = ?').bind(id).first();
   if (!cur) return notFound('Element finnes ikke');
 
+  const dp = daypartFrom(b, cur);
   const merged = {
     position: b.position !== undefined ? toIntOrNull(b.position) ?? cur.position : cur.position,
     type: b.type !== undefined ? normType(b.type) : cur.type,
@@ -89,7 +119,8 @@ export async function onRequestPut(context) {
   const row = await context.env.DB
     .prepare(
       `UPDATE playlist_items
-          SET position = ?, type = ?, title = ?, duration_seconds = ?, enabled = ?, config = ?
+          SET position = ?, type = ?, title = ?, duration_seconds = ?, enabled = ?, config = ?,
+              active_from = ?, active_to = ?, active_days = ?, active_from_date = ?, active_to_date = ?
         WHERE id = ? RETURNING *`
     )
     .bind(
@@ -99,6 +130,11 @@ export async function onRequestPut(context) {
       merged.duration_seconds,
       merged.enabled,
       merged.config,
+      dp.active_from,
+      dp.active_to,
+      dp.active_days,
+      dp.active_from_date,
+      dp.active_to_date,
       id
     )
     .first();
@@ -111,7 +147,11 @@ export async function onRequestDelete(context) {
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
-  await context.env.DB.prepare('DELETE FROM playlist_items WHERE id = ?').bind(id).run();
+  const row = await context.env.DB.prepare('SELECT * FROM playlist_items WHERE id = ?').bind(id).first();
+  if (row) {
+    await moveToTrash(context.env, 'playlist_item', row.title || row.type, { row });
+    await context.env.DB.prepare('DELETE FROM playlist_items WHERE id = ?').bind(id).run();
+  }
   return noContent();
 }
 

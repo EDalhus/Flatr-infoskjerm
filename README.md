@@ -6,7 +6,8 @@ assets** og **D1**. To deler:
 | Del | Rute | Beskrivelse |
 | --- | --- | --- |
 | **Viewer** | `/display/:screenId` | Publikumsvisning. Layout med soner, per-sone slideshow, kategorifarger, auto-responsiv 16:9 / 9:16, sanntid via SSE, wake lock, hastemeldinger som overlay. |
-| **Admin** | `/admin` | Program, kategorier, sponsorer, spillelister, mediebibliotek, maler, skjermer (layout + slides), live alerts. |
+| **Admin** | `/admin` | Program, kategorier, sponsorer, spillelister, mediebibliotek, maler, skjermer (layout + slides), live alerts, nylig slettet. |
+| **Program** | `/s/:screenId` | Offentlig, mobilvennlig programside for publikum (QR fra skjermen). Nå/neste, dag for dag, kategorifarger, `.ics`-eksport, oppdateres selv. |
 
 ## Skjermoppsett
 
@@ -18,9 +19,15 @@ eget `duration_seconds`.
 `thirds` (stor A + B/C stablet) og `custom` (egendefinerte sone-rektangler i
 prosent – full kontroll, sonene kan overlappe).
 
-**Slide-typer:** `program`, `sponsors`, `message`, `clock`, `image`, `layout`
-(fri slide med posisjonerte tekst-/bilde-elementer). En sone kan også vise en
-**delt spilleliste** i stedet for inline-slides.
+**Slide-typer:** `program`, `sponsors`, `message`, `clock`, `image`, `video`
+(MP4/WebM eller YouTube/Vimeo), `web` (embed en nettside), `qr` (QR-kode – kan
+peke på skjermens egen programside), `countdown` (til et tidspunkt eller til
+neste programpost), `layout` (fri slide med posisjonerte tekst-/bilde-elementer).
+En sone kan også vise en **delt spilleliste** i stedet for inline-slides.
+
+**Tidsstyring:** hver slide / spilleliste-element kan settes til å vises bare i
+et klokkeslett-vindu, på visse ukedager og/eller i et datointervall («Vises
+når» i editoren). Filtreres i Viewer mot skjermens lokale klokke.
 Program-slides filtreres pr. **kategori** (`categoryIds` – tom = alle), visning
 (`agenda` / `nowNext` / `next`), maks antall og evt. scene. Slik kan én skjerm
 vise kun «Scene»-poster mens en annen viser alt.
@@ -42,6 +49,12 @@ Krever en R2-bucket – se «Mediebibliotek» under.
 **Live forhåndsvisning:** slide-editoren rendrer den ekte Viewer-komponenten
 skalert ned ved siden av feltene og oppdaterer mens du skriver. På en fri slide
 kan du dra elementene rett på forhåndsvisningen.
+
+**Dra-og-slipp:** slides i en sone / spilleliste kan omrokeres ved å dra radene
+(opp/ned-pilene finnes fortsatt).
+
+**Nylig slettet:** sletting legger elementet i en papirkurv i 30 dager
+(admin → Nylig slettet). Skjermer og spillelister gjenopprettes med innholdet.
 
 **Auto-status:** programposter med `auto_status = 1` flipper `planlagt → pågår →
 ferdig` automatisk etter klokka. `avlyst` overstyrer alltid.
@@ -102,13 +115,15 @@ migreringene i rekkefølge:
 ```bash
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0002_zones_categories_slides.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0003_playlists_media_templates.sql
+npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0004_slidetypes_dayparting_trash.sql
 ```
 
 `0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
-auto-status, og gir eksisterende skjermer et standard slide-oppsett. `0003`
-legger til spillelister, mediebibliotek og maler. SQLite har ikke «ADD COLUMN
+auto-status. `0003` legger til spillelister, mediebibliotek og maler. `0004`
+legger til tidsstyring på slides og en papirkurv. SQLite har ikke «ADD COLUMN
 IF NOT EXISTS» – har du alt kjørt en migrering, feiler `ALTER`-linjene med
-«duplicate column name», og da er du allerede oppdatert.
+«duplicate column name», og da er du allerede oppdatert (kjør resten manuelt om
+en migrering stopper midt i – se feilmeldingen).
 
 ## Mediebibliotek (R2)
 
@@ -157,6 +172,8 @@ Under `/api`, rutet av `src/worker.js`. Skriveoperasjoner krever
 | `/api/playlist-items` | `GET POST PUT DELETE` | Elementer i en spilleliste (`?playlist=` / `?id=`). |
 | `/api/media` | `GET POST DELETE` | Mediebibliotek. `POST` = rå fil-bytes (`?name=&type=`), `GET ?id=&raw=1` serverer fila. |
 | `/api/templates` | `GET POST DELETE` | Maler (`?kind=slide\|screen`). |
+| `/api/trash` | `GET POST DELETE` | Papirkurv. `POST ?id=` gjenoppretter, `DELETE ?id=` / `?all=1` sletter permanent. |
+| `/api/health` | `GET` | `{ ok, db, media, time }`. |
 | `/api/categories` | `GET POST PUT DELETE` | Kategorier (navn + farge). |
 | `/api/schedule` | `GET POST PUT DELETE` | Program (+ `category_id`, `auto_status`, utledet `effective_status`). |
 | `/api/sponsors` | `GET POST PUT DELETE` | Sponsorer. |
@@ -179,25 +196,26 @@ uten å endre klienten.
 ```
 ├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1 (DB) + R2 (MEDIA)
 ├── schema.sql                # fullt skjema + demo-data
-├── migrations/               # 0001_init · 0002_zones_categories_slides · 0003_playlists_media_templates
+├── migrations/               # 0001 … 0004 (init · soner+kategorier · spillelister+media+maler · slidetyper+tidsstyring+papirkurv)
 └── src/
     ├── worker.js             # ruter /api/* + ASSETS-fallback
-    ├── main.jsx
+    ├── main.jsx              # ruter: /admin · /display/:id · /s/:id
     ├── api/                   # screens, slides, playlists, playlistItems, media,
-    │                          #   templates, categories, schedule, sponsors,
-    │                          #   alerts, heartbeat, state, stream, _shared
-    ├── lib/{api,time,layouts,slides}.js
-    ├── hooks/{useNow,useWakeLock,useSSE,useOrientation,useSlideshow,useHeartbeat,useFitScale}.js
+    │                          #   templates, trash, health, categories, schedule,
+    │                          #   sponsors, alerts, heartbeat, state, stream, _shared
+    ├── lib/{api,time,layouts,slides,daypart,ics}.js
+    ├── hooks/{useNow,useWakeLock,useSSE,useOrientation,useSlideshow,useHeartbeat,useFitScale,useListDnd}.js
     ├── viewer/
     │   ├── Viewer.jsx         # skalert design-lerret, løser soner + monterer <Zone>
-    │   ├── Zone.jsx           # kjører per-sone slideshow
-    │   ├── slides/            # SlideView + Program/Sponsor/Message/Clock/Image/Layout
+    │   ├── Zone.jsx           # per-sone slideshow + tidsstyrings-filter
+    │   ├── slides/            # SlideView + Program/Sponsor/Message/Clock/Image/Layout/Web/Video/Qr/Countdown
     │   └── components/{SponsorCarousel,AlertOverlay}.jsx
+    ├── public/Schedule.jsx    # offentlig programside (/s/:id)
     └── admin/
         ├── Admin.jsx          # sidebar-nav i seksjoner (?view=), token
-        └── components/        # ui, MediaPicker, slides/SlideForm, og *Manager for
-                               #   Schedule / Categories / Sponsors / Playlists /
-                               #   MediaLibrary / Templates / Screens / Alerts
+        └── components/        # ui, MediaPicker, slides/{SlideForm,SlidePreview}, og *Manager for
+                               #   Schedule / Categories / Sponsors / Playlists / MediaLibrary /
+                               #   Templates / Screens / Alerts / RecentlyDeleted
 ```
 
 Buildstate løser spilleliste-referanser opp til de faktiske elementene, så

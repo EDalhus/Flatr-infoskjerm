@@ -7,7 +7,8 @@ import {
   readJson,
   requireAdmin,
   toIntOrNull,
-  safeJson
+  safeJson,
+  moveToTrash
 } from './_shared.js';
 
 // GET /api/playlists        -> alle (med item_count + total_seconds)
@@ -80,8 +81,16 @@ export async function onRequestDelete(context) {
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
-  await context.env.DB.prepare('DELETE FROM playlist_items WHERE playlist_id = ?').bind(id).run();
-  await context.env.DB.prepare('DELETE FROM playlists WHERE id = ?').bind(id).run();
+  const row = await context.env.DB.prepare('SELECT * FROM playlists WHERE id = ?').bind(id).first();
+  if (row) {
+    const { results: items } = await context.env.DB
+      .prepare('SELECT * FROM playlist_items WHERE playlist_id = ?')
+      .bind(id)
+      .all();
+    await moveToTrash(context.env, 'playlist', row.name, { row, items: items ?? [] });
+    await context.env.DB.prepare('DELETE FROM playlist_items WHERE playlist_id = ?').bind(id).run();
+    await context.env.DB.prepare('DELETE FROM playlists WHERE id = ?').bind(id).run();
+  }
   return noContent();
 }
 

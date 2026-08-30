@@ -78,6 +78,13 @@ export const api = {
     create: (body) => req('/templates', { method: 'POST', body }),
     remove: (id) => req(`/templates?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
+  trash: {
+    list: () => req('/trash'),
+    restore: (id) => req(`/trash?id=${encodeURIComponent(id)}`, { method: 'POST' }),
+    purge: (id) => req(`/trash?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    empty: () => req('/trash?all=1', { method: 'DELETE' })
+  },
+  health: () => req('/health'),
   media: {
     list: () => req('/media'),
     remove: (id) => req(`/media?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),

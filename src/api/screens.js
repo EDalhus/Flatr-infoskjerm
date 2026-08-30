@@ -7,7 +7,8 @@ import {
   readJson,
   requireAdmin,
   toIntOrNull,
-  safeJson
+  safeJson,
+  moveToTrash
 } from './_shared.js';
 
 const LAYOUTS = ['solo', 'main-side', 'split', 'thirds', 'custom'];
@@ -178,8 +179,16 @@ export async function onRequestDelete(context) {
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
-  await context.env.DB.prepare('DELETE FROM screen_slides WHERE screen_id = ?').bind(id).run();
-  await context.env.DB.prepare('DELETE FROM screens WHERE id = ?').bind(id).run();
+  const row = await context.env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first();
+  if (row) {
+    const { results: slides } = await context.env.DB
+      .prepare('SELECT * FROM screen_slides WHERE screen_id = ?')
+      .bind(id)
+      .all();
+    await moveToTrash(context.env, 'screen', row.name, { row, slides: slides ?? [] });
+    await context.env.DB.prepare('DELETE FROM screen_slides WHERE screen_id = ?').bind(id).run();
+    await context.env.DB.prepare('DELETE FROM screens WHERE id = ?').bind(id).run();
+  }
   return noContent();
 }
 

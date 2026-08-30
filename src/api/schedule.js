@@ -7,7 +7,8 @@ import {
   readJson,
   requireAdmin,
   toIntOrNull,
-  effectiveStatus
+  effectiveStatus,
+  moveToTrash
 } from './_shared.js';
 
 const STATUSES = ['scheduled', 'live', 'done', 'cancelled'];
@@ -117,7 +118,11 @@ export async function onRequestDelete(context) {
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
-  await context.env.DB.prepare('DELETE FROM schedule WHERE id = ?').bind(id).run();
+  const row = await context.env.DB.prepare('SELECT * FROM schedule WHERE id = ?').bind(id).first();
+  if (row) {
+    await moveToTrash(context.env, 'schedule', row.title, { row });
+    await context.env.DB.prepare('DELETE FROM schedule WHERE id = ?').bind(id).run();
+  }
   return noContent();
 }
 

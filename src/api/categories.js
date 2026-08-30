@@ -6,7 +6,8 @@ import {
   handleOptions,
   readJson,
   requireAdmin,
-  toIntOrNull
+  toIntOrNull,
+  moveToTrash
 } from './_shared.js';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -66,7 +67,11 @@ export async function onRequestDelete(context) {
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
-  await context.env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+  const row = await context.env.DB.prepare('SELECT * FROM categories WHERE id = ?').bind(id).first();
+  if (row) {
+    await moveToTrash(context.env, 'category', row.name, { row });
+    await context.env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+  }
   return noContent();
 }
 

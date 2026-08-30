@@ -9,6 +9,7 @@ import MediaLibraryManager from './components/MediaLibraryManager.jsx';
 import TemplatesManager from './components/TemplatesManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
+import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 
 const NAV = [
   { id: 'schedule', label: 'Program', icon: 'calendar', section: 'Innhold', Component: ScheduleManager },
@@ -18,7 +19,8 @@ const NAV = [
   { id: 'media', label: 'Bibliotek', icon: 'image', section: 'Innhold', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'layers', section: 'Innhold', Component: TemplatesManager },
   { id: 'screens', label: 'Skjermer', icon: 'monitor', section: 'Visning', Component: ScreensManager },
-  { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager }
+  { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager },
+  { id: 'trash', label: 'Nylig slettet', icon: 'x', section: 'Visning', Component: RecentlyDeletedManager }
 ];
 
 const SECTIONS = ['Innhold', 'Visning'];
