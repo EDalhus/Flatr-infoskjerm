@@ -65,7 +65,23 @@ const ICONS = {
         ))
       )}
     </>
-  )
+  ),
+  up: <path d="m6 15 6-6 6 6" />,
+  down: <path d="m6 9 6 6 6-6" />,
+  back: <path d="M19 12H5M12 19l-7-7 7-7" />,
+  copy: (
+    <>
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M20 12 12 4H4v8l8 8z" />
+      <circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none" />
+    </>
+  ),
+  layers: <path d="m12 3 9 5-9 5-9-5 9-5zM3 14l9 5 9-5M3 18l9 5 9-5" />
 };
 
 export function Icon({ name, className = 'h-4 w-4' }) {

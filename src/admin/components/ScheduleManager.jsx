@@ -39,7 +39,9 @@ const emptyForm = {
   start_time: '',
   end_time: '',
   stage: '',
-  status: 'scheduled'
+  status: 'scheduled',
+  auto_status: true,
+  category_id: ''
 };
 
 const durationMin = (item) => {
@@ -50,6 +52,7 @@ const durationMin = (item) => {
 
 export default function ScheduleManager({ onChange }) {
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
@@ -57,14 +60,21 @@ export default function ScheduleManager({ onChange }) {
   const formRef = useRef(null);
 
   const load = () =>
-    api.schedule
-      .list()
-      .then((rows) => setItems(rows || []))
+    Promise.all([api.schedule.list(), api.categories.list()])
+      .then(([rows, cats]) => {
+        setItems(rows || []);
+        setCategories(cats || []);
+      })
       .catch((e) => setError(e.message));
 
   useEffect(() => {
     load();
   }, []);
+
+  const catMap = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c])),
+    [categories]
+  );
 
   const groups = useMemo(() => {
     const map = new Map();
@@ -81,9 +91,7 @@ export default function ScheduleManager({ onChange }) {
     setEditingId(null);
     setError('');
   };
-
   const focusForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
   const startNew = () => {
     resetForm();
     focusForm();
@@ -99,7 +107,9 @@ export default function ScheduleManager({ onChange }) {
       start_time: localInputToIso(form.start_time),
       end_time: form.end_time ? localInputToIso(form.end_time) : null,
       stage: form.stage || null,
-      status: form.status
+      status: form.status,
+      auto_status: form.auto_status,
+      category_id: form.category_id ? Number(form.category_id) : null
     };
     try {
       if (editingId) await api.schedule.update(editingId, payload);
@@ -123,7 +133,9 @@ export default function ScheduleManager({ onChange }) {
       start_time: isoToLocalInput(item.start_time),
       end_time: isoToLocalInput(item.end_time),
       stage: item.stage || '',
-      status: item.status || 'scheduled'
+      status: item.status || 'scheduled',
+      auto_status: item.auto_status !== 0,
+      category_id: item.category_id ? String(item.category_id) : ''
     });
     focusForm();
   };
@@ -186,9 +198,23 @@ export default function ScheduleManager({ onChange }) {
                   onChange={(e) => setForm({ ...form, end_time: e.target.value })}
                 />
               </Field>
+              <Field label="Kategori">
+                <Select
+                  value={form.category_id}
+                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                >
+                  <option value="">Ingen</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
               <Field label="Status">
                 <Select
                   value={form.status}
+                  disabled={form.auto_status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
                 >
                   {STATUS_OPTIONS.map((o) => (
@@ -198,6 +224,15 @@ export default function ScheduleManager({ onChange }) {
                   ))}
                 </Select>
               </Field>
+              <label className="flex items-center gap-2 text-sm text-ink sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={form.auto_status}
+                  onChange={(e) => setForm({ ...form, auto_status: e.target.checked })}
+                  className="h-4 w-4 rounded border-line text-brand focus:ring-brand/30"
+                />
+                Automatisk status – følg klokka (planlagt → pågår → ferdig)
+              </label>
               <div className="sm:col-span-2">
                 <Field label="Beskrivelse">
                   <Textarea
@@ -233,12 +268,14 @@ export default function ScheduleManager({ onChange }) {
         {groups.map(([stage, rows]) => (
           <GroupCard key={stage} label={stage} icon="calendar">
             {rows.map((item, i) => {
-              const tile = STATUS_TILE[item.status] || STATUS_TILE.scheduled;
+              const status = item.effective_status || item.status;
+              const tile = STATUS_TILE[status] || STATUS_TILE.scheduled;
               const mins = durationMin(item);
+              const category = catMap[item.category_id];
               return (
                 <Row
                   key={item.id}
-                  highlight={item.status === 'live'}
+                  highlight={status === 'live'}
                   media={
                     <MediaTile tone={tile.tone}>
                       <Icon name={tile.icon} className="h-5 w-5" />
@@ -252,7 +289,20 @@ export default function ScheduleManager({ onChange }) {
                         {formatTime(item.start_time)}
                         {item.end_time ? `–${formatTime(item.end_time)}` : ''}
                       </span>
-                      <span>· {STATUS_LABEL[item.status] || item.status}</span>
+                      <span>· {STATUS_LABEL[status] || status}</span>
+                      {item.auto_status !== 0 && <span className="text-muted/70">· auto</span>}
+                      {category && (
+                        <span
+                          className="ml-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold"
+                          style={{ backgroundColor: `${category.color}1f`, color: category.color }}
+                        >
+                          <span
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          {category.name}
+                        </span>
+                      )}
                     </>
                   }
                   actions={

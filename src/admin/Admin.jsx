@@ -2,19 +2,27 @@ import { useEffect, useMemo, useState } from 'react';
 import { api, getToken, setToken } from '../lib/api.js';
 import { Icon, Input, Button } from './components/ui.jsx';
 import ScheduleManager from './components/ScheduleManager.jsx';
+import CategoriesManager from './components/CategoriesManager.jsx';
 import SponsorsManager from './components/SponsorsManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
 
 const NAV = [
   { id: 'schedule', label: 'Program', icon: 'calendar', Component: ScheduleManager },
+  { id: 'categories', label: 'Kategorier', icon: 'tag', Component: CategoriesManager },
   { id: 'sponsors', label: 'Sponsorer', icon: 'image', Component: SponsorsManager },
   { id: 'screens', label: 'Skjermer', icon: 'monitor', Component: ScreensManager },
   { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', Component: AlertsManager }
 ];
 
+const initialTab = () => {
+  if (typeof window === 'undefined') return 'schedule';
+  const v = new URLSearchParams(window.location.search).get('view');
+  return NAV.some((n) => n.id === v) ? v : 'schedule';
+};
+
 export default function Admin() {
-  const [tab, setTab] = useState('schedule');
+  const [tab, setTab] = useState(initialTab);
   const [token, setTokenState] = useState(getToken());
   const [savedToken, setSavedToken] = useState(getToken());
   const [screenCount, setScreenCount] = useState(null);
@@ -79,7 +87,14 @@ export default function Admin() {
               return (
                 <button
                   key={n.id}
-                  onClick={() => setTab(n.id)}
+                  onClick={() => {
+                    setTab(n.id);
+                    if (typeof window !== 'undefined') {
+                      const url = new URL(window.location.href);
+                      url.searchParams.set('view', n.id);
+                      window.history.replaceState(null, '', url);
+                    }
+                  }}
                   className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
                     active
                       ? 'bg-brand-tint text-brand'

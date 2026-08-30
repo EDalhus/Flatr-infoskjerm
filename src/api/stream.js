@@ -1,4 +1,4 @@
-import { corsHeaders, buildState } from './_shared.js';
+import { corsHeaders, buildState, touchScreen } from './_shared.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -29,6 +29,7 @@ export async function onRequestGet({ request, env }) {
       let ticks = 0;
 
       try {
+        await touchScreen(env, screenId);
         const initial = await buildState(env, screenId);
         lastVersion = initial.version;
         send('snapshot', initial);

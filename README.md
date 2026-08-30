@@ -1,25 +1,48 @@
 # Infoskjerm for arrangementer
 
-En komplett infoskjerm-webapp for events, kjørt som en **Cloudflare Worker med
-statiske assets** og **D1**. Appen har to deler:
+En infoskjerm-webapp for events, kjørt som en **Cloudflare Worker med statiske
+assets** og **D1**. To deler:
 
 | Del | Rute | Beskrivelse |
 | --- | --- | --- |
-| **Viewer** | `/display/:screenId` | Publikumsvisning på TV/skjerm. Auto-responsiv 16:9 / 9:16, sanntid via SSE, wake lock, sponsorkarusell og pop-up-varsler. |
-| **Admin** | `/admin` | Administrasjon av skjermer, program, sponsorer og hastemeldinger. |
+| **Viewer** | `/display/:screenId` | Publikumsvisning. Layout med soner, per-sone slideshow, kategorifarger, auto-responsiv 16:9 / 9:16, sanntid via SSE, wake lock, hastemeldinger som overlay. |
+| **Admin** | `/admin` | Program, kategorier, sponsorer, skjermer (layout + slides), live alerts. |
+
+## Skjermoppsett
+
+Hver skjerm har en **layout** og én eller flere **soner** (a/b/c …). Hver sone
+har en **spilleliste av slides** som roterer som et slideshow – hver slide i sitt
+eget `duration_seconds`.
+
+**Layout-presets:** `solo` (helskjerm), `main-side` (70/30), `split` (50/50),
+`thirds` (stor A + B/C stablet) og `custom` (egendefinerte sone-rektangler i
+prosent – full kontroll, sonene kan overlappe).
+
+**Slide-typer:** `program`, `sponsors`, `message`, `clock`, `image`.
+Program-slides filtreres pr. **kategori** (`categoryIds` – tom = alle), visning
+(`agenda` / `nowNext` / `next`), maks antall og evt. scene. Slik kan én skjerm
+vise kun «Scene»-poster mens en annen viser alt.
+
+**Kategorier** (admin → Kategorier) gir navn + farge, som vises som merke på de
+offentlige skjermene.
+
+**Auto-status:** programposter med `auto_status = 1` flipper `planlagt → pågår →
+ferdig` automatisk etter klokka. `avlyst` overstyrer alltid.
+
+**Skjermstatus:** Viewer sender heartbeat, og admin viser grønn/grå prikk
+(online hvis sett innen 90 s). «Dupliser» kopierer en skjerm inkl. alle slides.
+
+Alle endringer pushes til skjermene i sanntid (SSE). Skjerm-editoren har en
+live `<iframe>`-forhåndsvisning.
 
 ## Teknologi
 
-- React + Vite + Tailwind CSS, React Router (`react-router-dom`)
-- Én Cloudflare Worker (`src/worker.js`) som ruter `/api/*` til modulene i
-  `src/api/` og lar `ASSETS`-bindingen servere Vite-bygget (`dist/`) med
-  SPA-fallback
-- Cloudflare D1 (SQLite) via `env.DB`-binding
-- Sanntid med Server-Sent Events (`src/api/stream.js`)
-- Konfigurasjon i `wrangler.jsonc`
-
-> Startet som et Pages-prosjekt, men bygd om til Worker + Static Assets slik at
-> `wrangler deploy` (som Cloudflares Git-bygg kjører) fungerer direkte.
+- React + Vite + Tailwind CSS, React Router
+- Én Worker (`src/worker.js`) ruter `/api/*` → `src/api/*`, `ASSETS` serverer
+  `dist/` med SPA-fallback
+- Cloudflare D1 via `env.DB`
+- SSE (`src/api/stream.js`)
+- `wrangler.jsonc`
 
 ---
 
@@ -27,195 +50,122 @@ statiske assets** og **D1**. Appen har to deler:
 
 ```bash
 npm install
+npm run db:local     # laster schema.sql inn i lokal D1 (kjør én gang)
+cp .dev.vars.example .dev.vars   # valgfritt: ADMIN_TOKEN
+npm run dev          # vite build && wrangler dev  →  http://localhost:8788
 ```
-
-Lag en lokal D1-database og last inn skjemaet (kjør én gang):
-
-```bash
-npm run db:local
-# = wrangler d1 execute event-infoscreen-db --local --file=./schema.sql
-```
-
-(Valgfritt) lag en `.dev.vars` for admin-token:
-
-```bash
-cp .dev.vars.example .dev.vars
-```
-
-Start utviklingsserveren:
-
-```bash
-npm run dev
-```
-
-`npm run dev` = `vite build && wrangler dev`. Wrangler serverer Worker-en,
-`ASSETS` (fra `dist/`) og en lokal D1 på **http://localhost:8788**:
 
 - Admin: <http://localhost:8788/admin>
 - Viewer: <http://localhost:8788/display/1>
 
-Roter nettleservinduet (eller bruk devtools device-modus) for å se
-16:9- og 9:16-layoutene bytte via Tailwind `landscape:` / `portrait:`.
-
-### Rask UI-iterasjon
-
-```bash
-npm run dev:client   # ren Vite på http://localhost:5173 med HMR (/api svarer ikke)
-```
-
-Kjør `npm run dev` igjen når du vil teste mot API-et.
+Rask UI-iterasjon uten API: `npm run dev:client` (ren Vite, port 5173).
 
 ---
 
-## 2. Cloudflare D1 – opprette og migrere
+## 2. Cloudflare D1
 
-### Opprett databasen
-
-```bash
-npx wrangler d1 create event-infoscreen-db
-```
-
-Kommandoen skriver ut et `database_id`. Lim det inn i `wrangler.jsonc` og commit:
-
-```jsonc
-"d1_databases": [
-  {
-    "binding": "DB",
-    "database_name": "event-infoscreen-db",
-    "database_id": "<DITT_DATABASE_ID>"
-  }
-]
-```
-
-### Kjør skjema / migrering
-
-Lokalt:
+### Opprett
 
 ```bash
-npx wrangler d1 execute event-infoscreen-db --local --file=./schema.sql
-# eller: npm run db:local
+npx wrangler d1 create event-infoscreen-db   # lim database_id inn i wrangler.jsonc
 ```
 
-Mot produksjon (remote D1):
+### Frisk database (alt + demo-data)
 
 ```bash
 npx wrangler d1 execute event-infoscreen-db --remote --file=./schema.sql
-# eller: npm run db:remote
+# eller lokalt: npm run db:local
 ```
 
-`schema.sql` bruker `CREATE TABLE IF NOT EXISTS` og kan kjøres på nytt. Nederst i
-fila ligger demo-data – fjern den blokken hvis du vil ha tom database.
+### Migrering av en eksisterende database
 
-Ad hoc-spørringer:
+`schema.sql` er for tomme databaser. Har du data fra en tidligere versjon, kjør
+migreringene i rekkefølge:
 
 ```bash
-npx wrangler d1 execute event-infoscreen-db --remote --command "SELECT * FROM schedule;"
+npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0002_zones_categories_slides.sql
+```
+
+`0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
+auto-status, og gir eksisterende skjermer et standard slide-oppsett. SQLite har
+ikke «ADD COLUMN IF NOT EXISTS» – har du alt kjørt den, feiler `ALTER`-linjene
+med «duplicate column name», og da er du allerede oppdatert.
+
+Ad hoc:
+
+```bash
+npx wrangler d1 execute event-infoscreen-db --remote --command "SELECT * FROM screen_slides;"
 ```
 
 ---
 
-## 3. Deploy til Cloudflare
+## 3. Deploy
 
-### Git-koblet (anbefalt)
+Git-koblet Worker: hver push kjører `npm install → npm run build → npx wrangler
+deploy`. `wrangler.jsonc` laster opp `dist/`, deployer `src/worker.js` og kobler
+på D1-bindingen `DB`.
 
-Worker-prosjektet er koblet til GitHub-repoet. Ved hver push kjører Cloudflare:
+> `name` i `wrangler.jsonc` må være navnet på Worker-prosjektet i dashboardet.
 
-```
-npm install  →  npm run build  →  npx wrangler deploy
-```
-
-`wrangler deploy` leser `wrangler.jsonc`: laster opp `dist/` som assets, deployer
-`src/worker.js` og kobler på D1-bindingen `DB`.
-
-> **Viktig:** `name` i `wrangler.jsonc` må være **nøyaktig** navnet på
-> Worker-prosjektet i Cloudflare-dashboardet. Er de ulike, lager `wrangler
-> deploy` en ny Worker i stedet for å oppdatere den eksisterende.
-
-### Manuelt fra egen maskin
-
-```bash
-npm run deploy
-# = vite build && wrangler deploy
-```
-
-### Admin-token (anbefalt i produksjon)
-
-Uten `ADMIN_TOKEN` er skrive-endepunktene åpne. Sett en hemmelighet:
-
-```bash
-npx wrangler secret put ADMIN_TOKEN
-```
-
-(eller i dashboardet: **Settings → Variables and Secrets**). Skriv inn samme verdi
-i `ADMIN_TOKEN`-feltet øverst i `/admin` (lagres i `localStorage` og sendes som
-`Authorization: Bearer …`). `GET`-endepunktene og SSE er alltid åpne slik at
-skjermene kan lese uten token.
+Manuelt: `npm run deploy`. Admin-token i prod: `npx wrangler secret put ADMIN_TOKEN`.
 
 ---
 
 ## API
 
-Alle endepunkter ligger under `/api` og rutes av `src/worker.js`.
-Skriveoperasjoner krever `Authorization: Bearer <ADMIN_TOKEN>` når hemmeligheten
-er satt.
+Under `/api`, rutet av `src/worker.js`. Skriveoperasjoner krever
+`Authorization: Bearer <ADMIN_TOKEN>` når hemmeligheten er satt.
 
 | Endepunkt | Metoder | Beskrivelse |
 | --- | --- | --- |
-| `/api/screens` | `GET`, `POST`, `PUT`, `DELETE` | Skjermer (`?id=` for én / endre / slette). |
-| `/api/schedule` | `GET`, `POST`, `PUT`, `DELETE` | Programposter (`?stage=` filtrerer GET, `?id=` for PUT/DELETE). |
-| `/api/sponsors` | `GET`, `POST`, `PUT`, `DELETE` | Sponsorer (`?id=` for PUT/DELETE). |
-| `/api/alerts` | `GET`, `POST`, `DELETE` | Hastemeldinger. `POST {message, target_screen_id?}`. `DELETE ?id=` eller `?all=1` arkiverer. |
-| `/api/state` | `GET` | Samlet tilstand for en Viewer (`?screen=`). |
-| `/api/stream` | `GET` | SSE. `event: snapshot` ved tilkobling, `event: update` ved endring. |
+| `/api/screens` | `GET POST PUT DELETE` | Skjermer + layout/rotasjon. `GET` gir `slide_count` + `online`. `POST {duplicate_of}` kloner. |
+| `/api/slides` | `GET POST PUT DELETE` | Slides pr. skjerm (`?screen=` / `?id=`). |
+| `/api/categories` | `GET POST PUT DELETE` | Kategorier (navn + farge). |
+| `/api/schedule` | `GET POST PUT DELETE` | Program (+ `category_id`, `auto_status`, utledet `effective_status`). |
+| `/api/sponsors` | `GET POST PUT DELETE` | Sponsorer. |
+| `/api/alerts` | `GET POST DELETE` | Hastemeldinger (`?id=` / `?all=1` arkiverer). |
+| `/api/heartbeat` | `POST` | `?screen=` – Viewer melder at den er i live. |
+| `/api/state` | `GET` | Samlet tilstand for én skjerm (`?screen=`). |
+| `/api/stream` | `GET` | SSE: `snapshot` ved tilkobling, `update` ved endring. |
 
 ### Sanntid
 
-`src/api/stream.js` poller D1 hvert `SSE_POLL_MS` (default 3000 ms, satt i
-`wrangler.jsonc`) og sender `update` når en innholds-signatur endres. Hver
-tilkobling lever i maks ~10 minutter; `EventSource` i klienten kobler seg til
-igjen automatisk. For høyere skala kan polling byttes ut med **Durable Objects**
-eller **Queues** som pub/sub uten å endre klienten.
+`stream.js` poller D1 hvert `SSE_POLL_MS` (default 3000 ms) og sender `update`
+når en innholds-signatur endres. Tilkoblingen lever ~10 min; `EventSource`
+kobler til igjen selv. For større skala: bytt polling mot Durable Objects/Queues
+uten å endre klienten.
 
 ---
 
 ## Prosjektstruktur
 
 ```
-├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1-binding (DB)
-├── schema.sql                # D1-skjema + demo-data
-├── index.html                # Vite entry
-├── vite.config.js
-├── tailwind.config.js
-├── postcss.config.js
+├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1 (DB)
+├── schema.sql                # fullt skjema + demo-data
+├── migrations/               # 0001_init, 0002_zones_categories_slides
 └── src/
-    ├── worker.js             # Worker: ruter /api/* + ASSETS-fallback
-    ├── main.jsx              # React Router
-    ├── api/
-    │   ├── _shared.js        # json()/CORS/auth/buildState()
-    │   ├── screens.js
-    │   ├── schedule.js
-    │   ├── sponsors.js
-    │   ├── alerts.js
-    │   ├── state.js
-    │   └── stream.js         # SSE
-    ├── lib/{api,time}.js
-    ├── hooks/{useNow,useWakeLock,useSSE}.js
+    ├── worker.js             # ruter /api/* + ASSETS-fallback
+    ├── main.jsx
+    ├── api/                   # screens, slides, categories, schedule, sponsors,
+    │                          #   alerts, heartbeat, state, stream, _shared
+    ├── lib/{api,time,layouts,slides}.js
+    ├── hooks/{useNow,useWakeLock,useSSE,useOrientation,useSlideshow,useHeartbeat}.js
     ├── viewer/
-    │   ├── Viewer.jsx
-    │   └── components/{Clock,NowNext,ProgramPanel,SponsorCarousel,MessageBoard,AlertOverlay}.jsx
+    │   ├── Viewer.jsx         # løser soner + monterer <Zone>
+    │   ├── Zone.jsx           # kjører per-sone slideshow
+    │   ├── slides/            # SlideView + Program/Sponsor/Message/Clock/Image
+    │   └── components/{SponsorCarousel,AlertOverlay}.jsx
     └── admin/
-        ├── Admin.jsx
-        └── components/{ui,ScreensManager,ScheduleManager,SponsorsManager,AlertsManager}.jsx
+        ├── Admin.jsx          # sidebar-nav (?view=), token
+        └── components/        # ui, Schedule-, Categories-, Sponsors-,
+                               #   Screens- (liste + editor + soner + slide-form),
+                               #   AlertsManager
 ```
 
 ## Viewer-detaljer
 
-- **Responsivt:** `landscape:` gir 2-kolonners layout (program ~70 % venstre,
-  sidepanel ~30 % høyre). `portrait:` stabler vertikalt (program ~65 % øverst,
-  sponsorer/sekundærinfo ~35 % nederst).
-- **Wake Lock:** `navigator.wakeLock` bes om automatisk og fornyes når fanen blir
-  synlig igjen.
-- **Nå / Neste:** utledes fra klokkeslett mot `start_time`/`end_time`.
-- **Sponsorkarusell:** roterer hvert `duration_seconds` (per sponsor, default 10 s).
-- **Instant Alerts:** ny aktiv `alert` trigger en full-skjerm pop-up (30 s), og
-  vises samtidig i «Meldinger»-lista til admin arkiverer den.
+- Sonene plasseres absolutt i prosent; `thirds`/`main-side`/`split` har egne
+  rektangler for liggende og stående, `custom` bruker `screens.custom_layout`.
+- `navigator.wakeLock` bes om automatisk og fornyes på `visibilitychange`.
+- Hver sone crossfader mellom sine slides; små prikker viser posisjon.
+- Ny aktiv `alert` gir full-skjerm pop-up (30 s) oppå alle soner.

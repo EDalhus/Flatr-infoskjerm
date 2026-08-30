@@ -1,23 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { partitionSchedule } from '../lib/time.js';
+import { resolveZones } from '../lib/layouts.js';
 import { useNow } from '../hooks/useNow.js';
 import { useWakeLock } from '../hooks/useWakeLock.js';
 import { useSSE } from '../hooks/useSSE.js';
-import Clock from './components/Clock.jsx';
-import NowNext from './components/NowNext.jsx';
-import ProgramPanel from './components/ProgramPanel.jsx';
-import SponsorCarousel from './components/SponsorCarousel.jsx';
-import MessageBoard from './components/MessageBoard.jsx';
+import { useOrientation } from '../hooks/useOrientation.js';
+import { useHeartbeat } from '../hooks/useHeartbeat.js';
+import Zone from './Zone.jsx';
 import AlertOverlay from './components/AlertOverlay.jsx';
 
-const EMPTY = { screen: null, schedule: [], sponsors: [], alerts: [] };
+const EMPTY = { screen: null, slides: [], categories: [], schedule: [], sponsors: [], alerts: [] };
 
 export default function Viewer() {
   const { screenId } = useParams();
   const now = useNow(1000);
+  const orientation = useOrientation();
   useWakeLock(true);
+  useHeartbeat(screenId);
 
   const [state, setState] = useState(EMPTY);
   const [loaded, setLoaded] = useState(false);
@@ -43,40 +43,59 @@ export default function Viewer() {
     setLoaded(true);
   }, []);
 
-  const connected = useSSE(api.streamUrl(screenId), {
-    snapshot: onData,
-    update: onData
-  });
+  const connected = useSSE(api.streamUrl(screenId), { snapshot: onData, update: onData });
 
-  const { sorted, nowItem, nextItem } = partitionSchedule(state.schedule, now);
+  const zones = useMemo(
+    () => resolveZones(state.screen, orientation),
+    [state.screen, orientation]
+  );
+  const slidesByZone = useMemo(() => {
+    const map = {};
+    for (const s of state.slides) (map[s.zone] ||= []).push(s);
+    return map;
+  }, [state.slides]);
+
+  const ctx = useMemo(
+    () => ({
+      schedule: state.schedule,
+      sponsors: state.sponsors,
+      categories: state.categories,
+      now
+    }),
+    [state.schedule, state.sponsors, state.categories, now]
+  );
+
+  const rotation = state.screen?.rotation_seconds || 15;
+  const hasContent = state.slides.length > 0;
 
   return (
-    <div className="viewer-root flex h-screen w-screen flex-col overflow-hidden bg-paper text-ink landscape:flex-row">
-      {/* HOVEDPROGRAM – 70 % (liggende) / 65 % (stående) */}
-      <main className="flex min-h-0 flex-col gap-4 p-6 landscape:h-full landscape:w-[70%] portrait:h-[65%] portrait:w-full">
-        <header className="flex shrink-0 items-baseline justify-between">
-          <h1 className="text-3xl font-black tracking-tight text-ink portrait:text-2xl">
-            {state.screen?.name || 'Infoskjerm'}
-          </h1>
-          {state.screen?.location && (
-            <span className="text-lg text-muted">{state.screen.location}</span>
-          )}
-        </header>
+    <div className="viewer-root relative h-screen w-screen overflow-hidden bg-paper text-ink">
+      {hasContent &&
+        zones.map((z) => (
+          <div
+            key={z.id}
+            className="absolute overflow-hidden p-3"
+            style={{ left: `${z.x}%`, top: `${z.y}%`, width: `${z.w}%`, height: `${z.h}%` }}
+          >
+            <Zone slides={slidesByZone[z.id] || []} rotationSeconds={rotation} ctx={ctx} />
+          </div>
+        ))}
 
-        <NowNext nowItem={nowItem} nextItem={nextItem} now={now} />
-        <ProgramPanel items={sorted} nowItemId={nowItem?.id} />
-      </main>
-
-      {/* SIDEPANEL – 30 % (liggende) / 35 % (stående) */}
-      <aside className="flex min-h-0 flex-col gap-4 border-line bg-card p-6 landscape:h-full landscape:w-[30%] landscape:border-l portrait:h-[35%] portrait:w-full portrait:border-t">
-        <Clock now={now} />
-        <SponsorCarousel sponsors={state.sponsors} />
-        <MessageBoard alerts={state.alerts} />
-      </aside>
+      {loaded && !hasContent && (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-10 text-center">
+          <div className="text-3xl font-black text-ink">
+            {state.screen?.name || `Skjerm ${screenId ?? ''}`}
+          </div>
+          <p className="max-w-md text-lg text-muted">
+            {state.screen
+              ? 'Ingen slides er satt opp for denne skjermen ennå. Legg til innhold i admin → Skjermer.'
+              : 'Fant ikke skjermen. Opprett den i admin, eller sjekk ID-en i adressen.'}
+          </p>
+        </div>
+      )}
 
       <AlertOverlay alerts={state.alerts} />
 
-      {/* Diskret tilkoblingsindikator */}
       <div
         className={`fixed bottom-3 right-3 h-2.5 w-2.5 rounded-full transition-colors ${
           connected ? 'bg-ok' : loaded ? 'bg-amber-500' : 'bg-muted'

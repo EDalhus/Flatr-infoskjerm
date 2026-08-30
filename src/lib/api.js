@@ -49,15 +49,27 @@ const crud = (resource) => ({
 });
 
 export const api = {
-  screens: crud('screens'),
+  screens: {
+    ...crud('screens'),
+    duplicate: (id, name) => req('/screens', { method: 'POST', body: { duplicate_of: id, name } })
+  },
   schedule: crud('schedule'),
   sponsors: crud('sponsors'),
+  categories: crud('categories'),
+  slides: {
+    list: (screenId) => req(`/slides?screen=${encodeURIComponent(screenId)}`),
+    create: (body) => req('/slides', { method: 'POST', body }),
+    update: (id, body) => req(`/slides?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+    remove: (id) => req(`/slides?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
   alerts: {
     list: (all = false) => req(`/alerts${all ? '?all=1' : ''}`),
     create: (body) => req('/alerts', { method: 'POST', body }),
     dismiss: (id) => req(`/alerts?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
     dismissAll: () => req('/alerts?all=1', { method: 'DELETE' })
   },
+  heartbeat: (screenId) =>
+    req(`/heartbeat?screen=${encodeURIComponent(screenId)}`, { method: 'POST' }),
   getState: (screenId) =>
     req(`/state${screenId ? `?screen=${encodeURIComponent(screenId)}` : ''}`),
   streamUrl: (screenId) =>

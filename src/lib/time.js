@@ -42,7 +42,8 @@ const ms = (v) => new Date(v).getTime();
  */
 export function partitionSchedule(items, now = new Date()) {
   const t = now.getTime();
-  const active = (i) => i.status !== 'cancelled' && i.status !== 'done';
+  const statusOf = (i) => i.effective_status || i.status;
+  const active = (i) => statusOf(i) !== 'cancelled' && statusOf(i) !== 'done';
 
   const sorted = [...items]
     .filter((i) => i.start_time && !Number.isNaN(ms(i.start_time)))
