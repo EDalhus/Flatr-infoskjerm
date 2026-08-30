@@ -1,0 +1,28 @@
+{
+  // Cloudflare Pages-prosjekt med Functions + D1.
+  // Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "event-infoscreen",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Byggekatalogen (./dist) sendes eksplisitt på kommandolinjen ved deploy
+  // (`wrangler pages deploy dist`) slik at `wrangler pages dev` kan kjøre
+  // Vite som proxy under utvikling uten å kollidere med en fast katalog.
+
+  // D1-binding. `env.DB` er tilgjengelig i alle Functions under /functions.
+  // Kjør `npm run db:create` og lim inn database_id du får tilbake.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "event-infoscreen-db",
+      "database_id": "REPLACE_WITH_YOUR_DATABASE_ID"
+    }
+  ],
+
+  // Ikke-hemmelige variabler. Hemmeligheter (f.eks. ADMIN_TOKEN) settes med
+  // `wrangler pages secret put ADMIN_TOKEN` eller i .dev.vars lokalt.
+  "vars": {
+    "SSE_POLL_MS": "3000"
+  }
+}

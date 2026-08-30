@@ -1,0 +1,3 @@
+# Kopier til .dev.vars for lokal utvikling (leses av `wrangler pages dev`).
+# Hvis ADMIN_TOKEN ikke er satt er admin-API-et åpent (praktisk lokalt).
+ADMIN_TOKEN=dev-secret-change-me

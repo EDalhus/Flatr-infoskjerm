@@ -1,0 +1,30 @@
+{
+  "name": "event-infoscreen",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Infoskjerm-webapp for arrangementer – Viewer + Admin på Cloudflare Pages, Functions og D1.",
+  "scripts": {
+    "dev": "wrangler pages dev --proxy 5173 --port 8788 -- npm run dev:client",
+    "dev:client": "vite",
+    "build": "vite build",
+    "preview": "npm run build && wrangler pages dev dist --port 8788",
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "db:create": "wrangler d1 create event-infoscreen-db",
+    "db:local": "wrangler d1 execute event-infoscreen-db --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute event-infoscreen-db --remote --file=./schema.sql"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "vite": "^5.4.8",
+    "wrangler": "^3.80.0"
+  }
+}
