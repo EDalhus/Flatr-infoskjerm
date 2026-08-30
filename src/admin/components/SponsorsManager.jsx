@@ -15,6 +15,7 @@ import {
   PageHeader,
   ErrorText
 } from './ui.jsx';
+import { MediaField } from './MediaPicker.jsx';
 
 const emptyForm = { name: '', image_url: '', duration_seconds: 10 };
 
@@ -126,15 +127,11 @@ export default function SponsorsManager({ onChange }) {
                 />
               </Field>
               <div className="sm:col-span-2">
-                <Field label="Bilde-URL" hint="Direktelenke til logo/bilde (PNG, SVG, JPG).">
-                  <Input
-                    required
-                    type="url"
-                    value={form.image_url}
-                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                    placeholder="https://…/logo.png"
-                  />
-                </Field>
+                <MediaField
+                  label="Logo / bilde"
+                  value={form.image_url}
+                  onChange={(url) => setForm({ ...form, image_url: url })}
+                />
               </div>
               <div className="flex gap-3 sm:col-span-2">
                 <Button type="submit" disabled={busy}>

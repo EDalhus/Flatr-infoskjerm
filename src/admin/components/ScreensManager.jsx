@@ -1,20 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { LAYOUT_OPTIONS, LANDSCAPE_PRESETS, zonesForScreen } from '../../lib/layouts.js';
-import {
-  SLIDE_TYPES,
-  SLIDE_TYPE_LABEL,
-  SLIDE_TYPE_ICON,
-  PROGRAM_MODES,
-  MESSAGE_EMPHASIS,
-  defaultConfig
-} from '../../lib/slides.js';
+import { SLIDE_TYPES, SLIDE_TYPE_LABEL, SLIDE_TYPE_ICON, defaultConfig } from '../../lib/slides.js';
 import {
   Icon,
   Field,
   Input,
   Select,
-  Textarea,
   Button,
   IconButton,
   Card,
@@ -24,8 +16,7 @@ import {
   PageHeader,
   ErrorText
 } from './ui.jsx';
-
-/* ============================ liste ============================ */
+import SlideForm from './slides/SlideForm.jsx';
 
 function OnlineDot({ online }) {
   return (
@@ -36,35 +27,84 @@ function OnlineDot({ online }) {
   );
 }
 
+const saveAsTemplate = async (kind, payload, reload) => {
+  const name = window.prompt(kind === 'screen' ? 'Navn på skjermmal:' : 'Navn på slide-mal:');
+  if (!name) return;
+  try {
+    await api.templates.create({ name: name.trim(), kind, payload });
+    reload?.();
+    alert('Lagret som mal.');
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+/* ============================ liste ============================ */
+
 function ScreenList({ onEdit, onChange }) {
   const [screens, setScreens] = useState([]);
-  const [form, setForm] = useState({ name: '', location: '', layout: 'main-side' });
+  const [templates, setTemplates] = useState([]);
+  const [form, setForm] = useState({ name: '', location: '', layout: 'main-side', template: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = () =>
-    api.screens
-      .list()
-      .then((rows) => setScreens(rows || []))
+    Promise.all([api.screens.list(), api.templates.list('screen')])
+      .then(([rows, tpls]) => {
+        setScreens(rows || []);
+        setTemplates(tpls || []);
+      })
       .catch((e) => setError(e.message));
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 20_000);
+    const id = setInterval(() => api.screens.list().then((r) => setScreens(r || [])).catch(() => {}), 20_000);
     return () => clearInterval(id);
   }, []);
+
+  const applyScreenTemplate = async (screenId, payload) => {
+    const zones = payload?.zones || {};
+    for (const [zone, items] of Object.entries(zones)) {
+      let pos = 0;
+      for (const it of items) {
+        await api.slides.create({
+          screen_id: screenId,
+          zone,
+          type: it.type,
+          title: it.title || null,
+          duration_seconds: it.duration_seconds,
+          config: it.config || {},
+          position: pos++
+        });
+      }
+    }
+  };
 
   const create = async (e) => {
     e.preventDefault();
     setError('');
     setBusy(true);
     try {
+      const tpl = form.template ? templates.find((t) => String(t.id) === form.template) : null;
       const created = await api.screens.create({
         name: form.name,
         location: form.location || null,
-        layout: form.layout
+        layout: tpl?.payload?.layout || form.layout
       });
-      setForm({ name: '', location: '', layout: 'main-side' });
+      if (tpl) {
+        if (tpl.payload?.rotation_seconds || tpl.payload?.custom_layout) {
+          await api.screens.update(created.id, {
+            layout: tpl.payload.layout,
+            rotation_seconds: tpl.payload.rotation_seconds,
+            custom_layout: tpl.payload.custom_layout || null
+          });
+        }
+        // slett standard-slides skjermen ble opprettet med, legg inn malens
+        const std = await api.slides.list(created.id);
+        for (const s of std) await api.slides.remove(s.id);
+        await applyScreenTemplate(created.id, tpl.payload);
+      }
+      setForm({ name: '', location: '', layout: 'main-side', template: '' });
       await load();
       onChange?.();
       if (created?.id) onEdit(created.id);
@@ -101,10 +141,10 @@ function ScreenList({ onEdit, onChange }) {
 
   return (
     <>
-      <PageHeader crumbs={['Administrer', 'Skjermer']} />
+      <PageHeader crumbs={['Visning', 'Skjermer']} />
       <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
         <Card title="Ny skjerm">
-          <form onSubmit={create} className="grid gap-4 sm:grid-cols-3">
+          <form onSubmit={create} className="grid gap-4 sm:grid-cols-2">
             <Field label="Navn">
               <Input
                 required
@@ -123,6 +163,7 @@ function ScreenList({ onEdit, onChange }) {
             <Field label="Layout">
               <Select
                 value={form.layout}
+                disabled={!!form.template}
                 onChange={(e) => setForm({ ...form, layout: e.target.value })}
               >
                 {LAYOUT_OPTIONS.map((o) => (
@@ -132,7 +173,20 @@ function ScreenList({ onEdit, onChange }) {
                 ))}
               </Select>
             </Field>
-            <div className="sm:col-span-3">
+            <Field label="Fra mal (valgfri)">
+              <Select
+                value={form.template}
+                onChange={(e) => setForm({ ...form, template: e.target.value })}
+              >
+                <option value="">Ingen – tom skjerm</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <div className="sm:col-span-2">
               <Button type="submit" disabled={busy}>
                 {busy ? 'Oppretter …' : 'Opprett og rediger'}
               </Button>
@@ -245,8 +299,7 @@ function LayoutPicker({ value, onChange }) {
 
 function CustomLayoutEditor({ zones, onChange }) {
   const setZone = (i, key, val) => {
-    const next = zones.map((z, idx) => (idx === i ? { ...z, [key]: Number(val) } : z));
-    onChange(next);
+    onChange(zones.map((z, idx) => (idx === i ? { ...z, [key]: Number(val) } : z)));
   };
   const addZone = () => {
     const id = String.fromCharCode(97 + zones.length);
@@ -256,7 +309,7 @@ function CustomLayoutEditor({ zones, onChange }) {
 
   return (
     <div className="rounded-xl border border-hair bg-paper p-4">
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-4">
         <div className="relative h-32 w-56 shrink-0 rounded-md border border-line bg-card">
           {zones.map((z) => (
             <div
@@ -270,7 +323,7 @@ function CustomLayoutEditor({ zones, onChange }) {
         </div>
         <div className="min-w-0 flex-1 space-y-2">
           {zones.map((z, i) => (
-            <div key={z.id} className="flex items-center gap-2">
+            <div key={z.id} className="flex flex-wrap items-center gap-2">
               <span className="w-6 text-sm font-bold uppercase text-muted">{z.id}</span>
               {['x', 'y', 'w', 'h'].map((k) => (
                 <label key={k} className="flex items-center gap-1 text-xs text-muted">
@@ -285,12 +338,7 @@ function CustomLayoutEditor({ zones, onChange }) {
                   />
                 </label>
               ))}
-              <IconButton
-                name="x"
-                label="Fjern sone"
-                tone="danger"
-                onClick={() => removeZone(i)}
-              />
+              <IconButton name="x" label="Fjern sone" tone="danger" onClick={() => removeZone(i)} />
             </div>
           ))}
           <Button type="button" size="sm" variant="outline" onClick={addZone}>
@@ -379,9 +427,7 @@ function SettingsCard({ screen, onSaved, onChange }) {
       </div>
 
       <div className="mt-4">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-          Layout
-        </div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Layout</div>
         <LayoutPicker value={form.layout} onChange={setLayout} />
       </div>
 
@@ -404,233 +450,37 @@ function SettingsCard({ screen, onSaved, onChange }) {
   );
 }
 
-function SlideForm({ slide, categories, onSave, onCancel }) {
-  const [form, setForm] = useState({
-    title: slide.title || '',
-    duration_seconds: slide.duration_seconds,
-    enabled: slide.enabled !== 0,
-    config: { ...defaultConfig(slide.type), ...(slide.config || {}) }
-  });
-  const [busy, setBusy] = useState(false);
-  const setCfg = (patch) => setForm((f) => ({ ...f, config: { ...f.config, ...patch } }));
-
-  const toggleCat = (id) => {
-    const cur = Array.isArray(form.config.categoryIds) ? form.config.categoryIds : [];
-    setCfg({ categoryIds: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] });
-  };
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      await onSave({
-        title: form.title || null,
-        duration_seconds: Number(form.duration_seconds) || 15,
-        enabled: form.enabled,
-        config: form.config
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="border-t border-hair bg-paper px-4 py-4 sm:px-5">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Tittel (valgfri)">
-          <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        </Field>
-        <Field label="Varighet (sek)">
-          <Input
-            type="number"
-            min={3}
-            value={form.duration_seconds}
-            onChange={(e) => setForm({ ...form, duration_seconds: e.target.value })}
-          />
-        </Field>
-
-        {slide.type === 'program' && (
-          <>
-            <Field label="Visning">
-              <Select
-                value={form.config.mode}
-                onChange={(e) => setCfg({ mode: e.target.value })}
-              >
-                {PROGRAM_MODES.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Maks antall poster">
-              <Input
-                type="number"
-                min={1}
-                value={form.config.max}
-                onChange={(e) => setCfg({ max: Number(e.target.value) || 10 })}
-              />
-            </Field>
-            <Field label="Kun scene (valgfri)">
-              <Input
-                value={form.config.stage || ''}
-                onChange={(e) => setCfg({ stage: e.target.value })}
-                placeholder="Alle scener"
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                Kategorier (ingen valgt = alle)
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {categories.length === 0 && (
-                  <span className="text-sm text-muted">Ingen kategorier opprettet.</span>
-                )}
-                {categories.map((c) => {
-                  const on = (form.config.categoryIds || []).includes(c.id);
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => toggleCat(c.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-semibold ${
-                        on ? 'border-transparent text-white' : 'border-line bg-card text-muted'
-                      }`}
-                      style={on ? { backgroundColor: c.color } : undefined}
-                    >
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: on ? '#fff' : c.color }}
-                      />
-                      {c.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-ink sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={form.config.showCategory !== false}
-                onChange={(e) => setCfg({ showCategory: e.target.checked })}
-                className="h-4 w-4 rounded border-line text-brand"
-              />
-              Vis kategori-merke på skjermen
-            </label>
-          </>
-        )}
-
-        {slide.type === 'message' && (
-          <>
-            <div className="sm:col-span-2">
-              <Field label="Tekst">
-                <Textarea
-                  rows={2}
-                  value={form.config.text}
-                  onChange={(e) => setCfg({ text: e.target.value })}
-                />
-              </Field>
-            </div>
-            <Field label="Uttrykk">
-              <Select
-                value={form.config.emphasis}
-                onChange={(e) => setCfg({ emphasis: e.target.value })}
-              >
-                {MESSAGE_EMPHASIS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </>
-        )}
-
-        {slide.type === 'image' && (
-          <>
-            <div className="sm:col-span-2">
-              <Field label="Bilde-URL">
-                <Input
-                  type="url"
-                  value={form.config.url}
-                  onChange={(e) => setCfg({ url: e.target.value })}
-                  placeholder="https://…"
-                />
-              </Field>
-            </div>
-            <Field label="Tilpasning">
-              <Select value={form.config.fit} onChange={(e) => setCfg({ fit: e.target.value })}>
-                <option value="contain">Vis hele bildet</option>
-                <option value="cover">Fyll flaten</option>
-              </Select>
-            </Field>
-            <Field label="Bildetekst (valgfri)">
-              <Input
-                value={form.config.caption}
-                onChange={(e) => setCfg({ caption: e.target.value })}
-              />
-            </Field>
-          </>
-        )}
-
-        {slide.type === 'clock' && (
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="flex items-center gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={form.config.showDate !== false}
-                onChange={(e) => setCfg({ showDate: e.target.checked })}
-                className="h-4 w-4 rounded border-line text-brand"
-              />
-              Vis dato
-            </label>
-            <label className="flex items-center gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={form.config.showSeconds !== false}
-                onChange={(e) => setCfg({ showSeconds: e.target.checked })}
-                className="h-4 w-4 rounded border-line text-brand"
-              />
-              Vis sekunder
-            </label>
-          </div>
-        )}
-
-        {slide.type === 'sponsors' && (
-          <p className="text-sm text-muted sm:col-span-2">
-            Viser alle sponsorer fra «Sponsorer». Hver sponsor roterer i sin egen varighet.
-          </p>
-        )}
-      </div>
-
-      <div className="mt-3 flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            checked={form.enabled}
-            onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-            className="h-4 w-4 rounded border-line text-brand"
-          />
-          Aktiv
-        </label>
-        <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="outline" onClick={onCancel}>
-            Lukk
-          </Button>
-          <Button size="sm" onClick={save} disabled={busy}>
-            {busy ? 'Lagrer …' : 'Lagre slide'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ZonePlaylist({ zone, slides, categories, onCreate, onUpdate, onDelete, onReorder }) {
+function ZonePlaylist({
+  zone,
+  slides,
+  categories,
+  playlists,
+  slideTemplates,
+  onCreate,
+  onCreatePlaylistRef,
+  onCreateFromTemplate,
+  onUpdate,
+  onDelete,
+  onReorder,
+  onSaveTemplate
+}) {
   const [openId, setOpenId] = useState(null);
   const [adding, setAdding] = useState('program');
   const list = slides
     .filter((s) => s.zone === zone)
     .sort((a, b) => a.position - b.position || a.id - b.id);
+
+  const doAdd = async () => {
+    let created = null;
+    if (adding.startsWith('playlist:')) created = await onCreatePlaylistRef(zone, Number(adding.slice(9)));
+    else if (adding.startsWith('tpl:')) created = await onCreateFromTemplate(zone, Number(adding.slice(4)));
+    else {
+      created = await onCreate(zone, adding);
+      if (created?.id) setOpenId(created.id);
+    }
+  };
+
+  const plName = (id) => playlists.find((p) => p.id === id)?.name || `Spilleliste #${id}`;
 
   return (
     <GroupCard
@@ -641,19 +491,36 @@ function ZonePlaylist({ zone, slides, categories, onCreate, onUpdate, onDelete, 
           <select
             value={adding}
             onChange={(e) => setAdding(e.target.value)}
-            className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink"
+            className="max-w-[9rem] rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink"
           >
-            {SLIDE_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
+            <optgroup label="Slide">
+              {SLIDE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </optgroup>
+            {playlists.length > 0 && (
+              <optgroup label="Spilleliste">
+                {playlists.map((p) => (
+                  <option key={p.id} value={`playlist:${p.id}`}>
+                    {p.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {slideTemplates.length > 0 && (
+              <optgroup label="Fra mal">
+                {slideTemplates.map((t) => (
+                  <option key={t.id} value={`tpl:${t.id}`}>
+                    {t.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <button
-            onClick={async () => {
-              const created = await onCreate(zone, adding);
-              if (created?.id) setOpenId(created.id);
-            }}
+            onClick={doAdd}
             className="inline-flex items-center gap-1 rounded-lg bg-brand px-2 py-1 text-xs font-bold uppercase tracking-wide text-white hover:bg-brand-dark"
           >
             <Icon name="plus" className="h-3.5 w-3.5" />
@@ -665,64 +532,77 @@ function ZonePlaylist({ zone, slides, categories, onCreate, onUpdate, onDelete, 
       {list.length === 0 && (
         <div className="px-5 py-4 text-sm text-muted">Ingen slides i denne sonen.</div>
       )}
-      {list.map((s, i) => (
-        <div key={s.id}>
-          <Row
-            media={
-              <MediaTile tone={s.enabled === 0 ? 'muted' : 'brand'}>
-                <Icon name={SLIDE_TYPE_ICON[s.type] || 'layers'} className="h-5 w-5" />
-              </MediaTile>
-            }
-            title={
-              <span className={s.enabled === 0 ? 'text-muted line-through' : ''}>
-                {s.title || SLIDE_TYPE_LABEL[s.type] || s.type}
-              </span>
-            }
-            meta={
-              <>
-                <span>{SLIDE_TYPE_LABEL[s.type] || s.type}</span>
-                <span>· {s.duration_seconds}s</span>
-                {s.enabled === 0 && <span>· av</span>}
-              </>
-            }
-            actions={
-              <>
-                <IconButton
-                  name="up"
-                  label="Flytt opp"
-                  onClick={() => onReorder(list, i, -1)}
-                  className={i === 0 ? 'pointer-events-none opacity-30' : ''}
-                />
-                <IconButton
-                  name="down"
-                  label="Flytt ned"
-                  onClick={() => onReorder(list, i, 1)}
-                  className={i === list.length - 1 ? 'pointer-events-none opacity-30' : ''}
-                />
-                <IconButton name="x" label="Slett" tone="danger" onClick={() => onDelete(s.id)} />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setOpenId(openId === s.id ? null : s.id)}
-                >
-                  {openId === s.id ? 'Lukk' : 'Endre'}
-                </Button>
-              </>
-            }
-          />
-          {openId === s.id && (
-            <SlideForm
-              slide={s}
-              categories={categories}
-              onCancel={() => setOpenId(null)}
-              onSave={async (patch) => {
-                await onUpdate(s.id, patch);
-                setOpenId(null);
-              }}
+      {list.map((s, i) => {
+        const isPlaylist = s.type === 'playlist';
+        return (
+          <div key={s.id}>
+            <Row
+              media={
+                <MediaTile tone={s.enabled === 0 ? 'muted' : isPlaylist ? 'ok' : 'brand'}>
+                  <Icon name={SLIDE_TYPE_ICON[s.type] || 'layers'} className="h-5 w-5" />
+                </MediaTile>
+              }
+              title={
+                <span className={s.enabled === 0 ? 'text-muted line-through' : ''}>
+                  {isPlaylist ? plName(s.playlist_id) : s.title || SLIDE_TYPE_LABEL[s.type] || s.type}
+                </span>
+              }
+              meta={
+                <>
+                  <span>{SLIDE_TYPE_LABEL[s.type] || s.type}</span>
+                  {!isPlaylist && <span>· {s.duration_seconds}s</span>}
+                  {s.enabled === 0 && <span>· av</span>}
+                </>
+              }
+              actions={
+                <>
+                  <IconButton
+                    name="up"
+                    label="Flytt opp"
+                    onClick={() => onReorder(list, i, -1)}
+                    className={i === 0 ? 'pointer-events-none opacity-30' : ''}
+                  />
+                  <IconButton
+                    name="down"
+                    label="Flytt ned"
+                    onClick={() => onReorder(list, i, 1)}
+                    className={i === list.length - 1 ? 'pointer-events-none opacity-30' : ''}
+                  />
+                  <IconButton name="x" label="Slett" tone="danger" onClick={() => onDelete(s.id)} />
+                  {isPlaylist ? (
+                    <a
+                      href={`/admin?view=playlists&edit=${s.playlist_id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
+                    >
+                      Åpne
+                    </a>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setOpenId(openId === s.id ? null : s.id)}
+                    >
+                      {openId === s.id ? 'Lukk' : 'Endre'}
+                    </Button>
+                  )}
+                </>
+              }
             />
-          )}
-        </div>
-      ))}
+            {openId === s.id && !isPlaylist && (
+              <SlideForm
+                slide={s}
+                categories={categories}
+                onCancel={() => setOpenId(null)}
+                onSaveTemplate={onSaveTemplate}
+                onSave={async (patch) => {
+                  await onUpdate(s.id, patch);
+                  setOpenId(null);
+                }}
+              />
+            )}
+          </div>
+        );
+      })}
     </GroupCard>
   );
 }
@@ -731,6 +611,8 @@ function ScreenEditor({ screenId, onBack, onChange }) {
   const [screen, setScreen] = useState(null);
   const [slides, setSlides] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [playlists, setPlaylists] = useState([]);
+  const [slideTemplates, setSlideTemplates] = useState([]);
   const [error, setError] = useState('');
   const previewRef = useRef(null);
 
@@ -740,17 +622,22 @@ function ScreenEditor({ screenId, onBack, onChange }) {
       if (found) setScreen(found);
     });
   const reloadSlides = () => api.slides.list(screenId).then((rows) => setSlides(rows || []));
+  const reloadTemplates = () => api.templates.list('slide').then((r) => setSlideTemplates(r || []));
 
   useEffect(() => {
     Promise.all([
       api.screens.list(),
       api.slides.list(screenId),
-      api.categories.list()
+      api.categories.list(),
+      api.playlists.list(),
+      api.templates.list('slide')
     ])
-      .then(([screens, sl, cats]) => {
+      .then(([screens, sl, cats, pls, tpls]) => {
         setScreen((screens || []).find((s) => String(s.id) === String(screenId)) || null);
         setSlides(sl || []);
         setCategories(cats || []);
+        setPlaylists(pls || []);
+        setSlideTemplates(tpls || []);
       })
       .catch((e) => setError(e.message));
   }, [screenId]);
@@ -774,6 +661,33 @@ function ScreenEditor({ screenId, onBack, onChange }) {
     } catch (e) {
       setError(e.message);
       return null;
+    }
+  };
+
+  const createPlaylistRef = async (zone, playlistId) => {
+    try {
+      await api.slides.create({ screen_id: Number(screenId), zone, playlist_id: playlistId });
+      await afterMutate();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const createFromTemplate = async (zone, templateId) => {
+    try {
+      const tpl = await api.templates.get(templateId);
+      const p = tpl.payload || {};
+      await api.slides.create({
+        screen_id: Number(screenId),
+        zone,
+        type: p.type || 'message',
+        title: p.title || tpl.name,
+        duration_seconds: p.duration_seconds,
+        config: p.config || {}
+      });
+      await afterMutate();
+    } catch (e) {
+      setError(e.message);
     }
   };
 
@@ -810,10 +724,33 @@ function ScreenEditor({ screenId, onBack, onChange }) {
     }
   };
 
+  const saveScreenTemplate = () => {
+    const zones = {};
+    for (const s of slides) {
+      if (s.type === 'playlist') continue;
+      (zones[s.zone] ||= []).push({
+        type: s.type,
+        title: s.title,
+        duration_seconds: s.duration_seconds,
+        config: s.config || {}
+      });
+    }
+    saveAsTemplate(
+      'screen',
+      {
+        layout: screen.layout,
+        custom_layout: screen.custom_layout ? { zones: screen.custom_layout.zones || screen.custom_layout } : null,
+        rotation_seconds: screen.rotation_seconds,
+        zones
+      },
+      null
+    );
+  };
+
   if (!screen) {
     return (
       <>
-        <PageHeader crumbs={['Administrer', 'Skjermer', '…']} />
+        <PageHeader crumbs={['Visning', 'Skjermer', '…']} />
         <div className="p-8 text-muted">Laster …</div>
       </>
     );
@@ -825,9 +762,12 @@ function ScreenEditor({ screenId, onBack, onChange }) {
   return (
     <>
       <PageHeader
-        crumbs={['Administrer', 'Skjermer', screen.name]}
+        crumbs={['Visning', 'Skjermer', screen.name]}
         action={
           <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={saveScreenTemplate}>
+              Lagre som mal
+            </Button>
             <a
               href={`${origin}/display/${screen.id}`}
               target="_blank"
@@ -854,10 +794,15 @@ function ScreenEditor({ screenId, onBack, onChange }) {
               zone={z}
               slides={slides}
               categories={categories}
+              playlists={playlists}
+              slideTemplates={slideTemplates}
               onCreate={createSlide}
+              onCreatePlaylistRef={createPlaylistRef}
+              onCreateFromTemplate={createFromTemplate}
               onUpdate={updateSlide}
               onDelete={deleteSlide}
               onReorder={reorder}
+              onSaveTemplate={(payload) => saveAsTemplate('slide', payload, reloadTemplates)}
             />
           ))}
           <ErrorText>{error}</ErrorText>

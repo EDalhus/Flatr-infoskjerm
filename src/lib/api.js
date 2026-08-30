@@ -62,6 +62,39 @@ export const api = {
     update: (id, body) => req(`/slides?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
     remove: (id) => req(`/slides?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
+  playlists: {
+    ...crud('playlists'),
+    get: (id) => req(`/playlists?id=${encodeURIComponent(id)}`)
+  },
+  playlistItems: {
+    list: (playlistId) => req(`/playlist-items?playlist=${encodeURIComponent(playlistId)}`),
+    create: (body) => req('/playlist-items', { method: 'POST', body }),
+    update: (id, body) => req(`/playlist-items?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+    remove: (id) => req(`/playlist-items?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+  templates: {
+    list: (kind) => req(`/templates${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`),
+    get: (id) => req(`/templates?id=${encodeURIComponent(id)}`),
+    create: (body) => req('/templates', { method: 'POST', body }),
+    remove: (id) => req(`/templates?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+  media: {
+    list: () => req('/media'),
+    remove: (id) => req(`/media?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    url: (id) => `${BASE}/media?id=${encodeURIComponent(id)}&raw=1`,
+    upload: (file, folder) => {
+      const q = new URLSearchParams({ name: file.name, type: file.type || 'application/octet-stream' });
+      if (folder) q.set('folder', folder);
+      const headers = { 'Content-Type': file.type || 'application/octet-stream' };
+      const token = getToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+      return fetch(`${BASE}/media?${q}`, { method: 'POST', headers, body: file }).then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error(d?.error || `${r.status} ${r.statusText}`);
+        return d;
+      });
+    }
+  },
   alerts: {
     list: (all = false) => req(`/alerts${all ? '?all=1' : ''}`),
     create: (body) => req('/alerts', { method: 'POST', body }),

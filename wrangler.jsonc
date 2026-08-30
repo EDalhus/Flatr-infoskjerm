@@ -29,6 +29,16 @@
     }
   ],
 
+  // Mediebibliotek. Opprett bucketen først:
+  //   npx wrangler r2 bucket create flatr-infoscreen-media
+  // (Appen fungerer uten – Bibliotek-fanen viser da bare en melding.)
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "flatr-infoscreen-media"
+    }
+  ],
+
   // Ikke-hemmelige variabler. Hemmeligheter (ADMIN_TOKEN) settes med
   // `wrangler secret put ADMIN_TOKEN` eller i .dev.vars lokalt.
   "vars": {

@@ -4,16 +4,24 @@ import { Icon, Input, Button } from './components/ui.jsx';
 import ScheduleManager from './components/ScheduleManager.jsx';
 import CategoriesManager from './components/CategoriesManager.jsx';
 import SponsorsManager from './components/SponsorsManager.jsx';
+import PlaylistsManager from './components/PlaylistsManager.jsx';
+import MediaLibraryManager from './components/MediaLibraryManager.jsx';
+import TemplatesManager from './components/TemplatesManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
 
 const NAV = [
-  { id: 'schedule', label: 'Program', icon: 'calendar', Component: ScheduleManager },
-  { id: 'categories', label: 'Kategorier', icon: 'tag', Component: CategoriesManager },
-  { id: 'sponsors', label: 'Sponsorer', icon: 'image', Component: SponsorsManager },
-  { id: 'screens', label: 'Skjermer', icon: 'monitor', Component: ScreensManager },
-  { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', Component: AlertsManager }
+  { id: 'schedule', label: 'Program', icon: 'calendar', section: 'Innhold', Component: ScheduleManager },
+  { id: 'categories', label: 'Kategorier', icon: 'tag', section: 'Innhold', Component: CategoriesManager },
+  { id: 'sponsors', label: 'Sponsorer', icon: 'image', section: 'Innhold', Component: SponsorsManager },
+  { id: 'playlists', label: 'Spillelister', icon: 'layers', section: 'Innhold', Component: PlaylistsManager },
+  { id: 'media', label: 'Bibliotek', icon: 'image', section: 'Innhold', Component: MediaLibraryManager },
+  { id: 'templates', label: 'Maler', icon: 'layers', section: 'Innhold', Component: TemplatesManager },
+  { id: 'screens', label: 'Skjermer', icon: 'monitor', section: 'Visning', Component: ScreensManager },
+  { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager }
 ];
+
+const SECTIONS = ['Innhold', 'Visning'];
 
 const initialTab = () => {
   if (typeof window === 'undefined') return 'schedule';
@@ -49,9 +57,18 @@ export default function Admin() {
   const bump = () => setRefreshKey((k) => k + 1);
   const Active = useMemo(() => NAV.find((n) => n.id === tab)?.Component ?? ScheduleManager, [tab]);
 
+  const go = (id) => {
+    setTab(id);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', id);
+      url.searchParams.delete('edit');
+      window.history.replaceState(null, '', url);
+    }
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-paper text-ink">
-      {/* smal merkevare-rail */}
       <div className="hidden w-14 shrink-0 flex-col items-center bg-brand py-4 text-white sm:flex">
         <div className="grid h-9 w-9 place-items-center rounded-lg bg-white text-lg font-black text-brand">
           F
@@ -68,8 +85,7 @@ export default function Admin() {
         </a>
       </div>
 
-      {/* sidebar */}
-      <aside className="flex w-60 shrink-0 flex-col border-r border-line bg-paper sm:w-64">
+      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-paper sm:w-64">
         <div className="px-5 py-5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
             Infoskjerm
@@ -78,40 +94,37 @@ export default function Admin() {
         </div>
 
         <div className="px-3">
-          <div className="px-2 pb-2 pt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-            Administrer
-          </div>
-          <nav className="space-y-0.5">
-            {NAV.map((n) => {
-              const active = n.id === tab;
-              return (
-                <button
-                  key={n.id}
-                  onClick={() => {
-                    setTab(n.id);
-                    if (typeof window !== 'undefined') {
-                      const url = new URL(window.location.href);
-                      url.searchParams.set('view', n.id);
-                      window.history.replaceState(null, '', url);
-                    }
-                  }}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-brand-tint text-brand'
-                      : 'text-ink/80 hover:bg-black/[0.04] hover:text-ink'
-                  }`}
-                >
-                  <Icon name={n.icon} className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 text-left">{n.label}</span>
-                  {n.id === 'screens' && screenCount != null && (
-                    <span className="rounded-full bg-ok-tint px-1.5 text-xs font-bold text-ok">
-                      {screenCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+          {SECTIONS.map((section) => (
+            <div key={section} className="mb-2">
+              <div className="px-2 pb-1.5 pt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                {section}
+              </div>
+              <nav className="space-y-0.5">
+                {NAV.filter((n) => n.section === section).map((n) => {
+                  const active = n.id === tab;
+                  return (
+                    <button
+                      key={n.id}
+                      onClick={() => go(n.id)}
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-brand-tint text-brand'
+                          : 'text-ink/80 hover:bg-black/[0.04] hover:text-ink'
+                      }`}
+                    >
+                      <Icon name={n.icon} className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 text-left">{n.label}</span>
+                      {n.id === 'screens' && screenCount != null && (
+                        <span className="rounded-full bg-ok-tint px-1.5 text-xs font-bold text-ok">
+                          {screenCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          ))}
         </div>
 
         <div className="mt-auto border-t border-line p-4">
@@ -137,7 +150,6 @@ export default function Admin() {
         </div>
       </aside>
 
-      {/* innhold */}
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
         <Active onChange={bump} />
       </main>

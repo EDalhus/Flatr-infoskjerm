@@ -3,13 +3,15 @@ import SponsorSlide from './SponsorSlide.jsx';
 import MessageSlide from './MessageSlide.jsx';
 import ClockSlide from './ClockSlide.jsx';
 import ImageSlide from './ImageSlide.jsx';
+import LayoutSlide from './LayoutSlide.jsx';
 
 const RENDERERS = {
   program: ProgramSlide,
   sponsors: SponsorSlide,
   message: MessageSlide,
   clock: ClockSlide,
-  image: ImageSlide
+  image: ImageSlide,
+  layout: LayoutSlide
 };
 
 export default function SlideView({ slide, ctx }) {

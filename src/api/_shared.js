@@ -121,10 +121,42 @@ export async function buildState(env, screenId) {
     effective_status: effectiveStatus(row, now)
   }));
 
-  const slideRows = (slides.results ?? []).map((row) => ({
-    ...row,
-    config: safeJson(row.config, {})
-  }));
+  // Løs opp spilleliste-referanser: en sone-rad med playlist_id byttes ut med
+  // spillelistas aktive elementer (i rekkefølge).
+  const rawSlides = slides.results ?? [];
+  const playlistIds = [...new Set(rawSlides.map((r) => r.playlist_id).filter(Boolean))];
+  const itemsByPlaylist = {};
+  if (playlistIds.length) {
+    const marks = playlistIds.map(() => '?').join(',');
+    const { results: items } = await env.DB
+      .prepare(
+        `SELECT * FROM playlist_items
+           WHERE playlist_id IN (${marks}) AND enabled = 1
+           ORDER BY playlist_id ASC, position ASC, id ASC`
+      )
+      .bind(...playlistIds)
+      .all();
+    for (const it of items ?? []) (itemsByPlaylist[it.playlist_id] ||= []).push(it);
+  }
+
+  const slideRows = [];
+  for (const row of rawSlides) {
+    if (row.type === 'playlist' || row.playlist_id) {
+      for (const it of itemsByPlaylist[row.playlist_id] ?? []) {
+        slideRows.push({
+          id: `p${row.playlist_id}-${it.id}`,
+          zone: row.zone,
+          type: it.type,
+          title: it.title,
+          duration_seconds: it.duration_seconds,
+          enabled: 1,
+          config: safeJson(it.config, {})
+        });
+      }
+      continue; // tom / slettet spilleliste → hopp over raden
+    }
+    slideRows.push({ ...row, config: safeJson(row.config, {}) });
+  }
 
   const state = {
     screen: screen

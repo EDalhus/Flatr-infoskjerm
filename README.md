@@ -6,7 +6,7 @@ assets** og **D1**. To deler:
 | Del | Rute | Beskrivelse |
 | --- | --- | --- |
 | **Viewer** | `/display/:screenId` | Publikumsvisning. Layout med soner, per-sone slideshow, kategorifarger, auto-responsiv 16:9 / 9:16, sanntid via SSE, wake lock, hastemeldinger som overlay. |
-| **Admin** | `/admin` | Program, kategorier, sponsorer, skjermer (layout + slides), live alerts. |
+| **Admin** | `/admin` | Program, kategorier, sponsorer, spillelister, mediebibliotek, maler, skjermer (layout + slides), live alerts. |
 
 ## Skjermoppsett
 
@@ -18,13 +18,26 @@ eget `duration_seconds`.
 `thirds` (stor A + B/C stablet) og `custom` (egendefinerte sone-rektangler i
 prosent – full kontroll, sonene kan overlappe).
 
-**Slide-typer:** `program`, `sponsors`, `message`, `clock`, `image`.
+**Slide-typer:** `program`, `sponsors`, `message`, `clock`, `image`, `layout`
+(fri slide med posisjonerte tekst-/bilde-elementer). En sone kan også vise en
+**delt spilleliste** i stedet for inline-slides.
 Program-slides filtreres pr. **kategori** (`categoryIds` – tom = alle), visning
 (`agenda` / `nowNext` / `next`), maks antall og evt. scene. Slik kan én skjerm
 vise kun «Scene»-poster mens en annen viser alt.
 
 **Kategorier** (admin → Kategorier) gir navn + farge, som vises som merke på de
 offentlige skjermene.
+
+**Spillelister** (admin → Spillelister) er gjenbrukbare rekker av slides. En
+sone på en skjerm kan peke på en spilleliste, så samme innhold (f.eks.
+«Sponsorer VLAN») vedlikeholdes ett sted og brukes på mange skjermer.
+
+**Mediebibliotek** (admin → Bibliotek) lagrer opplastede bilder i R2. Bilde-slides
+og sponsorlogoer kan velge fra biblioteket i stedet for å lime inn en URL.
+Krever en R2-bucket – se «Mediebibliotek» under.
+
+**Maler** (admin → Maler): «Lagre som mal» på en slide eller en hel skjerm, og
+«Fra mal» når du legger til slides / oppretter en skjerm.
 
 **Auto-status:** programposter med `auto_status = 1` flipper `planlagt → pågår →
 ferdig` automatisk etter klokka. `avlyst` overstyrer alltid.
@@ -84,12 +97,27 @@ migreringene i rekkefølge:
 
 ```bash
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0002_zones_categories_slides.sql
+npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0003_playlists_media_templates.sql
 ```
 
 `0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
-auto-status, og gir eksisterende skjermer et standard slide-oppsett. SQLite har
-ikke «ADD COLUMN IF NOT EXISTS» – har du alt kjørt den, feiler `ALTER`-linjene
-med «duplicate column name», og da er du allerede oppdatert.
+auto-status, og gir eksisterende skjermer et standard slide-oppsett. `0003`
+legger til spillelister, mediebibliotek og maler. SQLite har ikke «ADD COLUMN
+IF NOT EXISTS» – har du alt kjørt en migrering, feiler `ALTER`-linjene med
+«duplicate column name», og da er du allerede oppdatert.
+
+## Mediebibliotek (R2)
+
+Bilder lastes opp til en R2-bucket (binding `MEDIA` i `wrangler.jsonc`). Opprett
+den én gang:
+
+```bash
+npx wrangler r2 bucket create flatr-infoscreen-media
+```
+
+Uten bucketen fungerer resten av appen som normalt – Bibliotek-fanen viser bare
+en melding, og bilde-slides/sponsorer kan fortsatt bruke vanlige URL-er.
+`wrangler dev` simulerer R2 lokalt automatisk.
 
 Ad hoc:
 
@@ -108,6 +136,7 @@ på D1-bindingen `DB`.
 > `name` i `wrangler.jsonc` må være navnet på Worker-prosjektet i dashboardet.
 
 Manuelt: `npm run deploy`. Admin-token i prod: `npx wrangler secret put ADMIN_TOKEN`.
+For mediebibliotek: `npx wrangler r2 bucket create flatr-infoscreen-media` (én gang).
 
 ---
 
@@ -119,7 +148,11 @@ Under `/api`, rutet av `src/worker.js`. Skriveoperasjoner krever
 | Endepunkt | Metoder | Beskrivelse |
 | --- | --- | --- |
 | `/api/screens` | `GET POST PUT DELETE` | Skjermer + layout/rotasjon. `GET` gir `slide_count` + `online`. `POST {duplicate_of}` kloner. |
-| `/api/slides` | `GET POST PUT DELETE` | Slides pr. skjerm (`?screen=` / `?id=`). |
+| `/api/slides` | `GET POST PUT DELETE` | Slides pr. skjerm (`?screen=` / `?id=`). `playlist_id` gjør raden til en spilleliste-referanse. |
+| `/api/playlists` | `GET POST PUT DELETE` | Spillelister (`?id=` gir elementene). |
+| `/api/playlist-items` | `GET POST PUT DELETE` | Elementer i en spilleliste (`?playlist=` / `?id=`). |
+| `/api/media` | `GET POST DELETE` | Mediebibliotek. `POST` = rå fil-bytes (`?name=&type=`), `GET ?id=&raw=1` serverer fila. |
+| `/api/templates` | `GET POST DELETE` | Maler (`?kind=slide\|screen`). |
 | `/api/categories` | `GET POST PUT DELETE` | Kategorier (navn + farge). |
 | `/api/schedule` | `GET POST PUT DELETE` | Program (+ `category_id`, `auto_status`, utledet `effective_status`). |
 | `/api/sponsors` | `GET POST PUT DELETE` | Sponsorer. |
@@ -140,27 +173,32 @@ uten å endre klienten.
 ## Prosjektstruktur
 
 ```
-├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1 (DB)
+├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1 (DB) + R2 (MEDIA)
 ├── schema.sql                # fullt skjema + demo-data
-├── migrations/               # 0001_init, 0002_zones_categories_slides
+├── migrations/               # 0001_init · 0002_zones_categories_slides · 0003_playlists_media_templates
 └── src/
     ├── worker.js             # ruter /api/* + ASSETS-fallback
     ├── main.jsx
-    ├── api/                   # screens, slides, categories, schedule, sponsors,
+    ├── api/                   # screens, slides, playlists, playlistItems, media,
+    │                          #   templates, categories, schedule, sponsors,
     │                          #   alerts, heartbeat, state, stream, _shared
     ├── lib/{api,time,layouts,slides}.js
-    ├── hooks/{useNow,useWakeLock,useSSE,useOrientation,useSlideshow,useHeartbeat}.js
+    ├── hooks/{useNow,useWakeLock,useSSE,useOrientation,useSlideshow,useHeartbeat,useFitScale}.js
     ├── viewer/
-    │   ├── Viewer.jsx         # løser soner + monterer <Zone>
+    │   ├── Viewer.jsx         # skalert design-lerret, løser soner + monterer <Zone>
     │   ├── Zone.jsx           # kjører per-sone slideshow
-    │   ├── slides/            # SlideView + Program/Sponsor/Message/Clock/Image
+    │   ├── slides/            # SlideView + Program/Sponsor/Message/Clock/Image/Layout
     │   └── components/{SponsorCarousel,AlertOverlay}.jsx
     └── admin/
-        ├── Admin.jsx          # sidebar-nav (?view=), token
-        └── components/        # ui, Schedule-, Categories-, Sponsors-,
-                               #   Screens- (liste + editor + soner + slide-form),
-                               #   AlertsManager
+        ├── Admin.jsx          # sidebar-nav i seksjoner (?view=), token
+        └── components/        # ui, MediaPicker, slides/SlideForm, og *Manager for
+                               #   Schedule / Categories / Sponsors / Playlists /
+                               #   MediaLibrary / Templates / Screens / Alerts
 ```
+
+Buildstate løser spilleliste-referanser opp til de faktiske elementene, så
+Viewer trenger ingen kunnskap om spillelister – en sone får bare en flat liste
+slides.
 
 ## Viewer-detaljer
 

@@ -10,110 +10,71 @@ import {
   safeJson
 } from './_shared.js';
 
-const TYPES = ['program', 'sponsors', 'message', 'clock', 'image', 'layout', 'playlist'];
+const TYPES = ['program', 'sponsors', 'message', 'clock', 'image', 'layout'];
 const normType = (v) => (TYPES.includes(v) ? v : 'program');
-const normZone = (v) => {
-  const z = String(v || 'a')
-    .trim()
-    .toLowerCase();
-  return /^[a-z]$/.test(z) ? z : 'a';
-};
+const serializeConfig = (v) => JSON.stringify(safeJson(v, {}));
 
-function serializeConfig(value) {
-  const obj = safeJson(value, {});
-  return JSON.stringify(obj);
-}
-
-// GET /api/slides?screen=1   -> alle slides for én skjerm (ordnet)
-// GET /api/slides?id=5       -> én slide
+// GET /api/playlist-items?playlist=1
 export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const id = toIntOrNull(url.searchParams.get('id'));
-  const screen = toIntOrNull(url.searchParams.get('screen'));
-
-  if (id) {
-    const row = await env.DB.prepare('SELECT * FROM screen_slides WHERE id = ?').bind(id).first();
-    if (!row) return notFound('Slide finnes ikke');
-    return json({ ...row, config: safeJson(row.config, {}) });
-  }
-  if (!screen) return badRequest('screen eller id er påkrevd');
-
+  const playlist = toIntOrNull(new URL(request.url).searchParams.get('playlist'));
+  if (!playlist) return badRequest('playlist er påkrevd');
   const { results } = await env.DB
-    .prepare(
-      'SELECT * FROM screen_slides WHERE screen_id = ? ORDER BY zone ASC, position ASC, id ASC'
-    )
-    .bind(screen)
+    .prepare('SELECT * FROM playlist_items WHERE playlist_id = ? ORDER BY position ASC, id ASC')
+    .bind(playlist)
     .all();
   return json((results ?? []).map((r) => ({ ...r, config: safeJson(r.config, {}) })));
 }
 
-// POST /api/slides  { screen_id, zone?, type?, title?, duration_seconds?, config?, position? }
+// POST /api/playlist-items  { playlist_id, type?, title?, duration_seconds?, config?, position? }
 export async function onRequestPost(context) {
   const denied = requireAdmin(context);
   if (denied) return denied;
-
   const b = await readJson(context.request);
-  const screenId = toIntOrNull(b?.screen_id);
-  if (!screenId) return badRequest('screen_id er påkrevd');
+  const playlistId = toIntOrNull(b?.playlist_id);
+  if (!playlistId) return badRequest('playlist_id er påkrevd');
 
-  const screen = await context.env.DB
-    .prepare('SELECT id FROM screens WHERE id = ?')
-    .bind(screenId)
-    .first();
-  if (!screen) return notFound('Skjerm finnes ikke');
+  const pl = await context.env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(playlistId).first();
+  if (!pl) return notFound('Spilleliste finnes ikke');
 
-  const zone = normZone(b?.zone);
   let position = toIntOrNull(b?.position);
   if (position === null) {
     const max = await context.env.DB
-      .prepare('SELECT COALESCE(MAX(position), -1) AS m FROM screen_slides WHERE screen_id = ? AND zone = ?')
-      .bind(screenId, zone)
+      .prepare('SELECT COALESCE(MAX(position), -1) AS m FROM playlist_items WHERE playlist_id = ?')
+      .bind(playlistId)
       .first();
     position = (max?.m ?? -1) + 1;
   }
 
-  const playlistId = toIntOrNull(b?.playlist_id);
-  const type = playlistId ? 'playlist' : normType(b?.type);
-
   const row = await context.env.DB
     .prepare(
-      `INSERT INTO screen_slides (screen_id, zone, position, type, title, duration_seconds, enabled, config, playlist_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+      `INSERT INTO playlist_items (playlist_id, position, type, title, duration_seconds, enabled, config)
+       VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`
     )
     .bind(
-      screenId,
-      zone,
+      playlistId,
       position,
-      type,
+      normType(b?.type),
       b?.title ? String(b.title).trim() : null,
       Math.max(3, toIntOrNull(b?.duration_seconds) ?? 15),
       b?.enabled === false ? 0 : 1,
-      serializeConfig(b?.config),
-      playlistId
+      serializeConfig(b?.config)
     )
     .first();
   return json({ ...row, config: safeJson(row.config, {}) }, { status: 201 });
 }
 
-// PUT /api/slides?id=5  { ...felter }
+// PUT /api/playlist-items?id=1
 export async function onRequestPut(context) {
   const denied = requireAdmin(context);
   if (denied) return denied;
-
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
   const b = await readJson(context.request);
-  if (!b) return badRequest('ugyldig JSON');
-
-  const cur = await context.env.DB
-    .prepare('SELECT * FROM screen_slides WHERE id = ?')
-    .bind(id)
-    .first();
-  if (!cur) return notFound('Slide finnes ikke');
+  const cur = await context.env.DB.prepare('SELECT * FROM playlist_items WHERE id = ?').bind(id).first();
+  if (!cur) return notFound('Element finnes ikke');
 
   const merged = {
-    zone: b.zone !== undefined ? normZone(b.zone) : cur.zone,
     position: b.position !== undefined ? toIntOrNull(b.position) ?? cur.position : cur.position,
     type: b.type !== undefined ? normType(b.type) : cur.type,
     title: b.title !== undefined ? (b.title ? String(b.title).trim() : null) : cur.title,
@@ -127,12 +88,11 @@ export async function onRequestPut(context) {
 
   const row = await context.env.DB
     .prepare(
-      `UPDATE screen_slides
-          SET zone = ?, position = ?, type = ?, title = ?, duration_seconds = ?, enabled = ?, config = ?
+      `UPDATE playlist_items
+          SET position = ?, type = ?, title = ?, duration_seconds = ?, enabled = ?, config = ?
         WHERE id = ? RETURNING *`
     )
     .bind(
-      merged.zone,
       merged.position,
       merged.type,
       merged.title,
@@ -145,15 +105,13 @@ export async function onRequestPut(context) {
   return json({ ...row, config: safeJson(row.config, {}) });
 }
 
-// DELETE /api/slides?id=5
+// DELETE /api/playlist-items?id=1
 export async function onRequestDelete(context) {
   const denied = requireAdmin(context);
   if (denied) return denied;
-
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
-
-  await context.env.DB.prepare('DELETE FROM screen_slides WHERE id = ?').bind(id).run();
+  await context.env.DB.prepare('DELETE FROM playlist_items WHERE id = ?').bind(id).run();
   return noContent();
 }
 
