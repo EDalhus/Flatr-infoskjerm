@@ -27,7 +27,9 @@ neste programpost), `program` (filtrert på kategori / visning / maks / scene),
 `qr` (egen lenke eller skjermens programside), `video` (MP4/WebM eller
 YouTube/Vimeo), `web` (embed nettside), `sponsors`.
 
-**Bakgrunn** pr. lysbilde: ensfarget, gradient eller bilde.
+**Bakgrunn** pr. lysbilde: ensfarget, gradient, bilde eller **dynamisk**
+(animert – aurora / gradient / bølger / mesh, med egne farger og fart; ren
+CSS/SVG, lett på CPU).
 
 **Tidsstyring:** et lysbilde kan settes til å vises bare i et klokkeslett-vindu,
 på visse ukedager og/eller i et datointervall («Vises når»). Filtreres i Viewer

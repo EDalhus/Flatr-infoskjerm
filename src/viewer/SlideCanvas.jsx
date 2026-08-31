@@ -1,14 +1,17 @@
 import { backgroundStyle } from '../lib/deck.js';
 import ElementView from './ElementView.jsx';
+import DynamicBackground from './DynamicBackground.jsx';
 
 /** Ett lysbilde: bakgrunn + posisjonerte elementer (prosent av canvas). */
 export default function SlideCanvas({ slide, ctx, onNext }) {
   const elements = [...(slide.elements || [])].sort((a, b) => a.z - b.z || a.id - b.id);
+  const dyn = slide.background && slide.background.type === 'dynamic';
   return (
     <div
       className="absolute inset-0 overflow-hidden text-white"
       style={backgroundStyle(slide.background)}
     >
+      {dyn && <DynamicBackground bg={slide.background} />}
       {elements.map((el) => (
         <div
           key={el.id}

@@ -101,11 +101,36 @@ export const BACKGROUND_PRESETS = [
   { type: 'gradient', from: '#1f5566', to: '#0f2733', angle: 135 },
   { type: 'gradient', from: '#0ea5e9', to: '#1e3a8a', angle: 135 },
   { type: 'gradient', from: '#7c3aed', to: '#ec4899', angle: 135 },
-  { type: 'gradient', from: '#f59e0b', to: '#b91c1c', angle: 135 }
+  { type: 'gradient', from: '#f59e0b', to: '#b91c1c', angle: 135 },
+  { type: 'dynamic', preset: 'aurora', base: '#0a1a2f', colors: ['#34d399', '#22d3ee', '#3b82f6'] },
+  { type: 'dynamic', preset: 'gradient', colors: ['#7c3aed', '#ec4899', '#f59e0b'], angle: 130 },
+  { type: 'dynamic', preset: 'waves', base: '#0b1b34', colors: ['#22d3aa', '#0ea5e9', '#1e3a8a'] },
+  { type: 'dynamic', preset: 'mesh', base: '#0a0f1e', colors: ['#22d3ee', '#a855f7', '#f43f5e', '#34d399'] }
 ];
+
+export const DYNAMIC_PRESETS = [
+  { id: 'aurora', label: 'Aurora' },
+  { id: 'gradient', label: 'Gradient' },
+  { id: 'waves', label: 'Bølger' },
+  { id: 'mesh', label: 'Mesh' }
+];
+
+export function defaultDynamic(preset = 'aurora') {
+  return {
+    type: 'dynamic',
+    preset,
+    base: '#0a1a2f',
+    colors: ['#34d399', '#22d3ee', '#3b82f6'],
+    angle: 130,
+    speed: 1
+  };
+}
 
 export function backgroundStyle(bg) {
   const b = bg && typeof bg === 'object' ? bg : { type: 'color', color: '#0f2733' };
+  if (b.type === 'dynamic') {
+    return { backgroundColor: b.base || '#0a1a2f' };
+  }
   if (b.type === 'gradient') {
     return {
       backgroundImage: `linear-gradient(${b.angle ?? 135}deg, ${b.from || '#1f5566'}, ${b.to || '#0f2733'})`

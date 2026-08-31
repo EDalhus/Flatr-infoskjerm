@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { BASE_SIZE, backgroundStyle } from '../../../lib/deck.js';
 import { useFitScale } from '../../../hooks/useFitScale.js';
 import ElementView from '../../../viewer/ElementView.jsx';
+import DynamicBackground from '../../../viewer/DynamicBackground.jsx';
 import { usePreviewCtx } from './previewCtx.js';
 
 const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -249,6 +250,7 @@ export default function CanvasStage({
           ...backgroundStyle(slide?.background)
         }}
       >
+        {slide?.background?.type === 'dynamic' && <DynamicBackground bg={slide.background} />}
         {elements.map((el) => {
           const sel = el.id === selectedId;
           return (

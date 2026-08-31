@@ -1,9 +1,16 @@
-import { BACKGROUND_PRESETS, TRANSITIONS, ELEMENT_LABEL } from '../../../lib/deck.js';
-import { backgroundStyle } from '../../../lib/deck.js';
-import { Icon, Field, Input, Select, Button, ButtonGroup, ColorInput } from '../ui.jsx';
+import {
+  BACKGROUND_PRESETS,
+  DYNAMIC_PRESETS,
+  TRANSITIONS,
+  ELEMENT_LABEL,
+  backgroundStyle,
+  defaultDynamic
+} from '../../../lib/deck.js';
+import { Icon, Field, Input, Select, Button, ButtonGroup, ColorInput, Segmented } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
 import DaypartFields from '../DaypartFields.jsx';
 import ElementConfigFields from './ElementConfigFields.jsx';
+import DynamicBackground from '../../../viewer/DynamicBackground.jsx';
 
 const numRow = (el, set) => (
   <div className="grid grid-cols-4 gap-2">
@@ -120,22 +127,33 @@ function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate
 
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Bakgrunn</div>
-        <div className="mb-2 grid grid-cols-8 gap-1.5">
+        <div className="mb-2 grid grid-cols-6 gap-1.5">
           {BACKGROUND_PRESETS.map((p, i) => (
             <button
               key={i}
               type="button"
               onClick={() => set({ background: p })}
-              className="h-8 w-full rounded-lg border border-line"
-              style={backgroundStyle(p)}
-            />
+              className="relative h-8 w-full overflow-hidden rounded-lg border border-line"
+              style={p.type === 'dynamic' ? { background: p.base || '#0a1a2f' } : backgroundStyle(p)}
+            >
+              {p.type === 'dynamic' && <DynamicBackground bg={p} />}
+            </button>
           ))}
         </div>
-        <Select value={bg.type} onChange={(e) => setBg({ type: e.target.value })}>
+        <Select
+          value={bg.type}
+          onChange={(e) =>
+            e.target.value === 'dynamic'
+              ? set({ background: defaultDynamic() })
+              : setBg({ type: e.target.value })
+          }
+        >
           <option value="color">Ensfarget</option>
           <option value="gradient">Gradient</option>
           <option value="image">Bilde</option>
+          <option value="dynamic">Dynamisk</option>
         </Select>
+
         {bg.type === 'color' && (
           <ColorInput
             className="mt-2"
@@ -155,6 +173,54 @@ function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate
                 value={bg.angle ?? 135}
                 onChange={(e) => setBg({ angle: Number(e.target.value) || 0 })}
               />
+            </label>
+          </div>
+        )}
+        {bg.type === 'dynamic' && (
+          <div className="mt-2 space-y-2">
+            <div className="relative h-24 overflow-hidden rounded-lg border border-line">
+              <DynamicBackground bg={bg} />
+            </div>
+            <Segmented
+              value={bg.preset || 'aurora'}
+              onChange={(v) => setBg({ preset: v })}
+              options={DYNAMIC_PRESETS.map((p) => ({ value: p.id, label: p.label }))}
+            />
+            <div className="grid grid-cols-3 gap-2">
+              {[0, 1, 2].map((idx) => (
+                <ColorInput
+                  key={idx}
+                  value={(bg.colors && bg.colors[idx]) || '#34d399'}
+                  onChange={(e) => {
+                    const colors = [...(bg.colors || ['#34d399', '#22d3ee', '#3b82f6'])];
+                    colors[idx] = e.target.value;
+                    setBg({ colors });
+                  }}
+                />
+              ))}
+            </div>
+            {bg.preset !== 'gradient' && (
+              <label className="flex items-center gap-2 text-xs text-muted">
+                Basefarge
+                <ColorInput
+                  className="flex-1"
+                  value={bg.base || '#0a1a2f'}
+                  onChange={(e) => setBg({ base: e.target.value })}
+                />
+              </label>
+            )}
+            <label className="flex items-center gap-2 text-xs text-muted">
+              Fart
+              <input
+                type="range"
+                min="0.3"
+                max="2.5"
+                step="0.1"
+                value={bg.speed ?? 1}
+                onChange={(e) => setBg({ speed: Number(e.target.value) })}
+                className="flex-1 accent-brand"
+              />
+              <span className="w-8 text-right tabular-nums">{(bg.speed ?? 1).toFixed(1)}×</span>
             </label>
           </div>
         )}

@@ -45,3 +45,48 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Dynamiske bakgrunner */
+@keyframes bgDrift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+@keyframes waveSlide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-25%);
+  }
+}
+@keyframes blobFloat1 {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(7%, 5%) scale(1.18);
+  }
+}
+@keyframes blobFloat2 {
+  from {
+    transform: translate(0, 0) scale(1.06);
+  }
+  to {
+    transform: translate(-6%, 7%) scale(0.92);
+  }
+}
+@keyframes blobFloat3 {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(5%, -6%) scale(1.12);
+  }
+}
