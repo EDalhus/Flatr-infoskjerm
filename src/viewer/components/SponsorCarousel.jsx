@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+/** Roterer sponsorlogoer – kun bildet, ingen ramme, ingen tekst. */
 export default function SponsorCarousel({ sponsors }) {
   const [index, setIndex] = useState(0);
 
@@ -17,40 +18,21 @@ export default function SponsorCarousel({ sponsors }) {
 
   if (sponsors.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl border border-hair bg-card text-muted shadow-card">
+      <div className="flex h-full w-full items-center justify-center text-current opacity-40">
         Ingen sponsorer
       </div>
     );
   }
 
   const sponsor = sponsors[index % sponsors.length];
-
   return (
-    <div className="flex flex-1 flex-col rounded-2xl border border-hair bg-card p-4 shadow-card">
-      <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-muted">
-        Takk til våre sponsorer
-      </div>
-      <div className="flex flex-1 items-center justify-center overflow-hidden">
-        <img
-          key={sponsor.id}
-          src={sponsor.image_url}
-          alt={sponsor.name}
-          className="max-h-full max-w-full animate-fade-in object-contain"
-        />
-      </div>
-      <div className="mt-2 text-center text-sm font-semibold text-ink">{sponsor.name}</div>
-      {sponsors.length > 1 && (
-        <div className="mt-2 flex justify-center gap-1.5">
-          {sponsors.map((s, i) => (
-            <span
-              key={s.id}
-              className={`h-1.5 w-1.5 rounded-full ${
-                i === index % sponsors.length ? 'bg-brand' : 'bg-hair'
-              }`}
-            />
-          ))}
-        </div>
-      )}
+    <div className="flex h-full w-full items-center justify-center overflow-hidden">
+      <img
+        key={sponsor.id}
+        src={sponsor.image_url}
+        alt={sponsor.name}
+        className="max-h-full max-w-full animate-fade-in object-contain"
+      />
     </div>
   );
 }
