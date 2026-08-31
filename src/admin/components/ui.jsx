@@ -88,6 +88,12 @@ const ICONS = {
   alignCenter: <path d="M4 6h16M7 12h10M5 18h14" />,
   alignRight: <path d="M4 6h16M10 12h10M7 18h13" />,
   alignJustify: <path d="M4 6h16M4 12h16M4 18h16" />,
+  shadow: (
+    <>
+      <rect x="4" y="4" width="12" height="12" rx="2" />
+      <path d="M9 20h9a2 2 0 0 0 2-2V9" opacity="0.5" />
+    </>
+  ),
   eye: (
     <>
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
@@ -119,7 +125,7 @@ export function Button({ variant = 'primary', size = 'md', className = '', ...pr
   const base =
     'inline-flex items-center justify-center gap-2 font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none';
   const sizes = {
-    sm: 'rounded-lg px-3 py-1.5 text-xs uppercase tracking-[0.08em]',
+    sm: 'h-9 rounded-lg px-3 text-xs uppercase tracking-[0.08em]',
     md: 'rounded-full px-4 py-2 text-sm'
   };
   const variants = {
@@ -150,19 +156,36 @@ export function IconButton({ name, label, tone = 'muted', className = '', ...pro
   );
 }
 
-const inputBase =
-  'w-full rounded-lg border border-line bg-white px-3 py-2 text-ink placeholder:text-muted/70 ' +
-  'focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20';
+// Felles: 36px høyde, rounded-lg, samme kant/fokus overalt.
+const CONTROL = 'h-9 rounded-lg border border-line bg-white text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20';
+const inputBase = `w-full ${CONTROL} px-3 text-sm placeholder:text-muted/70`;
 
 export const Input = forwardRef(function Input({ className = '', ...props }, ref) {
   return <input ref={ref} {...props} className={`${inputBase} ${className}`} />;
 });
 export const Textarea = forwardRef(function Textarea({ className = '', ...props }, ref) {
-  return <textarea ref={ref} {...props} className={`${inputBase} ${className}`} />;
+  return (
+    <textarea
+      ref={ref}
+      {...props}
+      className={`w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 ${className}`}
+    />
+  );
 });
 export const Select = forwardRef(function Select({ className = '', ...props }, ref) {
   return <select ref={ref} {...props} className={`${inputBase} ${className}`} />;
 });
+
+/** Fargevelger med samme høyde/kant som resten. */
+export function ColorInput({ className = '', ...props }) {
+  return (
+    <input
+      type="color"
+      {...props}
+      className={`h-9 w-full cursor-pointer rounded-lg border border-line bg-white p-1 ${className}`}
+    />
+  );
+}
 
 export function Field({ label, children, hint }) {
   return (
@@ -294,10 +317,12 @@ export function MetaValue({ children }) {
   );
 }
 
-/** Segmentert knapperad. options: [{ value, label?, icon? }] */
+const cell = 'flex flex-1 items-center justify-center gap-1 px-2 text-xs font-semibold transition-colors';
+
+/** Segmentert valg (eksklusivt). options: [{ value, label?, icon? }] */
 export function Segmented({ value, onChange, options, className = '' }) {
   return (
-    <div className={`flex overflow-hidden rounded-lg border border-line ${className}`}>
+    <div className={`flex h-9 overflow-hidden rounded-lg border border-line ${className}`}>
       {options.map((o, i) => {
         const active = value === o.value;
         return (
@@ -305,11 +330,11 @@ export function Segmented({ value, onChange, options, className = '' }) {
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
-            className={`flex flex-1 items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold ${
-              i > 0 ? 'border-l border-line' : ''
-            } ${active ? 'bg-brand text-white' : 'bg-card text-muted hover:bg-hair'}`}
+            className={`${cell} ${i > 0 ? 'border-l border-line' : ''} ${
+              active ? 'bg-brand text-white' : 'bg-white text-muted hover:bg-hair'
+            }`}
           >
-            {o.icon ? <Icon name={o.icon} className="h-3.5 w-3.5" /> : o.label}
+            {o.icon ? <Icon name={o.icon} className="h-4 w-4" /> : o.label}
           </button>
         );
       })}
@@ -317,17 +342,26 @@ export function Segmented({ value, onChange, options, className = '' }) {
   );
 }
 
-/** På/av-knapp til B/I/U/S. */
-export function ToggleButton({ active, onClick, children, className = '' }) {
+/**
+ * Sammenkoblet knapperad. items: [{ key, label?, icon?, active?, onClick, title? }]
+ * Hver celle har egen aktiv-status (toggles) eller er bare en handling.
+ */
+export function ButtonGroup({ items, className = '' }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`grid h-8 w-8 place-items-center rounded-lg border text-sm font-bold ${
-        active ? 'border-brand bg-brand text-white' : 'border-line bg-card text-muted hover:bg-hair'
-      } ${className}`}
-    >
-      {children}
-    </button>
+    <div className={`flex h-9 overflow-hidden rounded-lg border border-line ${className}`}>
+      {items.map((it, i) => (
+        <button
+          key={it.key}
+          type="button"
+          title={it.title}
+          onClick={it.onClick}
+          className={`${cell} ${i > 0 ? 'border-l border-line' : ''} ${
+            it.active ? 'bg-brand text-white' : 'bg-white text-muted hover:bg-hair'
+          }`}
+        >
+          {it.icon ? <Icon name={it.icon} className="h-4 w-4" /> : it.label}
+        </button>
+      ))}
+    </div>
   );
 }

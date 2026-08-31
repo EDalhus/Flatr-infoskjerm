@@ -1,6 +1,6 @@
 import { BACKGROUND_PRESETS, TRANSITIONS, ELEMENT_LABEL } from '../../../lib/deck.js';
 import { backgroundStyle } from '../../../lib/deck.js';
-import { Icon, Field, Input, Select, Button } from '../ui.jsx';
+import { Icon, Field, Input, Select, Button, ButtonGroup, ColorInput } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
 import DaypartFields from '../DaypartFields.jsx';
 import ElementConfigFields from './ElementConfigFields.jsx';
@@ -8,13 +8,13 @@ import ElementConfigFields from './ElementConfigFields.jsx';
 const numRow = (el, set) => (
   <div className="grid grid-cols-4 gap-2">
     {['x', 'y', 'w', 'h'].map((k) => (
-      <label key={k} className="text-xs text-muted">
-        {k.toUpperCase()} %
-        <input
+      <label key={k} className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+        {k} %
+        <Input
           type="number"
+          className="mt-1"
           value={Math.round((el[k] ?? 0) * 10) / 10}
           onChange={(e) => set({ [k]: Number(e.target.value) })}
-          className="mt-0.5 w-full rounded border border-line bg-white px-1.5 py-1 text-ink"
         />
       </label>
     ))}
@@ -42,21 +42,24 @@ function ElementInspector({ element, categories, onChange, onDelete, onZ }) {
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Plassering</div>
         {numRow(element, set)}
-        <div className="mt-2 flex items-center gap-2">
-          <label className="flex-1 text-xs text-muted">
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wide text-muted">
             Rotasjon °
             <Input
               type="number"
+              className="mt-1"
               value={element.rotation || 0}
               onChange={(e) => set({ rotation: Number(e.target.value) || 0 })}
             />
           </label>
-          <Button size="sm" variant="outline" onClick={() => onZ(element.id, 1)}>
-            Forrest
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => onZ(element.id, -1)}>
-            Bakerst
-          </Button>
+          <div className="flex flex-col justify-end">
+            <ButtonGroup
+              items={[
+                { key: 'front', label: 'Forrest', onClick: () => onZ(element.id, 1) },
+                { key: 'back', label: 'Bakerst', onClick: () => onZ(element.id, -1) }
+              ]}
+            />
+          </div>
         </div>
       </div>
 
@@ -117,13 +120,13 @@ function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate
 
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Bakgrunn</div>
-        <div className="mb-2 flex flex-wrap gap-1.5">
+        <div className="mb-2 grid grid-cols-8 gap-1.5">
           {BACKGROUND_PRESETS.map((p, i) => (
             <button
               key={i}
               type="button"
               onClick={() => set({ background: p })}
-              className="h-8 w-8 rounded-md border border-line"
+              className="h-8 w-full rounded-lg border border-line"
               style={backgroundStyle(p)}
             />
           ))}
@@ -134,31 +137,21 @@ function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate
           <option value="image">Bilde</option>
         </Select>
         {bg.type === 'color' && (
-          <input
-            type="color"
+          <ColorInput
+            className="mt-2"
             value={bg.color || '#0f2733'}
             onChange={(e) => setBg({ color: e.target.value })}
-            className="mt-2 h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
           />
         )}
         {bg.type === 'gradient' && (
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <input
-              type="color"
-              value={bg.from || '#1f5566'}
-              onChange={(e) => setBg({ from: e.target.value })}
-              className="h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
-            />
-            <input
-              type="color"
-              value={bg.to || '#0f2733'}
-              onChange={(e) => setBg({ to: e.target.value })}
-              className="h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
-            />
-            <label className="col-span-2 text-xs text-muted">
+            <ColorInput value={bg.from || '#1f5566'} onChange={(e) => setBg({ from: e.target.value })} />
+            <ColorInput value={bg.to || '#0f2733'} onChange={(e) => setBg({ to: e.target.value })} />
+            <label className="col-span-2 flex items-center gap-2 text-xs text-muted">
               Vinkel °
               <Input
                 type="number"
+                className="flex-1"
                 value={bg.angle ?? 135}
                 onChange={(e) => setBg({ angle: Number(e.target.value) || 0 })}
               />
@@ -193,15 +186,17 @@ function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate
         />
       </div>
 
-      <div className="flex flex-wrap gap-2 border-t border-hair pt-3">
-        <Button size="sm" variant="outline" onClick={() => onDuplicate(slide.id)}>
-          <Icon name="copy" className="h-3.5 w-3.5" />
-          Dupliser
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => onSaveTemplate(slide)}>
-          Lagre som mal
-        </Button>
-        <Button size="sm" variant="danger" onClick={() => onDelete(slide.id)}>
+      <div className="space-y-2 border-t border-hair pt-3">
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="sm" variant="outline" onClick={() => onDuplicate(slide.id)}>
+            <Icon name="copy" className="h-3.5 w-3.5" />
+            Dupliser
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onSaveTemplate(slide)}>
+            Lagre som mal
+          </Button>
+        </div>
+        <Button size="sm" variant="danger" className="w-full" onClick={() => onDelete(slide.id)}>
           Slett lysbilde
         </Button>
       </div>

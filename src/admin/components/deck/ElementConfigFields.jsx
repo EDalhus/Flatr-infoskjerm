@@ -1,7 +1,7 @@
 import { PROGRAM_MODES, MESSAGE_EMPHASIS } from '../../../lib/slides.js';
 import { FONTS, FONT_WEIGHTS } from '../../../lib/deck.js';
 import { isoToLocalInput, localInputToIso } from '../../../lib/time.js';
-import { Field, Input, Select, Textarea, Segmented, ToggleButton } from '../ui.jsx';
+import { Field, Input, Select, Textarea, Segmented, ButtonGroup, ColorInput } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
 
 const Check = ({ label, checked, onChange }) => (
@@ -58,29 +58,17 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
           </Field>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <ToggleButton
-            active={(c.weight ?? 700) >= 700}
-            onClick={() => set({ weight: (c.weight ?? 700) >= 700 ? 400 : 700 })}
-          >
-            B
-          </ToggleButton>
-          <ToggleButton active={!!c.italic} onClick={() => set({ italic: !c.italic })}>
-            <span className="italic">I</span>
-          </ToggleButton>
-          <ToggleButton active={!!c.underline} onClick={() => set({ underline: !c.underline })}>
-            <span className="underline">U</span>
-          </ToggleButton>
-          <ToggleButton active={!!c.strike} onClick={() => set({ strike: !c.strike })}>
-            <span className="line-through">S</span>
-          </ToggleButton>
-          <ToggleButton active={!!c.shadow} onClick={() => set({ shadow: !c.shadow })} className="ml-auto">
-            <span className="text-[10px]">skygge</span>
-          </ToggleButton>
-        </div>
+        <ButtonGroup
+          items={[
+            { key: 'b', label: 'B', title: 'Fet', active: (c.weight ?? 700) >= 700, onClick: () => set({ weight: (c.weight ?? 700) >= 700 ? 400 : 700 }) },
+            { key: 'i', label: <span className="italic">I</span>, title: 'Kursiv', active: !!c.italic, onClick: () => set({ italic: !c.italic }) },
+            { key: 'u', label: <span className="underline">U</span>, title: 'Understrek', active: !!c.underline, onClick: () => set({ underline: !c.underline }) },
+            { key: 's', label: <span className="line-through">S</span>, title: 'Gjennomstrek', active: !!c.strike, onClick: () => set({ strike: !c.strike }) },
+            { key: 'sh', icon: 'shadow', title: 'Skygge', active: !!c.shadow, onClick: () => set({ shadow: !c.shadow }) }
+          ]}
+        />
 
-        <div>
-          <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Fyll</div>
+        <Field label="Fyll">
           <Segmented
             value={fill ? 'gradient' : 'solid'}
             onChange={(v) =>
@@ -97,41 +85,28 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
           />
           {fill ? (
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <input
-                type="color"
-                value={fill.from}
-                onChange={(e) => set({ fill: { ...fill, from: e.target.value } })}
-                className="h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
-              />
-              <input
-                type="color"
-                value={fill.to}
-                onChange={(e) => set({ fill: { ...fill, to: e.target.value } })}
-                className="h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
-              />
-              <label className="col-span-2 text-xs text-muted">
+              <ColorInput value={fill.from} onChange={(e) => set({ fill: { ...fill, from: e.target.value } })} />
+              <ColorInput value={fill.to} onChange={(e) => set({ fill: { ...fill, to: e.target.value } })} />
+              <label className="col-span-2 flex items-center gap-2 text-xs text-muted">
                 Vinkel °
                 <Input
                   type="number"
+                  className="flex-1"
                   value={fill.angle ?? 294}
                   onChange={(e) => set({ fill: { ...fill, angle: Number(e.target.value) || 0 } })}
                 />
               </label>
             </div>
           ) : (
-            <input
-              type="color"
+            <ColorInput
+              className="mt-2"
               value={c.color || '#ffffff'}
               onChange={(e) => set({ color: e.target.value })}
-              className="mt-2 h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
             />
           )}
-        </div>
+        </Field>
 
-        <div>
-          <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-            Justering
-          </div>
+        <Field label="Justering">
           <Segmented
             value={c.align || 'left'}
             onChange={(v) => set({ align: v })}
@@ -152,7 +127,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
               { value: 'bottom', label: 'Bunn' }
             ]}
           />
-        </div>
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Linjeavstand">
@@ -212,12 +187,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
           </Select>
         </Field>
         <Field label="Farge">
-          <input
-            type="color"
-            value={c.fill || '#1f5566'}
-            onChange={(e) => set({ fill: e.target.value })}
-            className="h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
-          />
+          <ColorInput value={c.fill || '#1f5566'} onChange={(e) => set({ fill: e.target.value })} />
         </Field>
         <Field label="Hjørnerundng (px)">
           <Input
