@@ -21,7 +21,7 @@ body {
   cursor: none;
 }
 
-@keyframes deckFade {
+@keyframes deckFadeIn {
   from {
     opacity: 0;
   }
@@ -29,7 +29,15 @@ body {
     opacity: 1;
   }
 }
-@keyframes deckPushLeft {
+@keyframes deckFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes deckPushInLeft {
   from {
     transform: translateX(100%);
   }
@@ -37,12 +45,28 @@ body {
     transform: translateX(0);
   }
 }
-@keyframes deckPushUp {
+@keyframes deckPushOutLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes deckPushInUp {
   from {
     transform: translateY(100%);
   }
   to {
     transform: translateY(0);
+  }
+}
+@keyframes deckPushOutUp {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
   }
 }
 
