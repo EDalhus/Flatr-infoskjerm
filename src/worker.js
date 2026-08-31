@@ -6,13 +6,13 @@
 //   SPA-fallback via assets.not_found_handling i wrangler.jsonc.
 
 import * as screens from './api/screens.js';
+import * as deck from './api/deck.js';
+import * as deckSlides from './api/deckSlides.js';
+import * as deckElements from './api/deckElements.js';
 import * as schedule from './api/schedule.js';
 import * as sponsors from './api/sponsors.js';
 import * as alerts from './api/alerts.js';
 import * as categories from './api/categories.js';
-import * as slides from './api/slides.js';
-import * as playlists from './api/playlists.js';
-import * as playlistItems from './api/playlistItems.js';
 import * as media from './api/media.js';
 import * as templates from './api/templates.js';
 import * as trash from './api/trash.js';
@@ -23,13 +23,13 @@ import * as stream from './api/stream.js';
 
 const ROUTES = {
   '/api/screens': screens,
+  '/api/deck': deck,
+  '/api/deck-slides': deckSlides,
+  '/api/deck-elements': deckElements,
   '/api/schedule': schedule,
   '/api/sponsors': sponsors,
   '/api/alerts': alerts,
   '/api/categories': categories,
-  '/api/slides': slides,
-  '/api/playlists': playlists,
-  '/api/playlist-items': playlistItems,
   '/api/media': media,
   '/api/templates': templates,
   '/api/trash': trash,

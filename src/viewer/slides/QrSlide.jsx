@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import qrcode from 'qrcode-generator';
-import SlideFrame from './SlideFrame.jsx';
+import { Frame } from './SlideFrame.jsx';
 
-export default function QrSlide({ slide, ctx }) {
+export default function QrSlide({ slide, ctx, chromeless }) {
   const cfg = slide.config || {};
+  const bare = chromeless || cfg.frame === false;
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const target =
     cfg.mode === 'schedule' ? `${origin}/s/${ctx?.screenId ?? ''}` : cfg.url || '';
@@ -21,26 +22,32 @@ export default function QrSlide({ slide, ctx }) {
   }, [target]);
 
   return (
-    <SlideFrame title={slide.title || null}>
-      <div className="flex h-full w-full flex-col items-center justify-center gap-6">
+    <Frame chromeless={bare} title={bare ? null : slide.title || null}>
+      <div
+        className="flex h-full w-full flex-col items-center justify-center gap-[4%] text-ink"
+        style={{ containerType: 'size' }}
+      >
         {dataUrl ? (
           <img
             src={dataUrl}
             alt="QR-kode"
-            className="h-[62%] max-h-full w-auto rounded-2xl bg-white p-4 shadow-card"
+            className="min-h-0 flex-1 rounded-xl bg-white p-[3%]"
+            style={{ objectFit: 'contain', width: 'auto', maxWidth: '100%' }}
           />
         ) : (
           <div className="text-muted">Mangler lenke</div>
         )}
         {cfg.label && (
-          <div className="text-center text-4xl font-extrabold text-ink portrait:text-3xl">
+          <div className="text-center font-extrabold" style={{ fontSize: '9cqmin' }}>
             {cfg.label}
           </div>
         )}
         {cfg.caption && (
-          <div className="text-center text-2xl text-muted portrait:text-xl">{cfg.caption}</div>
+          <div className="text-center text-muted" style={{ fontSize: '6cqmin' }}>
+            {cfg.caption}
+          </div>
         )}
       </div>
-    </SlideFrame>
+    </Frame>
   );
 }

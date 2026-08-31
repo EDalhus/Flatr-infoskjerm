@@ -56,21 +56,20 @@ export const api = {
   schedule: crud('schedule'),
   sponsors: crud('sponsors'),
   categories: crud('categories'),
-  slides: {
-    list: (screenId) => req(`/slides?screen=${encodeURIComponent(screenId)}`),
-    create: (body) => req('/slides', { method: 'POST', body }),
-    update: (id, body) => req(`/slides?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
-    remove: (id) => req(`/slides?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-  },
-  playlists: {
-    ...crud('playlists'),
-    get: (id) => req(`/playlists?id=${encodeURIComponent(id)}`)
-  },
-  playlistItems: {
-    list: (playlistId) => req(`/playlist-items?playlist=${encodeURIComponent(playlistId)}`),
-    create: (body) => req('/playlist-items', { method: 'POST', body }),
-    update: (id, body) => req(`/playlist-items?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
-    remove: (id) => req(`/playlist-items?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  deck: {
+    get: (screenId) => req(`/deck?screen=${encodeURIComponent(screenId)}`),
+    slide: {
+      get: (id) => req(`/deck-slides?id=${encodeURIComponent(id)}`),
+      create: (body) => req('/deck-slides', { method: 'POST', body }),
+      update: (id, body) => req(`/deck-slides?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+      remove: (id) => req(`/deck-slides?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+      duplicate: (id) => req('/deck-slides', { method: 'POST', body: { duplicate_of: id } })
+    },
+    element: {
+      create: (body) => req('/deck-elements', { method: 'POST', body }),
+      update: (id, body) => req(`/deck-elements?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+      remove: (id) => req(`/deck-elements?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    }
   },
   templates: {
     list: (kind) => req(`/templates${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`),

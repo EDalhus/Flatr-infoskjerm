@@ -14,11 +14,10 @@ const TABLE = {
   sponsor: 'sponsors',
   category: 'categories',
   template: 'templates',
-  screen_slide: 'screen_slides',
-  playlist_item: 'playlist_items',
   media: 'media',
-  screen: 'screens',
-  playlist: 'playlists'
+  deck_element: 'deck_elements',
+  screen_slide: 'screen_slides',
+  playlist_item: 'playlist_items'
 };
 
 const KIND_LABEL = {
@@ -26,11 +25,12 @@ const KIND_LABEL = {
   sponsor: 'Sponsor',
   category: 'Kategori',
   template: 'Mal',
-  screen_slide: 'Slide',
-  playlist_item: 'Spilleliste-element',
   media: 'Mediefil',
+  deck_slide: 'Lysbilde',
+  deck_element: 'Widget',
   screen: 'Skjerm',
-  playlist: 'Spilleliste'
+  screen_slide: 'Slide (gammel)',
+  playlist_item: 'Spilleliste-element (gammel)'
 };
 
 async function insertRow(env, table, row, keepId) {
@@ -49,25 +49,68 @@ async function tryInsert(env, table, row) {
 }
 
 async function restoreEntry(env, kind, payload) {
-  const table = TABLE[kind];
-  if (!table) return;
-
-  if (kind === 'screen' || kind === 'playlist') {
-    const childTable = kind === 'screen' ? 'screen_slides' : 'playlist_items';
-    const fk = kind === 'screen' ? 'screen_id' : 'playlist_id';
-    const children = kind === 'screen' ? payload.slides : payload.items;
-    const newId = await tryInsert(env, table, payload.row);
-    for (const ch of children || []) {
-      const c = { ...ch, [fk]: newId };
+  // Skjerm: gjenopprett skjerm → lysbilder → elementer, med nye id-er.
+  if (kind === 'screen') {
+    const newScreenId = await tryInsert(env, 'screens', payload.row);
+    const slideIdMap = {};
+    for (const s of payload.slides || []) {
+      const c = { ...s, screen_id: newScreenId };
+      const oldId = c.id;
       delete c.id;
       try {
-        await insertRow(env, childTable, c, false);
+        slideIdMap[oldId] = await insertRow(env, 'deck_slides', c, false);
       } catch {
-        /* barn med brutt referanse hoppes over */
+        /* hopp over */
+      }
+    }
+    for (const e of payload.elements || []) {
+      const ns = slideIdMap[e.slide_id];
+      if (!ns) continue;
+      const c = { ...e, slide_id: ns };
+      delete c.id;
+      try {
+        await insertRow(env, 'deck_elements', c, false);
+      } catch {
+        /* hopp over */
       }
     }
     return;
   }
+
+  // Lysbilde: gjenopprett lysbildet + elementene sine.
+  if (kind === 'deck_slide') {
+    const c = { ...payload.row };
+    delete c.id;
+    const newId = await tryInsert(env, 'deck_slides', c);
+    for (const e of payload.elements || []) {
+      const ec = { ...e, slide_id: newId };
+      delete ec.id;
+      try {
+        await insertRow(env, 'deck_elements', ec, false);
+      } catch {
+        /* hopp over */
+      }
+    }
+    return;
+  }
+
+  // Historikk-modell (sone-slides / spillelister)
+  if (kind === 'playlist') {
+    const newId = await tryInsert(env, 'playlists', payload.row);
+    for (const ch of payload.items || []) {
+      const c = { ...ch, playlist_id: newId };
+      delete c.id;
+      try {
+        await insertRow(env, 'playlist_items', c, false);
+      } catch {
+        /* hopp over */
+      }
+    }
+    return;
+  }
+
+  const table = TABLE[kind];
+  if (!table) return;
   await tryInsert(env, table, payload.row);
 }
 

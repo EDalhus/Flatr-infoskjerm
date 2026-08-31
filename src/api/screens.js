@@ -11,161 +11,160 @@ import {
   moveToTrash
 } from './_shared.js';
 
-const LAYOUTS = ['solo', 'main-side', 'split', 'thirds', 'custom'];
-const normLayout = (v, fallback = 'main-side') => (LAYOUTS.includes(v) ? v : fallback);
 const ONLINE_MS = 90_000;
+const normOrientation = (v, f = 'landscape') => (v === 'portrait' ? 'portrait' : f);
 
 function decorate(row) {
   return {
     ...row,
-    custom_layout: safeJson(row.custom_layout, null),
     online: row.last_seen ? Date.now() - Date.parse(row.last_seen) < ONLINE_MS : false
   };
 }
 
-const DEFAULT_SLIDES = [
-  ['a', 0, 'program', 'Program', 20, '{"mode":"agenda","categoryIds":[],"max":10,"showCategory":true}'],
-  ['b', 0, 'clock', 'Klokke', 10, '{"showDate":true,"showSeconds":false}'],
-  ['b', 1, 'sponsors', 'Sponsorer', 15, '{}']
-];
+const COUNT = `(SELECT COUNT(*) FROM deck_slides d WHERE d.screen_id = s.id) AS slide_count`;
 
-async function seedDefaultSlides(env, screenId) {
-  const stmt = env.DB.prepare(
-    `INSERT INTO screen_slides (screen_id, zone, position, type, title, duration_seconds, config)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  );
-  await env.DB.batch(
-    DEFAULT_SLIDES.map(([zone, pos, type, title, dur, cfg]) =>
-      stmt.bind(screenId, zone, pos, type, title, dur, cfg)
+async function seedFirstSlide(env, screenId) {
+  const slide = await env.DB
+    .prepare(
+      `INSERT INTO deck_slides (screen_id, position, name, duration_seconds, background)
+       VALUES (?, 0, 'Lysbilde 1', 15, '{"type":"gradient","from":"#1f5566","to":"#0f2733","angle":135}') RETURNING id`
     )
-  );
+    .bind(screenId)
+    .first();
+  await env.DB
+    .prepare(
+      `INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, config)
+       VALUES (?, 0, 'text', 8, 40, 84, 20, '{"text":"Ny skjerm","size":96,"weight":800,"align":"center","color":"#ffffff"}')`
+    )
+    .bind(slide.id)
+    .run();
 }
 
-// GET /api/screens        -> alle skjermer (med slide_count + online)
-// GET /api/screens?id=1   -> én skjerm
+// GET /api/screens        -> alle (med slide_count + online)
+// GET /api/screens?id=1   -> én
 export async function onRequestGet({ request, env }) {
   const id = toIntOrNull(new URL(request.url).searchParams.get('id'));
 
   if (id) {
     const row = await env.DB
-      .prepare(
-        `SELECT s.*, (SELECT COUNT(*) FROM screen_slides w WHERE w.screen_id = s.id) AS slide_count
-           FROM screens s WHERE s.id = ?`
-      )
+      .prepare(`SELECT s.*, ${COUNT} FROM screens s WHERE s.id = ?`)
       .bind(id)
       .first();
     return row ? json(decorate(row)) : notFound('Skjerm finnes ikke');
   }
-
   const { results } = await env.DB
-    .prepare(
-      `SELECT s.*, (SELECT COUNT(*) FROM screen_slides w WHERE w.screen_id = s.id) AS slide_count
-         FROM screens s ORDER BY s.name ASC`
-    )
+    .prepare(`SELECT s.*, ${COUNT} FROM screens s ORDER BY s.name ASC`)
     .all();
   return json((results ?? []).map(decorate));
 }
 
 // POST /api/screens
-//   { name, location?, layout? }              -> ny skjerm (+ standard slides)
-//   { duplicate_of: <id>, name? }             -> klon skjerm inkl. alle slides
+//   { name, location?, orientation? }   -> ny skjerm (+ ett tomt lysbilde)
+//   { duplicate_of, name? }             -> klon skjerm inkl. alle lysbilder/elementer
 export async function onRequestPost(context) {
   const denied = requireAdmin(context);
   if (denied) return denied;
-
+  const env = context.env;
   const b = await readJson(context.request);
   const cloneId = toIntOrNull(b?.duplicate_of);
 
   if (cloneId) {
-    const src = await context.env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(cloneId).first();
+    const src = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(cloneId).first();
     if (!src) return notFound('Skjerm å kopiere finnes ikke');
 
-    const copy = await context.env.DB
+    const copy = await env.DB
       .prepare(
-        `INSERT INTO screens (name, location, layout, custom_layout, rotation_seconds)
-         VALUES (?, ?, ?, ?, ?) RETURNING *`
+        `INSERT INTO screens (name, location, orientation, rotation_seconds) VALUES (?, ?, ?, ?) RETURNING *`
       )
       .bind(
         b?.name ? String(b.name).trim() : `${src.name} (kopi)`,
         src.location,
-        src.layout,
-        src.custom_layout,
+        src.orientation,
         src.rotation_seconds
       )
       .first();
 
-    const { results: slides } = await context.env.DB
-      .prepare('SELECT * FROM screen_slides WHERE screen_id = ?')
+    const { results: slides } = await env.DB
+      .prepare('SELECT * FROM deck_slides WHERE screen_id = ? ORDER BY position ASC, id ASC')
       .bind(cloneId)
       .all();
-
-    if (slides?.length) {
-      const stmt = context.env.DB.prepare(
-        `INSERT INTO screen_slides (screen_id, zone, position, type, title, duration_seconds, enabled, config)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      );
-      await context.env.DB.batch(
-        slides.map((s) =>
-          stmt.bind(copy.id, s.zone, s.position, s.type, s.title, s.duration_seconds, s.enabled, s.config)
+    for (const s of slides ?? []) {
+      const ns = await env.DB
+        .prepare(
+          `INSERT INTO deck_slides
+             (screen_id, position, name, duration_seconds, transition, transition_ms, background, enabled,
+              active_from, active_to, active_days, active_from_date, active_to_date)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
         )
-      );
+        .bind(
+          copy.id,
+          s.position,
+          s.name,
+          s.duration_seconds,
+          s.transition,
+          s.transition_ms,
+          s.background,
+          s.enabled,
+          s.active_from,
+          s.active_to,
+          s.active_days,
+          s.active_from_date,
+          s.active_to_date
+        )
+        .first();
+      const { results: els } = await env.DB
+        .prepare('SELECT * FROM deck_elements WHERE slide_id = ?')
+        .bind(s.id)
+        .all();
+      if (els?.length) {
+        const stmt = env.DB.prepare(
+          `INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, rotation, config)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        );
+        await env.DB.batch(
+          els.map((e) => stmt.bind(ns.id, e.z, e.kind, e.x, e.y, e.w, e.h, e.rotation, e.config))
+        );
+      }
     }
     return json(decorate({ ...copy, slide_count: slides?.length ?? 0 }), { status: 201 });
   }
 
   if (!b?.name) return badRequest('name er påkrevd');
-  const row = await context.env.DB
-    .prepare(
-      'INSERT INTO screens (name, location, layout) VALUES (?, ?, ?) RETURNING *'
+  const row = await env.DB
+    .prepare('INSERT INTO screens (name, location, orientation) VALUES (?, ?, ?) RETURNING *')
+    .bind(
+      String(b.name).trim(),
+      b.location ? String(b.location).trim() : null,
+      normOrientation(b.orientation)
     )
-    .bind(String(b.name).trim(), b.location ? String(b.location).trim() : null, normLayout(b.layout))
     .first();
-
-  await seedDefaultSlides(context.env, row.id);
-  return json(decorate({ ...row, slide_count: DEFAULT_SLIDES.length }), { status: 201 });
+  await seedFirstSlide(env, row.id);
+  return json(decorate({ ...row, slide_count: 1 }), { status: 201 });
 }
 
-// PUT /api/screens?id=1  { name?, location?, layout?, custom_layout?, rotation_seconds? }
+// PUT /api/screens?id=1  { name?, location?, orientation? }
 export async function onRequestPut(context) {
   const denied = requireAdmin(context);
   if (denied) return denied;
-
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
-
   const b = await readJson(context.request);
   if (!b) return badRequest('ugyldig JSON');
 
   const cur = await context.env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first();
   if (!cur) return notFound('Skjerm finnes ikke');
 
-  const customLayout =
-    b.custom_layout !== undefined
-      ? b.custom_layout
-        ? JSON.stringify(safeJson(b.custom_layout, null))
-        : null
-      : cur.custom_layout;
-
   const row = await context.env.DB
-    .prepare(
-      `UPDATE screens
-          SET name = ?, location = ?, layout = ?, custom_layout = ?, rotation_seconds = ?
-        WHERE id = ? RETURNING *`
-    )
+    .prepare('UPDATE screens SET name = ?, location = ?, orientation = ? WHERE id = ? RETURNING *')
     .bind(
       b.name !== undefined ? String(b.name).trim() : cur.name,
       b.location !== undefined ? (b.location ? String(b.location).trim() : null) : cur.location,
-      b.layout !== undefined ? normLayout(b.layout, cur.layout) : cur.layout,
-      customLayout,
-      b.rotation_seconds !== undefined
-        ? Math.max(4, toIntOrNull(b.rotation_seconds) ?? cur.rotation_seconds)
-        : cur.rotation_seconds,
+      b.orientation !== undefined ? normOrientation(b.orientation, cur.orientation) : cur.orientation,
       id
     )
     .first();
-
   const count = await context.env.DB
-    .prepare('SELECT COUNT(*) AS c FROM screen_slides WHERE screen_id = ?')
+    .prepare('SELECT COUNT(*) AS c FROM deck_slides WHERE screen_id = ?')
     .bind(id)
     .first();
   return json(decorate({ ...row, slide_count: count?.c ?? 0 }));
@@ -175,18 +174,26 @@ export async function onRequestPut(context) {
 export async function onRequestDelete(context) {
   const denied = requireAdmin(context);
   if (denied) return denied;
-
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
 
   const row = await context.env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first();
   if (row) {
     const { results: slides } = await context.env.DB
-      .prepare('SELECT * FROM screen_slides WHERE screen_id = ?')
+      .prepare('SELECT * FROM deck_slides WHERE screen_id = ?')
       .bind(id)
       .all();
-    await moveToTrash(context.env, 'screen', row.name, { row, slides: slides ?? [] });
-    await context.env.DB.prepare('DELETE FROM screen_slides WHERE screen_id = ?').bind(id).run();
+    const ids = (slides ?? []).map((s) => s.id);
+    let elements = [];
+    if (ids.length) {
+      const marks = ids.map(() => '?').join(',');
+      const { results } = await context.env.DB
+        .prepare(`SELECT * FROM deck_elements WHERE slide_id IN (${marks})`)
+        .bind(...ids)
+        .all();
+      elements = results ?? [];
+    }
+    await moveToTrash(context.env, 'screen', row.name, { row, slides: slides ?? [], elements });
     await context.env.DB.prepare('DELETE FROM screens WHERE id = ?').bind(id).run();
   }
   return noContent();

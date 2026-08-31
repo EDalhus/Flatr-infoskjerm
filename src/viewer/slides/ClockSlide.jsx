@@ -1,7 +1,8 @@
 import { formatDate } from '../../lib/time.js';
 
-export default function ClockSlide({ slide, ctx }) {
+export default function ClockSlide({ slide, ctx, chromeless }) {
   const cfg = slide.config || {};
+  const bare = chromeless || cfg.frame === false;
   const now = ctx.now;
   const time = now.toLocaleTimeString('nb-NO', {
     hour: '2-digit',
@@ -10,12 +11,22 @@ export default function ClockSlide({ slide, ctx }) {
   });
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-hair bg-card p-6 text-center shadow-card">
-      <div className="font-mono text-7xl font-bold tabular-nums tracking-tight text-ink portrait:text-5xl">
+    <div
+      className={`flex h-full w-full flex-col items-center justify-center text-center ${
+        bare ? '' : 'rounded-xl border border-hair bg-card p-4 text-ink shadow-card'
+      }`}
+      style={{ containerType: 'size' }}
+    >
+      <div className="font-mono font-bold tabular-nums" style={{ fontSize: '30cqmin', lineHeight: 1 }}>
         {time}
       </div>
       {cfg.showDate !== false && (
-        <div className="mt-2 text-lg uppercase tracking-[0.3em] text-muted">{formatDate(now)}</div>
+        <div
+          className="mt-[4%] uppercase tracking-[0.2em] opacity-70"
+          style={{ fontSize: '7cqmin' }}
+        >
+          {formatDate(now)}
+        </div>
       )}
     </div>
   );

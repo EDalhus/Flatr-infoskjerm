@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
-import { SLIDE_TYPE_LABEL } from '../../lib/slides.js';
+import { ELEMENT_LABEL } from '../../lib/deck.js';
 import { Icon, IconButton, GroupCard, Row, MediaTile, PageHeader, ErrorText } from './ui.jsx';
 
 export default function TemplatesManager({ onChange }) {
@@ -28,48 +28,40 @@ export default function TemplatesManager({ onChange }) {
     }
   };
 
-  const slideT = items.filter((t) => t.kind === 'slide');
-  const screenT = items.filter((t) => t.kind === 'screen');
-
   const describe = (t) => {
+    const p = t.payload || {};
     if (t.kind === 'slide') {
-      const p = t.payload || {};
-      return `Slide · ${SLIDE_TYPE_LABEL[p.type] || p.type || '—'} · ${p.duration_seconds || 15}s`;
+      const kinds = (p.elements || []).map((e) => ELEMENT_LABEL[e.kind] || e.kind);
+      return `Lysbilde · ${p.elements?.length || 0} elementer${kinds.length ? ` (${kinds.slice(0, 4).join(', ')})` : ''}`;
     }
-    const zones = Object.keys(t.payload?.zones || {});
-    return `Skjerm · ${t.payload?.layout || '—'} · soner ${zones.join(', ') || '—'}`;
+    return `${t.kind} · gammel modell`;
   };
-
-  const section = (label, list) => (
-    <GroupCard label={`${label} · ${list.length}`} icon="layers">
-      {list.length === 0 && <div className="px-5 py-4 text-sm text-muted">Ingen maler.</div>}
-      {list.map((t) => (
-        <Row
-          key={t.id}
-          media={
-            <MediaTile tone="muted">
-              <Icon name="layers" className="h-5 w-5" />
-            </MediaTile>
-          }
-          title={t.name}
-          meta={<span>{describe(t)}</span>}
-          actions={<IconButton name="x" label="Slett" tone="danger" onClick={() => remove(t.id)} />}
-        />
-      ))}
-    </GroupCard>
-  );
 
   return (
     <>
       <PageHeader crumbs={['Innhold', 'Maler']} />
       <div className="mx-auto w-full max-w-4xl space-y-6 p-6 sm:p-8">
         <p className="text-sm text-muted">
-          Maler lages med «Lagre som mal» i en slide (skjerm-editor / spilleliste) eller på en hel
-          skjerm. Bruk dem via «Fra mal» når du legger til slides eller oppretter en skjerm.
+          Lag maler med «Lagre som mal» på et lysbilde i skjerm-editoren. De blir tilgjengelige når
+          du legger til et nytt lysbilde.
         </p>
         <ErrorText>{error}</ErrorText>
-        {section('Slide-maler', slideT)}
-        {section('Skjermmaler', screenT)}
+        <GroupCard label={`Maler · ${items.length}`} icon="layers">
+          {items.length === 0 && <div className="px-5 py-4 text-sm text-muted">Ingen maler ennå.</div>}
+          {items.map((t) => (
+            <Row
+              key={t.id}
+              media={
+                <MediaTile tone="muted">
+                  <Icon name="layers" className="h-5 w-5" />
+                </MediaTile>
+              }
+              title={t.name}
+              meta={<span>{describe(t)}</span>}
+              actions={<IconButton name="x" label="Slett" tone="danger" onClick={() => remove(t.id)} />}
+            />
+          ))}
+        </GroupCard>
       </div>
     </>
   );

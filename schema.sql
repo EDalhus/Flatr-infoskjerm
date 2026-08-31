@@ -4,10 +4,13 @@
 --
 -- Har du en database fra en tidligere versjon: kjør migreringene i
 -- ./migrations/ i rekkefølge (se README → «Migrering»).
+--
+-- Modell: hver skjerm er en rekke lysbilder (deck_slides). Hvert lysbilde er
+-- én fri canvas med posisjonerte widgets (deck_elements). Tabellene
+-- screen_slides / playlists er historikk fra sone-modellen og brukes ikke.
 -- ---------------------------------------------------------------------------
 PRAGMA foreign_keys = ON;
 
--- Kategorier – fargelegger og grupperer programposter på offentlige skjermer.
 CREATE TABLE IF NOT EXISTS categories (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   name       TEXT NOT NULL,
@@ -15,19 +18,52 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
--- Skjermer / plasseringer + layout- og rotasjonskonfig.
 CREATE TABLE IF NOT EXISTS screens (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   name             TEXT NOT NULL,
   location         TEXT,
-  layout           TEXT NOT NULL DEFAULT 'main-side',  -- solo | main-side | split | thirds | custom
-  custom_layout    TEXT,
+  orientation      TEXT NOT NULL DEFAULT 'landscape',  -- landscape | portrait
+  layout           TEXT NOT NULL DEFAULT 'main-side',  -- historikk, ubrukt
+  custom_layout    TEXT,                                -- historikk, ubrukt
   rotation_seconds INTEGER NOT NULL DEFAULT 15,
   last_seen        TEXT,
   created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
--- Program / tidsskjema.
+-- Lysbilder pr. skjerm.
+CREATE TABLE IF NOT EXISTS deck_slides (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  screen_id        INTEGER NOT NULL REFERENCES screens(id) ON DELETE CASCADE,
+  position         INTEGER NOT NULL DEFAULT 0,
+  name             TEXT,
+  duration_seconds INTEGER NOT NULL DEFAULT 15,
+  transition       TEXT NOT NULL DEFAULT 'fade',
+  transition_ms    INTEGER NOT NULL DEFAULT 600,
+  background        TEXT NOT NULL DEFAULT '{"type":"color","color":"#0f2733"}',
+  enabled          INTEGER NOT NULL DEFAULT 1,
+  active_from       TEXT,
+  active_to         TEXT,
+  active_days       TEXT,
+  active_from_date  TEXT,
+  active_to_date    TEXT,
+  created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+-- Widgets på et lysbilde (posisjon i prosent av canvas).
+CREATE TABLE IF NOT EXISTS deck_elements (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  slide_id   INTEGER NOT NULL REFERENCES deck_slides(id) ON DELETE CASCADE,
+  z          INTEGER NOT NULL DEFAULT 0,
+  kind       TEXT NOT NULL,   -- text|image|shape|clock|countdown|program|qr|video|web|sponsors
+  x          REAL NOT NULL DEFAULT 15,
+  y          REAL NOT NULL DEFAULT 15,
+  w          REAL NOT NULL DEFAULT 40,
+  h          REAL NOT NULL DEFAULT 25,
+  rotation   REAL NOT NULL DEFAULT 0,
+  config     TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
 CREATE TABLE IF NOT EXISTS schedule (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   title       TEXT NOT NULL,
@@ -40,7 +76,6 @@ CREATE TABLE IF NOT EXISTS schedule (
   category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL
 );
 
--- Sponsorer / media til karusell.
 CREATE TABLE IF NOT EXISTS sponsors (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   name             TEXT NOT NULL,
@@ -48,53 +83,6 @@ CREATE TABLE IF NOT EXISTS sponsors (
   duration_seconds INTEGER NOT NULL DEFAULT 10
 );
 
--- Gjenbrukbare spillelister.
-CREATE TABLE IF NOT EXISTS playlists (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  name       TEXT NOT NULL,
-  folder     TEXT,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-);
-
-CREATE TABLE IF NOT EXISTS playlist_items (
-  id               INTEGER PRIMARY KEY AUTOINCREMENT,
-  playlist_id      INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
-  position         INTEGER NOT NULL DEFAULT 0,
-  type             TEXT NOT NULL DEFAULT 'program',
-  title            TEXT,
-  duration_seconds INTEGER NOT NULL DEFAULT 15,
-  enabled          INTEGER NOT NULL DEFAULT 1,
-  config           TEXT NOT NULL DEFAULT '{}',
-  active_from      TEXT,
-  active_to        TEXT,
-  active_days      TEXT,
-  active_from_date TEXT,
-  active_to_date   TEXT,
-  created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-);
-
--- Slides pr. skjerm/sone. En rad er enten en inline-slide (type + config)
--- eller en referanse til en delt spilleliste (type='playlist', playlist_id satt).
-CREATE TABLE IF NOT EXISTS screen_slides (
-  id               INTEGER PRIMARY KEY AUTOINCREMENT,
-  screen_id        INTEGER NOT NULL REFERENCES screens(id) ON DELETE CASCADE,
-  zone             TEXT NOT NULL DEFAULT 'a',
-  position         INTEGER NOT NULL DEFAULT 0,
-  type             TEXT NOT NULL DEFAULT 'program',  -- program|sponsors|message|clock|image|layout|web|video|qr|countdown|playlist
-  title            TEXT,
-  duration_seconds INTEGER NOT NULL DEFAULT 15,
-  enabled          INTEGER NOT NULL DEFAULT 1,
-  config           TEXT NOT NULL DEFAULT '{}',
-  playlist_id      INTEGER REFERENCES playlists(id) ON DELETE SET NULL,
-  active_from      TEXT,
-  active_to        TEXT,
-  active_days      TEXT,
-  active_from_date TEXT,
-  active_to_date   TEXT,
-  created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-);
-
--- Mediebibliotek. Bytes ligger i R2 (binding MEDIA); metadata her.
 CREATE TABLE IF NOT EXISTS media (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   name         TEXT NOT NULL,
@@ -105,7 +93,7 @@ CREATE TABLE IF NOT EXISTS media (
   created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
--- Maler for slides og hele skjermoppsett.
+-- Maler: kind='slide' → payload er et helt lysbilde (bakgrunn + elements).
 CREATE TABLE IF NOT EXISTS templates (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   name       TEXT NOT NULL,
@@ -114,7 +102,6 @@ CREATE TABLE IF NOT EXISTS templates (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
--- Papirkurv – slettede rader kan gjenopprettes en periode.
 CREATE TABLE IF NOT EXISTS trash (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   kind       TEXT NOT NULL,
@@ -123,7 +110,6 @@ CREATE TABLE IF NOT EXISTS trash (
   deleted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
--- Hastemeldinger / live alerts.
 CREATE TABLE IF NOT EXISTS alerts (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   message          TEXT NOT NULL,
@@ -132,27 +118,49 @@ CREATE TABLE IF NOT EXISTS alerts (
   created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_schedule_start    ON schedule (start_time);
-CREATE INDEX IF NOT EXISTS idx_schedule_category ON schedule (category_id);
-CREATE INDEX IF NOT EXISTS idx_alerts_active     ON alerts (active);
-CREATE INDEX IF NOT EXISTS idx_alerts_target     ON alerts (target_screen_id);
-CREATE INDEX IF NOT EXISTS idx_slides_screen     ON screen_slides (screen_id, zone, position);
-CREATE INDEX IF NOT EXISTS idx_playlist_items    ON playlist_items (playlist_id, position);
-CREATE INDEX IF NOT EXISTS idx_media_folder      ON media (folder);
-CREATE INDEX IF NOT EXISTS idx_trash_deleted     ON trash (deleted_at);
+-- Historikk fra sone-modellen (brukes ikke av appen lenger).
+CREATE TABLE IF NOT EXISTS playlists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, folder TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE TABLE IF NOT EXISTS playlist_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT 'program',
+  title TEXT, duration_seconds INTEGER NOT NULL DEFAULT 15, enabled INTEGER NOT NULL DEFAULT 1,
+  config TEXT NOT NULL DEFAULT '{}',
+  active_from TEXT, active_to TEXT, active_days TEXT, active_from_date TEXT, active_to_date TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE TABLE IF NOT EXISTS screen_slides (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  screen_id INTEGER NOT NULL REFERENCES screens(id) ON DELETE CASCADE,
+  zone TEXT NOT NULL DEFAULT 'a', position INTEGER NOT NULL DEFAULT 0,
+  type TEXT NOT NULL DEFAULT 'program', title TEXT, duration_seconds INTEGER NOT NULL DEFAULT 15,
+  enabled INTEGER NOT NULL DEFAULT 1, config TEXT NOT NULL DEFAULT '{}',
+  playlist_id INTEGER REFERENCES playlists(id) ON DELETE SET NULL,
+  active_from TEXT, active_to TEXT, active_days TEXT, active_from_date TEXT, active_to_date TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_schedule_start      ON schedule (start_time);
+CREATE INDEX IF NOT EXISTS idx_schedule_category   ON schedule (category_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_active       ON alerts (active);
+CREATE INDEX IF NOT EXISTS idx_alerts_target       ON alerts (target_screen_id);
+CREATE INDEX IF NOT EXISTS idx_media_folder        ON media (folder);
+CREATE INDEX IF NOT EXISTS idx_trash_deleted       ON trash (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_deck_slides_screen  ON deck_slides (screen_id, position);
+CREATE INDEX IF NOT EXISTS idx_deck_elements_slide ON deck_elements (slide_id, z);
 
 -- ---------------------------------------------------------------------------
 -- Demo-data (valgfritt – fjern hele blokken for tom database)
 -- ---------------------------------------------------------------------------
 INSERT INTO categories (name, color) VALUES
-  ('Scene',    '#1f5566'),
-  ('Verksted', '#9333ea'),
-  ('Servering', '#c2410c'),
-  ('Praktisk', '#15803d');
+  ('Scene', '#1f5566'), ('Verksted', '#9333ea'), ('Servering', '#c2410c'), ('Praktisk', '#15803d');
 
-INSERT INTO screens (name, location, layout) VALUES
-  ('Hovedscene', 'Storsalen', 'thirds'),
-  ('Inngangsparti', 'Foaje', 'main-side');
+INSERT INTO screens (name, location, orientation) VALUES
+  ('Hovedscene', 'Storsalen', 'landscape'),
+  ('Inngangsparti', 'Foaje', 'landscape');
 
 INSERT INTO sponsors (name, image_url, duration_seconds) VALUES
   ('Cloudflare',  'https://dummyimage.com/800x400/1d4ed8/ffffff&text=Cloudflare',  10),
@@ -176,21 +184,20 @@ INSERT INTO schedule (title, description, start_time, end_time, stage, status, c
     strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+105 minutes'),
     strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+165 minutes'), 'Hovedscene', 'scheduled', 1);
 
--- Delt spilleliste som brukes på sidepanelet
-INSERT INTO playlists (name, folder) VALUES ('Fellesinfo', NULL);
-INSERT INTO playlist_items (playlist_id, position, type, title, duration_seconds, config) VALUES
-  (1, 0, 'message', 'Wi-Fi', 12, '{"text":"Wi-Fi: LAN  ·  Passord: velkommen","emphasis":"info"}'),
-  (1, 1, 'message', 'Kiosk', 12, '{"text":"Kiosken er åpen til 22:00","emphasis":"success"}');
+-- Skjerm 1: ett lysbilde med tittel + program + klokke
+INSERT INTO deck_slides (screen_id, position, name, duration_seconds, background) VALUES
+  (1, 0, 'Program', 20, '{"type":"gradient","from":"#1f5566","to":"#0f2733","angle":135}');
+INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, config) VALUES
+  (1, 0, 'text', 6, 6, 60, 12, '{"text":"Hovedscene","size":72,"weight":800,"align":"left","color":"#ffffff"}'),
+  (1, 1, 'program', 6, 22, 58, 70, '{"mode":"agenda","categoryIds":[1],"max":7,"showCategory":true}'),
+  (1, 2, 'clock', 70, 6, 24, 16, '{"showDate":true,"showSeconds":true}'),
+  (1, 3, 'sponsors', 70, 26, 24, 40, '{}');
 
--- Skjerm 1 (Hovedscene, tredeler)
-INSERT INTO screen_slides (screen_id, zone, position, type, title, duration_seconds, config, playlist_id) VALUES
-  (1, 'a', 0, 'program', 'Program – scene', 25, '{"mode":"agenda","categoryIds":[1],"max":8,"showCategory":true}', NULL),
-  (1, 'b', 0, 'clock', 'Klokke', 12, '{"showDate":true,"showSeconds":true}', NULL),
-  (1, 'c', 0, 'sponsors', 'Sponsorer', 18, '{}', NULL),
-  (1, 'c', 1, 'playlist', 'Fellesinfo', 12, '{}', 1);
-
--- Skjerm 2 (Inngangsparti, hoved + side)
-INSERT INTO screen_slides (screen_id, zone, position, type, title, duration_seconds, config, playlist_id) VALUES
-  (2, 'a', 0, 'program', 'Dagens program', 20, '{"mode":"agenda","categoryIds":[],"max":12,"showCategory":true}', NULL),
-  (2, 'b', 0, 'clock', 'Klokke', 10, '{"showDate":true,"showSeconds":false}', NULL),
-  (2, 'b', 1, 'playlist', 'Fellesinfo', 12, '{}', 1);
+-- Skjerm 2: ett lysbilde med hele programmet
+INSERT INTO deck_slides (screen_id, position, name, duration_seconds, background) VALUES
+  (2, 0, 'Dagens program', 20, '{"type":"color","color":"#0f2733"}');
+INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, config) VALUES
+  (2, 0, 'text', 6, 5, 70, 12, '{"text":"Dagens program","size":72,"weight":800,"align":"left","color":"#ffffff"}'),
+  (2, 1, 'program', 6, 20, 66, 74, '{"mode":"agenda","categoryIds":[],"max":10,"showCategory":true}'),
+  (2, 2, 'clock', 76, 5, 20, 14, '{"showDate":true,"showSeconds":false}'),
+  (2, 3, 'qr', 76, 24, 20, 34, '{"mode":"schedule","label":"Program","caption":"Skann for mobil"}');

@@ -4,7 +4,6 @@ import { Icon, Input, Button } from './components/ui.jsx';
 import ScheduleManager from './components/ScheduleManager.jsx';
 import CategoriesManager from './components/CategoriesManager.jsx';
 import SponsorsManager from './components/SponsorsManager.jsx';
-import PlaylistsManager from './components/PlaylistsManager.jsx';
 import MediaLibraryManager from './components/MediaLibraryManager.jsx';
 import TemplatesManager from './components/TemplatesManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
@@ -12,23 +11,22 @@ import AlertsManager from './components/AlertsManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 
 const NAV = [
+  { id: 'screens', label: 'Skjermer', icon: 'monitor', section: 'Visning', Component: ScreensManager },
+  { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager },
   { id: 'schedule', label: 'Program', icon: 'calendar', section: 'Innhold', Component: ScheduleManager },
   { id: 'categories', label: 'Kategorier', icon: 'tag', section: 'Innhold', Component: CategoriesManager },
   { id: 'sponsors', label: 'Sponsorer', icon: 'image', section: 'Innhold', Component: SponsorsManager },
-  { id: 'playlists', label: 'Spillelister', icon: 'layers', section: 'Innhold', Component: PlaylistsManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', section: 'Innhold', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'layers', section: 'Innhold', Component: TemplatesManager },
-  { id: 'screens', label: 'Skjermer', icon: 'monitor', section: 'Visning', Component: ScreensManager },
-  { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager },
   { id: 'trash', label: 'Nylig slettet', icon: 'x', section: 'Visning', Component: RecentlyDeletedManager }
 ];
 
-const SECTIONS = ['Innhold', 'Visning'];
+const SECTIONS = ['Visning', 'Innhold'];
 
 const initialTab = () => {
-  if (typeof window === 'undefined') return 'schedule';
+  if (typeof window === 'undefined') return 'screens';
   const v = new URLSearchParams(window.location.search).get('view');
-  return NAV.some((n) => n.id === v) ? v : 'schedule';
+  return NAV.some((n) => n.id === v) ? v : 'screens';
 };
 
 export default function Admin() {

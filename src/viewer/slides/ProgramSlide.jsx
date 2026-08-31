@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { formatTime, minutesUntil, partitionSchedule } from '../../lib/time.js';
 import { filterSchedule } from '../../lib/slides.js';
-import SlideFrame from './SlideFrame.jsx';
+import { Frame } from './SlideFrame.jsx';
 
 const STATUS_STYLES = {
   live: 'bg-ok-tint text-ok border-ok/30',
@@ -64,10 +64,11 @@ function BigCard({ label, item, now, accent, catMap, showCategory }) {
   );
 }
 
-export default function ProgramSlide({ slide, ctx }) {
+export default function ProgramSlide({ slide, ctx, chromeless }) {
   const cfg = slide.config || {};
   const mode = cfg.mode || 'agenda';
   const showCategory = cfg.showCategory !== false;
+  const bare = chromeless || cfg.frame === false;
   const { schedule, categories, now } = ctx;
 
   const catMap = useMemo(
@@ -79,7 +80,7 @@ export default function ProgramSlide({ slide, ctx }) {
 
   if (mode === 'nowNext' || mode === 'next') {
     return (
-      <SlideFrame title={slide.title || 'Program'}>
+      <Frame chromeless={bare} title={bare ? null : slide.title || 'Program'}>
         <div className="flex h-full gap-4 portrait:flex-col">
           <BigCard
             label="Nå på scenen"
@@ -99,7 +100,7 @@ export default function ProgramSlide({ slide, ctx }) {
             />
           )}
         </div>
-      </SlideFrame>
+      </Frame>
     );
   }
 
@@ -107,7 +108,7 @@ export default function ProgramSlide({ slide, ctx }) {
   const rows = list.length ? list : sorted.slice(0, Math.max(1, cfg.max || 10));
 
   return (
-    <SlideFrame title={slide.title || 'Program'} pad={false}>
+    <Frame chromeless={bare} title={bare ? null : slide.title || 'Program'} pad={false}>
       <ol className="h-full divide-y divide-hair overflow-hidden">
         {rows.length === 0 && <li className="p-6 text-muted">Ingen programposter.</li>}
         {rows.map((item) => {
@@ -139,6 +140,6 @@ export default function ProgramSlide({ slide, ctx }) {
           );
         })}
       </ol>
-    </SlideFrame>
+    </Frame>
   );
 }

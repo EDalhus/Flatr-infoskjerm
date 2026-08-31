@@ -81,7 +81,15 @@ const ICONS = {
       <circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none" />
     </>
   ),
-  layers: <path d="m12 3 9 5-9 5-9-5 9-5zM3 14l9 5 9-5M3 18l9 5 9-5" />
+  layers: <path d="m12 3 9 5-9 5-9-5 9-5zM3 14l9 5 9-5M3 18l9 5 9-5" />,
+  text: <path d="M5 5h14M12 5v14M9 19h6" />,
+  square: <rect x="4" y="4" width="16" height="16" rx="2" />,
+  eye: (
+    <>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  )
 };
 
 export function Icon({ name, className = 'h-4 w-4' }) {

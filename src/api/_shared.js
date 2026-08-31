@@ -115,14 +115,14 @@ export async function buildState(env, screenId) {
   const id = toIntOrNull(screenId);
   const now = Date.now();
 
-  const [screen, slides, categories, schedule, sponsors, alerts] = await Promise.all([
+  const [screen, deckSlides, categories, schedule, sponsors, alerts] = await Promise.all([
     id ? env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first() : Promise.resolve(null),
     id
       ? env.DB
           .prepare(
-            `SELECT * FROM screen_slides
+            `SELECT * FROM deck_slides
                WHERE screen_id = ? AND enabled = 1
-               ORDER BY zone ASC, position ASC, id ASC`
+               ORDER BY position ASC, id ASC`
           )
           .bind(id)
           .all()
@@ -145,49 +145,30 @@ export async function buildState(env, screenId) {
     effective_status: effectiveStatus(row, now)
   }));
 
-  // Løs opp spilleliste-referanser: en sone-rad med playlist_id byttes ut med
-  // spillelistas aktive elementer (i rekkefølge).
-  const rawSlides = slides.results ?? [];
-  const playlistIds = [...new Set(rawSlides.map((r) => r.playlist_id).filter(Boolean))];
-  const itemsByPlaylist = {};
-  if (playlistIds.length) {
-    const marks = playlistIds.map(() => '?').join(',');
-    const { results: items } = await env.DB
+  // Hent elementene for lysbildene og bygg deck.
+  const rawSlides = deckSlides.results ?? [];
+  const slideIds = rawSlides.map((s) => s.id);
+  const elsBySlide = {};
+  if (slideIds.length) {
+    const marks = slideIds.map(() => '?').join(',');
+    const { results: els } = await env.DB
       .prepare(
-        `SELECT * FROM playlist_items
-           WHERE playlist_id IN (${marks}) AND enabled = 1
-           ORDER BY playlist_id ASC, position ASC, id ASC`
+        `SELECT * FROM deck_elements WHERE slide_id IN (${marks}) ORDER BY slide_id ASC, z ASC, id ASC`
       )
-      .bind(...playlistIds)
+      .bind(...slideIds)
       .all();
-    for (const it of items ?? []) (itemsByPlaylist[it.playlist_id] ||= []).push(it);
+    for (const e of els ?? [])
+      (elsBySlide[e.slide_id] ||= []).push({ ...e, config: safeJson(e.config, {}) });
   }
-
-  const slideRows = [];
-  for (const row of rawSlides) {
-    if (row.type === 'playlist' || row.playlist_id) {
-      for (const it of itemsByPlaylist[row.playlist_id] ?? []) {
-        slideRows.push({
-          id: `p${row.playlist_id}-${it.id}`,
-          zone: row.zone,
-          type: it.type,
-          title: it.title,
-          duration_seconds: it.duration_seconds,
-          enabled: 1,
-          config: safeJson(it.config, {}),
-          ...pickDaypart(it)
-        });
-      }
-      continue; // tom / slettet spilleliste → hopp over raden
-    }
-    slideRows.push({ ...row, config: safeJson(row.config, {}) });
-  }
+  const deck = rawSlides.map((s) => ({
+    ...s,
+    background: safeJson(s.background, { type: 'color', color: '#0f2733' }),
+    elements: elsBySlide[s.id] ?? []
+  }));
 
   const state = {
-    screen: screen
-      ? { ...screen, custom_layout: safeJson(screen.custom_layout, null) }
-      : null,
-    slides: slideRows,
+    screen: screen || null,
+    deck,
     categories: categories.results ?? [],
     schedule: scheduleRows,
     sponsors: sponsors.results ?? [],
@@ -202,7 +183,7 @@ export async function buildState(env, screenId) {
 export function signature(state) {
   const basis = JSON.stringify({
     screen: state.screen,
-    slides: state.slides,
+    deck: state.deck,
     categories: state.categories,
     schedule: state.schedule,
     sponsors: state.sponsors,

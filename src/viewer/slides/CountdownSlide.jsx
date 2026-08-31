@@ -1,6 +1,7 @@
 import { partitionSchedule } from '../../lib/time.js';
 
 const TONES = {
+  none: '',
   info: 'bg-brand text-white',
   success: 'bg-ok text-white',
   warn: 'bg-danger text-white'
@@ -10,7 +11,7 @@ const pad = (n) => String(n).padStart(2, '0');
 
 export default function CountdownSlide({ slide, ctx }) {
   const cfg = slide.config || {};
-  const tone = TONES[cfg.emphasis] || TONES.info;
+  const tone = TONES[cfg.emphasis] ?? TONES.info;
 
   let target = cfg.target;
   if (cfg.mode === 'nextItem') {
@@ -33,22 +34,23 @@ export default function CountdownSlide({ slide, ctx }) {
 
   return (
     <div
-      className={`flex h-full w-full flex-col items-center justify-center gap-6 rounded-2xl p-10 text-center shadow-card ${tone}`}
+      className={`flex h-full w-full flex-col items-center justify-center gap-[3%] rounded-xl p-[4%] text-center ${tone}`}
+      style={{ containerType: 'size' }}
     >
-      {(slide.title || cfg.title) && (
-        <div className="text-2xl font-black uppercase tracking-[0.3em] text-white/85 portrait:text-lg">
+      {(cfg.title || slide.title) && (
+        <div
+          className="font-black uppercase tracking-[0.25em] opacity-85"
+          style={{ fontSize: '7cqmin' }}
+        >
           {cfg.title || slide.title}
         </div>
       )}
-      {done ? (
-        <div className="text-7xl font-extrabold leading-tight portrait:text-4xl">
-          {cfg.doneText || 'Nå kjører vi!'}
-        </div>
-      ) : (
-        <div className="font-mono text-[8rem] font-bold tabular-nums leading-none portrait:text-6xl">
-          {text}
-        </div>
-      )}
+      <div
+        className="font-mono font-bold tabular-nums leading-none"
+        style={{ fontSize: done ? '14cqmin' : '24cqmin' }}
+      >
+        {done ? cfg.doneText || 'Nå kjører vi!' : text}
+      </div>
     </div>
   );
 }

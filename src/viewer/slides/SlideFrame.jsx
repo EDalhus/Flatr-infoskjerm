@@ -12,3 +12,20 @@ export default function SlideFrame({ title, children, pad = true, className = ''
     </div>
   );
 }
+
+/** Ramme som forenkles når widgeten ligger på en canvas (beholder lys flate
+ *  så innholdet er lesbart, men uten tittellinje/kant). */
+export function Frame({ chromeless, title, pad = true, children }) {
+  if (chromeless) {
+    return (
+      <div className="flex h-full w-full flex-col overflow-hidden rounded-xl bg-card">
+        <div className={`min-h-0 flex-1 ${pad ? 'p-4' : ''}`}>{children}</div>
+      </div>
+    );
+  }
+  return (
+    <SlideFrame title={title} pad={pad}>
+      {children}
+    </SlideFrame>
+  );
+}
