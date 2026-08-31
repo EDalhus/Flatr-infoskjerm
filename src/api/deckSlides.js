@@ -147,7 +147,8 @@ export async function onRequestPost(context) {
     )
     .first();
 
-  if (tpl?.elements?.length) await insertElements(env, slide.id, tpl.elements);
+  const seed = tpl?.elements?.length ? tpl.elements : Array.isArray(b?.elements) ? b.elements : null;
+  if (seed?.length) await insertElements(env, slide.id, seed);
 
   return json(
     {

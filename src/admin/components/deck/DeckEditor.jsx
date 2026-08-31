@@ -5,6 +5,7 @@ import { Icon, Button, ErrorText } from '../ui.jsx';
 import SlideNavigator from './SlideNavigator.jsx';
 import CanvasStage from './CanvasStage.jsx';
 import Inspector from './Inspector.jsx';
+import LayoutPicker from './LayoutPicker.jsx';
 
 export default function DeckEditor({ screenId, onBack, onChange }) {
   const [screen, setScreen] = useState(null);
@@ -14,6 +15,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
   const [selEl, setSelEl] = useState(null);
   const [err, setErr] = useState('');
   const [widgetMenu, setWidgetMenu] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const timers = useRef({});
 
   const reload = async (keepSlide) => {
@@ -119,9 +121,22 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
     }
   };
 
-  const addSlide = async () => {
+  const addSlide = async (layout) => {
     try {
-      const s = await api.deck.slide.create({ screen_id: Number(screenId) });
+      const s = await api.deck.slide.create({
+        screen_id: Number(screenId),
+        name: layout?.label,
+        elements: layout?.elements || []
+      });
+      await reload(s.id);
+      onChange?.();
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+  const addSlideFromTemplate = async (tpl) => {
+    try {
+      const s = await api.deck.slide.create({ screen_id: Number(screenId), template_id: tpl.id });
       await reload(s.id);
       onChange?.();
     } catch (e) {
@@ -233,6 +248,11 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           ))}
         </div>
 
+        <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
+          <Icon name="plus" className="h-4 w-4" />
+          Lysbilde
+        </Button>
+
         <div className="relative">
           <Button size="sm" onClick={() => setWidgetMenu((v) => !v)}>
             <Icon name="plus" className="h-4 w-4" />
@@ -278,13 +298,13 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           orientation={orientation}
           selectedId={selSlide}
           onSelect={setSelSlide}
-          onAdd={addSlide}
+          onAdd={() => setPickerOpen(true)}
           onDuplicate={dupSlide}
           onDelete={deleteSlide}
           onMove={moveSlide}
         />
 
-        <div className="min-w-0 flex-1 p-4">
+        <div className="relative min-w-0 flex-1">
           {slide ? (
             <CanvasStage
               slide={slide}
@@ -312,6 +332,14 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           onSaveTemplate={saveTemplate}
         />
       </div>
+
+      {pickerOpen && (
+        <LayoutPicker
+          onPick={addSlide}
+          onPickTemplate={addSlideFromTemplate}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

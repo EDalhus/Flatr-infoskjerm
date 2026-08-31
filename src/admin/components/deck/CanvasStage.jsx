@@ -134,17 +134,16 @@ export default function CanvasStage({
       ref={containerRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
-      className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#12161c] outline-none"
+      className="absolute inset-0 overflow-hidden bg-[#1b1e24] outline-none"
     >
       <div
         ref={stageRef}
         onPointerDown={() => onSelect(null)}
-        className="relative text-white shadow-2xl"
+        className="absolute left-1/2 top-1/2 origin-center text-white shadow-[0_20px_60px_rgba(0,0,0,0.5)] ring-1 ring-white/10"
         style={{
           width: base.w,
           height: base.h,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center',
+          transform: `translate(-50%, -50%) scale(${scale || 0.0001})`,
           ...backgroundStyle(slide?.background)
         }}
       >

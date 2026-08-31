@@ -23,21 +23,44 @@ function decorate(row) {
 
 const COUNT = `(SELECT COUNT(*) FROM deck_slides d WHERE d.screen_id = s.id) AS slide_count`;
 
-async function seedFirstSlide(env, screenId) {
+async function seedFirstSlide(env, screenId, name) {
   const slide = await env.DB
     .prepare(
       `INSERT INTO deck_slides (screen_id, position, name, duration_seconds, background)
-       VALUES (?, 0, 'Lysbilde 1', 15, '{"type":"gradient","from":"#1f5566","to":"#0f2733","angle":135}') RETURNING id`
+       VALUES (?, 0, 'Tittel', 15, '{"type":"gradient","from":"#1f5566","to":"#0f2733","angle":135}') RETURNING id`
     )
     .bind(screenId)
     .first();
-  await env.DB
-    .prepare(
-      `INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, config)
-       VALUES (?, 0, 'text', 8, 40, 84, 20, '{"text":"Ny skjerm","size":96,"weight":800,"align":"center","color":"#ffffff"}')`
+  const stmt = env.DB.prepare(
+    `INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, config) VALUES (?, ?, 'text', ?, ?, ?, ?, ?)`
+  );
+  await env.DB.batch([
+    stmt.bind(
+      slide.id,
+      0,
+      8,
+      36,
+      84,
+      16,
+      JSON.stringify({
+        text: name || 'Tittel',
+        size: 120,
+        weight: 800,
+        align: 'center',
+        valign: 'middle',
+        color: '#ffffff'
+      })
+    ),
+    stmt.bind(
+      slide.id,
+      1,
+      8,
+      55,
+      84,
+      8,
+      JSON.stringify({ text: 'Undertittel', size: 46, weight: 400, align: 'center', color: '#ffffff' })
     )
-    .bind(slide.id)
-    .run();
+  ]);
 }
 
 // GET /api/screens        -> alle (med slide_count + online)
@@ -138,7 +161,7 @@ export async function onRequestPost(context) {
       normOrientation(b.orientation)
     )
     .first();
-  await seedFirstSlide(env, row.id);
+  await seedFirstSlide(env, row.id, row.name);
   return json(decorate({ ...row, slide_count: 1 }), { status: 201 });
 }
 

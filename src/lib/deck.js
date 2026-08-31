@@ -106,3 +106,94 @@ export const BASE_SIZE = {
   landscape: { w: 1920, h: 1080 },
   portrait: { w: 1080, h: 1920 }
 };
+
+/** Innebygde lysbilde-maler (Keynote-stil «Velg en layout»). */
+export const SLIDE_LAYOUTS = [
+  { id: 'blank', label: 'Tom', elements: [] },
+  {
+    id: 'title',
+    label: 'Tittel',
+    elements: [
+      { kind: 'text', x: 8, y: 36, w: 84, h: 16, config: { text: 'Tittel', size: 120, weight: 800, align: 'center', valign: 'middle', color: '#ffffff' } },
+      { kind: 'text', x: 8, y: 55, w: 84, h: 8, config: { text: 'Undertittel', size: 46, weight: 400, align: 'center', color: '#ffffff' } }
+    ]
+  },
+  {
+    id: 'title-program',
+    label: 'Tittel + program',
+    elements: [
+      { kind: 'text', x: 6, y: 5, w: 88, h: 12, config: { text: 'Program', size: 84, weight: 800, align: 'left', color: '#ffffff' } },
+      { kind: 'program', x: 6, y: 20, w: 88, h: 74, config: { mode: 'agenda', categoryIds: [], max: 10, showCategory: true } }
+    ]
+  },
+  {
+    id: 'program-full',
+    label: 'Program (fullskjerm)',
+    elements: [
+      { kind: 'program', x: 4, y: 4, w: 92, h: 92, config: { mode: 'agenda', categoryIds: [], max: 12, showCategory: true } }
+    ]
+  },
+  {
+    id: 'now-next',
+    label: 'Nå & neste',
+    elements: [
+      { kind: 'text', x: 6, y: 5, w: 88, h: 12, config: { text: 'Nå & neste', size: 84, weight: 800, align: 'left', color: '#ffffff' } },
+      { kind: 'program', x: 6, y: 20, w: 88, h: 58, config: { mode: 'nowNext', categoryIds: [], showCategory: true } }
+    ]
+  },
+  {
+    id: 'clock-program',
+    label: 'Klokke + program',
+    elements: [
+      { kind: 'text', x: 6, y: 5, w: 60, h: 12, config: { text: 'Program', size: 80, weight: 800, align: 'left', color: '#ffffff' } },
+      { kind: 'clock', x: 72, y: 5, w: 24, h: 16, config: { showDate: true, showSeconds: true } },
+      { kind: 'program', x: 6, y: 22, w: 64, h: 72, config: { mode: 'agenda', categoryIds: [], max: 9, showCategory: true } },
+      { kind: 'sponsors', x: 72, y: 24, w: 24, h: 40, config: {} }
+    ]
+  },
+  {
+    id: 'sponsors',
+    label: 'Sponsorer',
+    elements: [
+      { kind: 'text', x: 8, y: 8, w: 84, h: 10, config: { text: 'Takk til våre sponsorer', size: 60, weight: 700, align: 'center', color: '#ffffff' } },
+      { kind: 'sponsors', x: 15, y: 22, w: 70, h: 66, config: {} }
+    ]
+  },
+  {
+    id: 'countdown',
+    label: 'Nedtelling',
+    elements: [
+      { kind: 'text', x: 8, y: 16, w: 84, h: 12, config: { text: 'Starter om', size: 68, weight: 700, align: 'center', color: '#ffffff' } },
+      { kind: 'countdown', x: 20, y: 34, w: 60, h: 34, config: { mode: 'nextItem', emphasis: 'none' } }
+    ]
+  },
+  {
+    id: 'message',
+    label: 'Melding',
+    elements: [
+      { kind: 'text', x: 10, y: 33, w: 80, h: 34, config: { text: 'Din melding her', size: 104, weight: 800, align: 'center', valign: 'middle', color: '#ffffff' } }
+    ]
+  },
+  {
+    id: 'qr',
+    label: 'QR-kode',
+    elements: [
+      { kind: 'qr', x: 38, y: 12, w: 24, h: 54, config: { mode: 'schedule' } },
+      { kind: 'text', x: 10, y: 70, w: 80, h: 10, config: { text: 'Skann for program', size: 52, weight: 700, align: 'center', color: '#ffffff' } }
+    ]
+  },
+  {
+    id: 'image-full',
+    label: 'Bilde',
+    elements: [{ kind: 'image', x: 0, y: 0, w: 100, h: 100, config: { url: '', fit: 'cover' } }]
+  },
+  {
+    id: 'image-text',
+    label: 'Bilde + tittel',
+    elements: [
+      { kind: 'image', x: 0, y: 0, w: 50, h: 100, config: { url: '', fit: 'cover' } },
+      { kind: 'text', x: 56, y: 38, w: 40, h: 14, config: { text: 'Tittel', size: 84, weight: 800, align: 'left', valign: 'middle', color: '#ffffff' } },
+      { kind: 'text', x: 56, y: 54, w: 40, h: 10, config: { text: 'Undertekst', size: 38, weight: 400, align: 'left', color: '#ffffff' } }
+    ]
+  }
+];
