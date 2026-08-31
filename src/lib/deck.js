@@ -15,16 +15,45 @@ export const ELEMENT_KINDS = [
 export const ELEMENT_LABEL = Object.fromEntries(ELEMENT_KINDS.map((k) => [k.kind, k.label]));
 export const ELEMENT_ICON = Object.fromEntries(ELEMENT_KINDS.map((k) => [k.kind, k.icon]));
 
+export const FONTS = [
+  { value: '', label: 'Standard (Inter)' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: '"Times New Roman", Times, serif', label: 'Times New Roman' },
+  { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },
+  { value: '"Helvetica Neue", Helvetica, Arial, sans-serif', label: 'Helvetica' },
+  { value: '"Trebuchet MS", sans-serif', label: 'Trebuchet MS' },
+  { value: 'Verdana, Geneva, sans-serif', label: 'Verdana' },
+  { value: '"Courier New", Courier, monospace', label: 'Courier New' },
+  { value: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif', label: 'Impact' },
+  { value: 'system-ui, sans-serif', label: 'System' }
+];
+
+export const FONT_WEIGHTS = [
+  { value: 300, label: 'Tynn' },
+  { value: 400, label: 'Normal' },
+  { value: 500, label: 'Medium' },
+  { value: 600, label: 'Halvfet' },
+  { value: 700, label: 'Fet' },
+  { value: 800, label: 'Ekstra fet' },
+  { value: 900, label: 'Svart' }
+];
+
 export const DEFAULT_ELEMENT_CONFIG = {
   text: {
     text: 'Tekst',
+    font: '',
     size: 64,
     weight: 700,
     align: 'left',
     valign: 'top',
     color: '#ffffff',
+    fill: null, // { type:'gradient', from, to, angle } overstyrer color
     lineHeight: 1.1,
-    italic: false
+    tracking: 0,
+    italic: false,
+    underline: false,
+    strike: false,
+    shadow: false
   },
   image: { url: '', fit: 'contain', radius: 0 },
   shape: { shape: 'rect', fill: '#1f5566', radius: 16, opacity: 100 },

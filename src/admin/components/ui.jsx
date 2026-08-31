@@ -84,6 +84,10 @@ const ICONS = {
   layers: <path d="m12 3 9 5-9 5-9-5 9-5zM3 14l9 5 9-5M3 18l9 5 9-5" />,
   text: <path d="M5 5h14M12 5v14M9 19h6" />,
   square: <rect x="4" y="4" width="16" height="16" rx="2" />,
+  alignLeft: <path d="M4 6h16M4 12h10M4 18h13" />,
+  alignCenter: <path d="M4 6h16M7 12h10M5 18h14" />,
+  alignRight: <path d="M4 6h16M10 12h10M7 18h13" />,
+  alignJustify: <path d="M4 6h16M4 12h16M4 18h16" />,
   eye: (
     <>
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
@@ -287,5 +291,43 @@ export function MetaValue({ children }) {
     <span className="hidden text-xs font-semibold uppercase tracking-wide text-muted sm:inline">
       {children}
     </span>
+  );
+}
+
+/** Segmentert knapperad. options: [{ value, label?, icon? }] */
+export function Segmented({ value, onChange, options, className = '' }) {
+  return (
+    <div className={`flex overflow-hidden rounded-lg border border-line ${className}`}>
+      {options.map((o, i) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={`flex flex-1 items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold ${
+              i > 0 ? 'border-l border-line' : ''
+            } ${active ? 'bg-brand text-white' : 'bg-card text-muted hover:bg-hair'}`}
+          >
+            {o.icon ? <Icon name={o.icon} className="h-3.5 w-3.5" /> : o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** På/av-knapp til B/I/U/S. */
+export function ToggleButton({ active, onClick, children, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`grid h-8 w-8 place-items-center rounded-lg border text-sm font-bold ${
+        active ? 'border-brand bg-brand text-white' : 'border-line bg-card text-muted hover:bg-hair'
+      } ${className}`}
+    >
+      {children}
+    </button>
   );
 }

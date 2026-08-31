@@ -10,19 +10,37 @@ function TextEl({ config }) {
   const c = config || {};
   const alignItems =
     c.valign === 'middle' ? 'center' : c.valign === 'bottom' ? 'flex-end' : 'flex-start';
+  const decoration = [c.underline && 'underline', c.strike && 'line-through']
+    .filter(Boolean)
+    .join(' ');
+
+  const style = {
+    fontFamily: c.font || undefined,
+    fontSize: c.size ?? 64,
+    fontWeight: c.weight ?? 700,
+    fontStyle: c.italic ? 'italic' : 'normal',
+    textAlign: c.align || 'left',
+    lineHeight: c.lineHeight ?? 1.1,
+    letterSpacing: c.tracking ? `${c.tracking}px` : undefined,
+    textDecoration: decoration || undefined,
+    textShadow: c.shadow ? '0 2px 12px rgba(0,0,0,0.45)' : undefined
+  };
+
+  const fill = c.fill && c.fill.type === 'gradient' ? c.fill : null;
+  if (fill) {
+    style.backgroundImage = `linear-gradient(${fill.angle ?? 294}deg, ${fill.from || '#3b82f6'}, ${
+      fill.to || '#ec4899'
+    })`;
+    style.WebkitBackgroundClip = 'text';
+    style.backgroundClip = 'text';
+    style.color = 'transparent';
+  } else {
+    style.color = c.color || '#ffffff';
+  }
+
   return (
     <div className="flex h-full w-full" style={{ alignItems }}>
-      <div
-        className="w-full whitespace-pre-wrap break-words"
-        style={{
-          fontSize: c.size ?? 64,
-          fontWeight: c.weight ?? 700,
-          fontStyle: c.italic ? 'italic' : 'normal',
-          textAlign: c.align || 'left',
-          lineHeight: c.lineHeight ?? 1.1,
-          color: c.color || '#ffffff'
-        }}
-      >
+      <div className="w-full whitespace-pre-wrap break-words" style={style}>
         {c.text ?? ''}
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { PROGRAM_MODES, MESSAGE_EMPHASIS } from '../../../lib/slides.js';
+import { FONTS, FONT_WEIGHTS } from '../../../lib/deck.js';
 import { isoToLocalInput, localInputToIso } from '../../../lib/time.js';
-import { Field, Input, Select, Textarea } from '../ui.jsx';
+import { Field, Input, Select, Textarea, Segmented, ToggleButton } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
 
 const Check = ({ label, checked, onChange }) => (
@@ -20,12 +21,33 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
   const c = cfg || {};
 
   if (kind === 'text') {
+    const fill = c.fill && c.fill.type === 'gradient' ? c.fill : null;
     return (
       <div className="grid gap-3">
         <Field label="Tekst">
           <Textarea rows={3} value={c.text || ''} onChange={(e) => set({ text: e.target.value })} />
         </Field>
+
+        <Field label="Font">
+          <Select value={c.font || ''} onChange={(e) => set({ font: e.target.value })}>
+            {FONTS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
         <div className="grid grid-cols-2 gap-3">
+          <Field label="Vekt">
+            <Select value={c.weight ?? 700} onChange={(e) => set({ weight: Number(e.target.value) })}>
+              {FONT_WEIGHTS.map((w) => (
+                <option key={w.value} value={w.value}>
+                  {w.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <Field label="Størrelse (px)">
             <Input
               type="number"
@@ -34,46 +56,123 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
               onChange={(e) => set({ size: Number(e.target.value) || 64 })}
             />
           </Field>
-          <Field label="Linjehøyde">
-            <Input
-              type="number"
-              step="0.05"
-              min={0.8}
-              value={c.lineHeight ?? 1.1}
-              onChange={(e) => set({ lineHeight: Number(e.target.value) || 1.1 })}
-            />
-          </Field>
-          <Field label="Vekt">
-            <Select value={c.weight ?? 700} onChange={(e) => set({ weight: Number(e.target.value) })}>
-              <option value={400}>Normal</option>
-              <option value={600}>Halvfet</option>
-              <option value={800}>Fet</option>
-            </Select>
-          </Field>
-          <Field label="Justering">
-            <Select value={c.align || 'left'} onChange={(e) => set({ align: e.target.value })}>
-              <option value="left">Venstre</option>
-              <option value="center">Midtstilt</option>
-              <option value="right">Høyre</option>
-            </Select>
-          </Field>
-          <Field label="Loddrett">
-            <Select value={c.valign || 'top'} onChange={(e) => set({ valign: e.target.value })}>
-              <option value="top">Topp</option>
-              <option value="middle">Midt</option>
-              <option value="bottom">Bunn</option>
-            </Select>
-          </Field>
-          <Field label="Farge">
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <ToggleButton
+            active={(c.weight ?? 700) >= 700}
+            onClick={() => set({ weight: (c.weight ?? 700) >= 700 ? 400 : 700 })}
+          >
+            B
+          </ToggleButton>
+          <ToggleButton active={!!c.italic} onClick={() => set({ italic: !c.italic })}>
+            <span className="italic">I</span>
+          </ToggleButton>
+          <ToggleButton active={!!c.underline} onClick={() => set({ underline: !c.underline })}>
+            <span className="underline">U</span>
+          </ToggleButton>
+          <ToggleButton active={!!c.strike} onClick={() => set({ strike: !c.strike })}>
+            <span className="line-through">S</span>
+          </ToggleButton>
+          <ToggleButton active={!!c.shadow} onClick={() => set({ shadow: !c.shadow })} className="ml-auto">
+            <span className="text-[10px]">skygge</span>
+          </ToggleButton>
+        </div>
+
+        <div>
+          <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Fyll</div>
+          <Segmented
+            value={fill ? 'gradient' : 'solid'}
+            onChange={(v) =>
+              set(
+                v === 'gradient'
+                  ? { fill: { type: 'gradient', from: c.color || '#3b82f6', to: '#ec4899', angle: 294 } }
+                  : { fill: null }
+              )
+            }
+            options={[
+              { value: 'solid', label: 'Ensfarget' },
+              { value: 'gradient', label: 'Forløpning' }
+            ]}
+          />
+          {fill ? (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <input
+                type="color"
+                value={fill.from}
+                onChange={(e) => set({ fill: { ...fill, from: e.target.value } })}
+                className="h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
+              />
+              <input
+                type="color"
+                value={fill.to}
+                onChange={(e) => set({ fill: { ...fill, to: e.target.value } })}
+                className="h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
+              />
+              <label className="col-span-2 text-xs text-muted">
+                Vinkel °
+                <Input
+                  type="number"
+                  value={fill.angle ?? 294}
+                  onChange={(e) => set({ fill: { ...fill, angle: Number(e.target.value) || 0 } })}
+                />
+              </label>
+            </div>
+          ) : (
             <input
               type="color"
               value={c.color || '#ffffff'}
               onChange={(e) => set({ color: e.target.value })}
-              className="h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
+              className="mt-2 h-9 w-full cursor-pointer rounded-lg border border-line bg-white"
+            />
+          )}
+        </div>
+
+        <div>
+          <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+            Justering
+          </div>
+          <Segmented
+            value={c.align || 'left'}
+            onChange={(v) => set({ align: v })}
+            options={[
+              { value: 'left', icon: 'alignLeft' },
+              { value: 'center', icon: 'alignCenter' },
+              { value: 'right', icon: 'alignRight' },
+              { value: 'justify', icon: 'alignJustify' }
+            ]}
+          />
+          <Segmented
+            className="mt-1.5"
+            value={c.valign || 'top'}
+            onChange={(v) => set({ valign: v })}
+            options={[
+              { value: 'top', label: 'Topp' },
+              { value: 'middle', label: 'Midt' },
+              { value: 'bottom', label: 'Bunn' }
+            ]}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Linjeavstand">
+            <Input
+              type="number"
+              step="0.05"
+              min={0.7}
+              value={c.lineHeight ?? 1.1}
+              onChange={(e) => set({ lineHeight: Number(e.target.value) || 1.1 })}
+            />
+          </Field>
+          <Field label="Tegnavstand (px)">
+            <Input
+              type="number"
+              step="0.5"
+              value={c.tracking ?? 0}
+              onChange={(e) => set({ tracking: Number(e.target.value) || 0 })}
             />
           </Field>
         </div>
-        <Check label="Kursiv" checked={!!c.italic} onChange={(v) => set({ italic: v })} />
       </div>
     );
   }

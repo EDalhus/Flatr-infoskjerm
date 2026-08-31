@@ -16,6 +16,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
   const [err, setErr] = useState('');
   const [widgetMenu, setWidgetMenu] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [snap, setSnap] = useState(true);
   const timers = useRef({});
 
   const reload = async (keepSlide) => {
@@ -274,11 +275,21 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           )}
         </div>
 
+        <button
+          onClick={() => setSnap((v) => !v)}
+          title="Snapping til senter/kanter"
+          className={`ml-auto inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] ${
+            snap ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-card text-muted hover:bg-hair'
+          }`}
+        >
+          <Icon name="layers" className="h-3.5 w-3.5" />
+          Snapping
+        </button>
         <a
           href={`${origin}/display/${screenId}`}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
         >
           <Icon name="eye" className="h-3.5 w-3.5" />
           Forhåndsvis
@@ -313,6 +324,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
               onSelect={setSelEl}
               onChange={patchElement}
               onDeleteElement={deleteElement}
+              snapEnabled={snap}
             />
           ) : (
             <div className="grid h-full place-items-center text-muted">Ingen lysbilder.</div>
