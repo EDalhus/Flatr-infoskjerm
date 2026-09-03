@@ -107,6 +107,15 @@ export const api = {
     dismiss: (id) => req(`/alerts?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
     dismissAll: () => req('/alerts?all=1', { method: 'DELETE' })
   },
+  pairing: {
+    // Admin: koble en kode (vist på TV-en) til en skjerm.
+    link: (pairing_code, screen_id) =>
+      req('/pairing/link', { method: 'POST', body: { pairing_code, screen_id } }),
+    // Admin: liste over parringer (pending + paired).
+    list: () => req('/pairing'),
+    // Admin: opphev en paring (device_id eller screen_id).
+    unpair: (body) => req('/pairing/unpair', { method: 'POST', body })
+  },
   heartbeat: (screenId) =>
     req(`/heartbeat?screen=${encodeURIComponent(screenId)}`, { method: 'POST' }),
   getState: (screenId) =>

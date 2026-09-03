@@ -8,11 +8,13 @@ import MediaLibraryManager from './components/MediaLibraryManager.jsx';
 import TemplatesManager from './components/TemplatesManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
+import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 
 const NAV = [
   { id: 'screens', label: 'Skjermer', icon: 'monitor', section: 'Visning', Component: ScreensManager },
   { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager },
+  { id: 'pairing', label: 'Parring', icon: 'external', section: 'Visning', Component: PairingManager },
   { id: 'schedule', label: 'Program', icon: 'calendar', section: 'Innhold', Component: ScheduleManager },
   { id: 'categories', label: 'Kategorier', icon: 'tag', section: 'Innhold', Component: CategoriesManager },
   { id: 'sponsors', label: 'Sponsorer', icon: 'image', section: 'Innhold', Component: SponsorsManager },

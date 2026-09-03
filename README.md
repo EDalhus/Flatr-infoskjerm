@@ -107,6 +107,7 @@ npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0002_zo
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0003_playlists_media_templates.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0004_slidetypes_dayparting_trash.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0005_canvas_decks.sql
+npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0006_pairing.sql
 ```
 
 `0005` bytter til canvas-modellen (`deck_slides` + `deck_elements`, `orientation`
@@ -114,7 +115,8 @@ på skjerm). Sone-tabellene (`screen_slides` / `playlists`) blir liggende urørt
 men brukes ikke lenger – eksisterende skjermer beholder navn, men lysbildene må
 bygges på nytt i den nye editoren.
 
-`0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
+`0006` legger til `pairings`-tabellen for enhets-parring (Apple TV m.fl.) – se
+[Enhets-parring](#enhets-parring-tv-klienter). `0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
 auto-status. `0003` legger til spillelister, mediebibliotek og maler. `0004`
 legger til tidsstyring på slides og en papirkurv. SQLite har ikke «ADD COLUMN
 IF NOT EXISTS» – har du alt kjørt en migrering, feiler `ALTER`-linjene med
@@ -177,6 +179,11 @@ Under `/api`, rutet av `src/worker.js`. Skriveoperasjoner krever
 | `/api/heartbeat` | `POST` | `?screen=` – Viewer melder at den er i live. |
 | `/api/state` | `GET` | Samlet tilstand for én skjerm (`?screen=`). |
 | `/api/stream` | `GET` | SSE: `snapshot` ved tilkobling, `update` ved endring. |
+| `/api/pairing/request` | `POST` | TV-klient ber om en kode. Åpent. Gir `{ device_id, code, code_display, expires_at, poll_interval_seconds }`. |
+| `/api/pairing/status/:deviceId` | `GET` | TV-klient poller. Åpent. `pending` / `paired` (+ `auth_token`, `state_url`, `stream_url`) / `expired` / `unknown`. |
+| `/api/pairing/link` | `POST` | Admin kobler `{ pairing_code, screen_id }` til en skjerm. Krever token. |
+| `/api/pairing` | `GET` | Admin: liste over enheter (+ `online`). Krever token. |
+| `/api/pairing/unpair` | `POST` | Admin fjerner en paring (`{ device_id }` eller `{ screen_id }`). Krever token. |
 
 ### Sanntid
 
@@ -187,18 +194,114 @@ uten å endre klienten.
 
 ---
 
+## Enhets-parring (TV-klienter)
+
+En dedikert infoskjerm-app (Apple TV / tvOS, Fire TV, nettleser-kiosk …) knyttes
+til en skjerm uten å taste inn URL-er eller tokens. Backend: `src/api/pairing.js`
++ tabellen `pairings` (migrering `0006`). Admin-UI: **Visning → Parring**.
+
+**Flyt**
+
+1. **TV-en starter** → `POST /api/pairing/request`. Backend lager en opak
+   `device_id` (UUID) + en kort, lettlest kode (6 tegn, uten `I/O/0/1`), lagrer en
+   `pending`-rad som utløper om 15 min, og svarer med begge. TV-en lagrer
+   `device_id` permanent på enheten og viser `code_display` (`"ABC-DEF"`) stort på
+   skjermen.
+2. **TV-en poller** `GET /api/pairing/status/<device_id>` hvert `poll_interval_seconds`
+   (4 s) så lenge koden vises.
+3. **Admin** åpner Parring-fanen, taster koden fra TV-en, velger skjerm og lagrer
+   → `POST /api/pairing/link { pairing_code, screen_id }` (krever `ADMIN_TOKEN`).
+   Raden settes til `paired`, får `screen_id` og en tilfeldig `auth_token`.
+4. **Neste status-poll** svarer `{ status: "paired", screen_id, auth_token,
+   state_url, stream_url, display_url }`. TV-en lagrer `auth_token`, senker
+   polle-frekvensen, og henter innhold fra `state_url` + lytter på `stream_url`
+   (SSE) – med `Authorization: Bearer <auth_token>` på hver forespørsel.
+
+**Feilhåndtering** – `link` gir tydelige koder: `404` ukjent kode, `410` utløpt
+(`reason: "expired"`), `409` koden er alt brukt på en annen skjerm
+(`reason: "already_paired"`; samme skjerm er idempotent). `status` gir `expired`
+når 15-minuttersvinduet er passert og `unknown` (404) hvis enheten er slettet /
+opphevet – da starter TV-en parring på nytt.
+
+**Sikkerhet** – `device_id` er en 128-bits UUID; `status` avslører kun data for en
+kjent id. `auth_token` sendes bare til TV-en via `status`, aldri i `link`-svaret.
+`request` har en enkel innebygd brems (>60 rader/min → `429`); sett Cloudflare
+Rate Limiting / WAF foran endepunktet i produksjon. Gamle `pending`/`expired`-rader
+ryddes automatisk etter 24 t.
+
+**Låse ned innholds-endepunktene (valgfritt)** – `/api/state` og `/api/stream` er i
+dag åpne (nettleser-forhåndsvisning i admin bruker dem uten token). Vil du kreve
+parrings-token for TV-trafikk, bruk `verifyPairingToken(env, request)` fra
+`pairing.js` i `state.js` / `stream.js`.
+
+**tvOS-klient (skisse)**
+
+```swift
+// Ved oppstart: hent (eller gjenbruk lagret) device_id.
+struct Pairing: Decodable { let device_id, code, code_display: String
+                            let poll_interval_seconds: Int }
+struct Status: Decodable { let status: String
+                           let screen_id: Int?; let auth_token, state_url, stream_url: String?
+                           let code_display: String?; let poll_interval_seconds: Int }
+
+let base = URL(string: "https://<ditt-worker-domene>")!
+
+func startPairing() async throws -> Pairing {
+    if let saved = Keychain.string("device_id") {          // gjenbruk – overlever omstart
+        let s = try await status(deviceId: saved)
+        if s.status == "paired" { begin(screen: s); return … }
+    }
+    var r = URLRequest(url: base.appending(path: "/api/pairing/request"))
+    r.httpMethod = "POST"
+    let p = try JSONDecoder().decode(Pairing.self, from: try await URLSession.shared.data(for: r).0)
+    Keychain.set(p.device_id, "device_id")
+    show(p.code_display)                                    // stor kode på skjermen
+    return p
+}
+
+func status(deviceId: String) async throws -> Status {
+    let url = base.appending(path: "/api/pairing/status/\(deviceId)")
+    return try JSONDecoder().decode(Status.self, from: try await URLSession.shared.data(from: url).0)
+}
+
+// Poll-løkke mens koden vises:
+while true {
+    let s = try await status(deviceId: p.device_id)
+    switch s.status {
+    case "paired":
+        Keychain.set(s.auth_token!, "auth_token")
+        begin(screen: s)                                    // hent s.state_url, lytt på s.stream_url
+        return
+    case "expired", "unknown":
+        return try await startPairing()                     // ny kode
+    default:
+        try await Task.sleep(for: .seconds(s.poll_interval_seconds))
+    }
+}
+
+// Alle innholds-kall etter parring:
+var req = URLRequest(url: base.appending(path: s.state_url!))
+req.setValue("Bearer \(Keychain.string("auth_token")!)", forHTTPHeaderField: "Authorization")
+```
+
+Enkleste variant: etter `paired` kan TV-en bare laste `display_url`
+(`/display/<screen_id>`) i en `WKWebView` – da gjenbrukes hele Viewer-en som den er.
+
+---
+
 ## Prosjektstruktur
 
 ```
 ├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1 (DB) + R2 (MEDIA)
 ├── schema.sql                # fullt skjema + demo-data
-├── migrations/               # 0001 … 0005 (siste: canvas-modellen)
+├── migrations/               # 0001 … 0006 (siste: enhets-parring)
 └── src/
     ├── worker.js             # ruter /api/* + ASSETS-fallback
     ├── main.jsx              # ruter: /admin · /display/:id · /s/:id
     ├── api/                   # screens, deck, deckSlides, deckElements, media,
     │                          #   templates, trash, health, categories, schedule,
-    │                          #   sponsors, alerts, heartbeat, state, stream, _shared
+    │                          #   sponsors, alerts, heartbeat, state, stream,
+    │                          #   pairing (TV-parring), _shared
     ├── lib/{api,time,deck,slides,daypart,ics}.js
     ├── hooks/{useNow,useWakeLock,useSSE,useHeartbeat,useFitScale,useListDnd}.js
     ├── viewer/
@@ -214,8 +317,8 @@ uten å endre klienten.
         └── components/
             ├── deck/          # DeckEditor + SlideNavigator + CanvasStage + Inspector + ElementConfigFields
             ├── DaypartFields, MediaPicker
-            └── *Manager: Screens / Alerts / Schedule / Categories / Sponsors /
-                          MediaLibrary / Templates / RecentlyDeleted
+            └── *Manager: Screens / Alerts / Pairing / Schedule / Categories /
+                          Sponsors / MediaLibrary / Templates / RecentlyDeleted
 ```
 
 `buildState` slår sammen lysbilder + elementer til `state.deck`; Viewer rendrer

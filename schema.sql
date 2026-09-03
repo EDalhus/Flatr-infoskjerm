@@ -110,6 +110,20 @@ CREATE TABLE IF NOT EXISTS trash (
   deleted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+-- Enhets-parring for TV-klienter (Apple TV / tvOS m.fl.).
+CREATE TABLE IF NOT EXISTS pairings (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  code        TEXT NOT NULL,
+  device_id   TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'pending',   -- pending | paired | expired
+  screen_id   INTEGER REFERENCES screens(id) ON DELETE CASCADE,
+  auth_token  TEXT,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  expires_at  TEXT NOT NULL,
+  paired_at   TEXT,
+  last_seen   TEXT
+);
+
 CREATE TABLE IF NOT EXISTS alerts (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   message          TEXT NOT NULL,
@@ -151,6 +165,10 @@ CREATE INDEX IF NOT EXISTS idx_media_folder        ON media (folder);
 CREATE INDEX IF NOT EXISTS idx_trash_deleted       ON trash (deleted_at);
 CREATE INDEX IF NOT EXISTS idx_deck_slides_screen  ON deck_slides (screen_id, position);
 CREATE INDEX IF NOT EXISTS idx_deck_elements_slide ON deck_elements (slide_id, z);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pairings_device       ON pairings (device_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pairings_code_pending ON pairings (code) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_pairings_status ON pairings (status);
+CREATE INDEX IF NOT EXISTS idx_pairings_token  ON pairings (auth_token);
 
 -- ---------------------------------------------------------------------------
 -- Demo-data (valgfritt – fjern hele blokken for tom database)

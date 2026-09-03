@@ -20,6 +20,7 @@ import * as health from './api/health.js';
 import * as heartbeat from './api/heartbeat.js';
 import * as state from './api/state.js';
 import * as stream from './api/stream.js';
+import * as pairing from './api/pairing.js';
 
 const ROUTES = {
   '/api/screens': screens,
@@ -59,6 +60,15 @@ export default {
 
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       const key = url.pathname.replace(/\/+$/, '') || '/api';
+
+      // Enhets-parring har dynamiske stier (/api/pairing/status/<device_id>),
+      // så hele prefikset rutes til én modul som selv matcher underruten.
+      if (key === '/api/pairing' || key.startsWith('/api/pairing/')) {
+        const h = pairing[METHOD_HANDLER[request.method]];
+        if (!h) return jsonError(405, 'Metode ikke tillatt');
+        return h({ request, env });
+      }
+
       const mod = ROUTES[key];
       if (!mod) return jsonError(404, 'Ukjent endepunkt');
 
