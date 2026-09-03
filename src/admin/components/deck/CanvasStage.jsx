@@ -83,7 +83,7 @@ function DragMeasure({ el, base }) {
       />
       <Lbl style={{ top: `${el.y + el.h + (100 - el.y - el.h) / 2}%`, left: `${cx}%` }}>{pxB}</Lbl>
       <div
-        className="absolute rounded bg-ink px-1.5 py-0.5 text-[13px] font-bold text-white"
+        className="absolute rounded bg-brand px-1.5 py-0.5 text-[13px] font-bold text-white"
         style={{ left: `${el.x}%`, top: `${el.y}%`, transform: 'translateY(-130%)' }}
       >
         {Math.round((el.w / 100) * base.w)} × {Math.round((el.h / 100) * base.h)}

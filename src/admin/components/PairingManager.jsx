@@ -274,7 +274,7 @@ export default function PairingManager({ onChange }) {
                 type="checkbox"
                 checked={allShownSelected}
                 onChange={toggleAll}
-                className="h-4 w-4 rounded border-line accent-brand"
+                className="h-4 w-4 rounded border-line accent-focus"
                 disabled={filtered.length === 0}
               />
               Enheter · {pairings.length}
@@ -312,7 +312,7 @@ export default function PairingManager({ onChange }) {
                         type="checkbox"
                         checked={selected.has(p.device_id)}
                         onChange={() => toggle(p.device_id)}
-                        className="h-4 w-4 shrink-0 rounded border-line accent-brand"
+                        className="h-4 w-4 shrink-0 rounded border-line accent-focus"
                         aria-label="Velg enhet"
                       />
                       <button
@@ -365,7 +365,7 @@ export default function PairingManager({ onChange }) {
       </div>
 
       {selected.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-xl border border-black/20 bg-ink px-2 py-2 text-white shadow-pop">
+        <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-[#1a0730] px-2 py-2 text-white shadow-pop">
           <span className="px-2 text-sm font-semibold">{selected.size} valgt</span>
           <span className="mx-1 h-5 w-px bg-white/20" />
           <BulkBtn onClick={() => runCommand(selectedPairedIds, 'reload', 'Last inn')}>Last inn</BulkBtn>

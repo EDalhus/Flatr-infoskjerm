@@ -53,7 +53,7 @@ export default function LayoutPicker({ onPick, onPickTemplate, onClose }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-6" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={onClose}>
       <div
         className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-hair bg-card shadow-pop"
         onClick={(e) => e.stopPropagation()}

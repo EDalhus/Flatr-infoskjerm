@@ -72,7 +72,7 @@ export default function Admin() {
   return (
     <div className="flex h-screen overflow-hidden bg-paper text-ink">
       <div className="hidden w-14 shrink-0 flex-col items-center border-r border-line bg-card py-4 sm:flex">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-ink text-lg font-black text-white">
+        <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-lg font-black text-white">
           F
         </div>
         <div className="mt-4 grid h-9 w-9 place-items-center rounded-lg bg-hair text-muted">
@@ -110,8 +110,8 @@ export default function Admin() {
                       onClick={() => go(n.id)}
                       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
                         active
-                          ? 'bg-paper font-semibold text-ink shadow-card'
-                          : 'font-medium text-ink/70 hover:bg-paper hover:text-ink'
+                          ? 'bg-brand-tint font-semibold text-ink'
+                          : 'font-medium text-ink/70 hover:bg-brand-tint/50 hover:text-ink'
                       }`}
                     >
                       <Icon
@@ -149,7 +149,7 @@ export default function Admin() {
             </Button>
           </div>
           <p className="mt-2 text-xs leading-snug text-muted">
-            Kreves bare når <code className="rounded bg-black/5 px-1">ADMIN_TOKEN</code> er satt i
+            Kreves bare når <code className="rounded bg-white/10 px-1">ADMIN_TOKEN</code> er satt i
             produksjon.
           </p>
         </div>

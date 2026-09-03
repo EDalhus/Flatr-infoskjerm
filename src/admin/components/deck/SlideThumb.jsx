@@ -41,7 +41,7 @@ export default function SlideThumb({ slide, orientation }) {
                 }}
               />
             ) : (
-              <div className="grid h-full w-full place-items-center rounded bg-white/85 text-[6px] font-bold uppercase tracking-wide text-ink/55">
+              <div className="grid h-full w-full place-items-center rounded bg-white/85 text-[6px] font-bold uppercase tracking-wide text-[#2b0d40]/60">
                 {ELEMENT_LABEL[el.kind] || el.kind}
               </div>
             )}

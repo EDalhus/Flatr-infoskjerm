@@ -26,7 +26,7 @@ export default function AlertOverlay({ alerts }) {
   if (!active) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/75 p-12 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-12 backdrop-blur-sm">
       <div className="w-full max-w-5xl animate-alert-in rounded-[2rem] border-4 border-white/50 bg-danger p-14 text-center shadow-pop">
         <div className="text-2xl font-black uppercase tracking-[0.4em] text-white/85">
           Viktig beskjed

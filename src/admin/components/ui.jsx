@@ -1,4 +1,4 @@
-/* Delte UI-byggeklosser for admin – varm palett, gruppekort og listerader. */
+/* Delte UI-byggeklosser for admin – mørk lilla palett, gruppekort og listerader. */
 import { forwardRef } from 'react';
 
 const ICONS = {
@@ -141,7 +141,7 @@ export function Button({ variant = 'primary', size = 'md', className = '', ...pr
     md: 'rounded-full px-4 py-2 text-sm'
   };
   const variants = {
-    primary: 'bg-brand text-card hover:bg-brand-dark',
+    primary: 'bg-brand text-white hover:bg-brand-dark',
     outline: 'border border-line bg-card text-ink hover:bg-hair',
     ghost: 'text-brand hover:bg-brand-tint',
     danger: 'bg-danger-tint text-danger hover:bg-danger-hover'
@@ -169,7 +169,7 @@ export function IconButton({ name, label, tone = 'muted', className = '', ...pro
 }
 
 // Felles: 36px høyde, rounded-lg, samme kant/fokus overalt.
-const CONTROL = 'h-9 rounded-lg border border-line bg-white text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20';
+const CONTROL = 'h-9 rounded-lg border border-line bg-paper text-ink focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/30';
 const inputBase = `w-full ${CONTROL} px-3 text-sm placeholder:text-muted/70`;
 
 export const Input = forwardRef(function Input({ className = '', ...props }, ref) {
@@ -180,7 +180,7 @@ export const Textarea = forwardRef(function Textarea({ className = '', ...props 
     <textarea
       ref={ref}
       {...props}
-      className={`w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 ${className}`}
+      className={`w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/30 ${className}`}
     />
   );
 });
@@ -194,7 +194,7 @@ export function ColorInput({ className = '', ...props }) {
     <input
       type="color"
       {...props}
-      className={`h-9 w-full cursor-pointer rounded-lg border border-line bg-white p-1 ${className}`}
+      className={`h-9 w-full cursor-pointer rounded-lg border border-line bg-paper p-1 ${className}`}
     />
   );
 }
@@ -343,7 +343,7 @@ export function Segmented({ value, onChange, options, className = '' }) {
             type="button"
             onClick={() => onChange(o.value)}
             className={`${cell} ${i > 0 ? 'border-l border-line' : ''} ${
-              active ? 'bg-brand text-white' : 'bg-white text-muted hover:bg-hair'
+              active ? 'bg-brand text-white' : 'bg-paper text-muted hover:bg-hair'
             }`}
           >
             {o.icon ? <Icon name={o.icon} className="h-4 w-4" /> : o.label}
@@ -368,7 +368,7 @@ export function ButtonGroup({ items, className = '' }) {
           title={it.title}
           onClick={it.onClick}
           className={`${cell} ${i > 0 ? 'border-l border-line' : ''} ${
-            it.active ? 'bg-brand text-white' : 'bg-white text-muted hover:bg-hair'
+            it.active ? 'bg-brand text-white' : 'bg-paper text-muted hover:bg-hair'
           }`}
         >
           {it.icon ? <Icon name={it.icon} className="h-4 w-4" /> : it.label}

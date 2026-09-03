@@ -10,10 +10,16 @@ body,
 
 body {
   margin: 0;
-  background: #f6f6f7;
-  color: #1c1d1f;
+  background: #2b0d40;
+  color: #f2edff;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Mørkt tema for admin: la nettleser-kontroller (datovelger, select-pil,
+   scrollbar) følge med. Viewer/-display overstyrer selv der det trengs. */
+:root {
+  color-scheme: dark;
 }
 
 /* Skjul markør på infoskjermer i kiosk-modus */

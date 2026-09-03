@@ -7,27 +7,28 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
       },
       colors: {
-        // Nøytral, moderne admin-palett med oransje aksent.
-        paper: '#f6f6f7', // sidebakgrunn (kjølig off-white)
-        card: '#ffffff',
-        ink: '#1c1d1f', // primærtekst (nær-svart)
-        muted: '#8b8d94', // sekundærtekst
-        line: '#e9e9ec', // kant mot paper
-        hair: '#f0f0f2', // kant inne i kort
+        // Mørk lilla admin-palett med magenta aksent og gul highlight.
+        paper: '#2b0d40', // sidebakgrunn (mørkeste lilla)
+        card: '#3a1f73', // flate / kort (indigo)
+        ink: '#f2edff', // primærtekst (nær-hvit lavendel)
+        muted: '#a999cf', // sekundærtekst
+        line: '#4e3196', // kant mot paper
+        hair: '#472c88', // kant inne i kort
         brand: {
-          DEFAULT: '#f15a29', // oransje aksent
-          dark: '#d94d1e',
-          tint: '#fdeee7'
+          DEFAULT: '#bc17bf', // magenta aksent
+          dark: '#9d0fa0',
+          tint: '#4a1566' // mørk magenta-vask (aktiv nav-bakgrunn)
         },
-        zone: '#f4f4f6', // gruppe-header
-        zoneink: '#6a6c72',
-        ok: { DEFAULT: '#16a34a', tint: '#e4f6ea' },
-        danger: { DEFAULT: '#e0393a', tint: '#fdeceb', hover: '#f9dcdb' },
-        badge: { DEFAULT: '#eeeef0', ink: '#52545a' }
+        focus: '#3e22f2', // elektrisk blå – fokusring / avkryssing
+        zone: '#33195f', // gruppe-header
+        zoneink: '#bcabde',
+        ok: { DEFAULT: '#34d399', tint: '#123a30' },
+        danger: { DEFAULT: '#fb7185', tint: '#4a1626', hover: '#5c1b2f' },
+        badge: { DEFAULT: '#f2ea79', ink: '#2b0d40' } // gul brikke, mørk tekst
       },
       boxShadow: {
-        card: '0 1px 2px rgba(17,18,20,0.04), 0 1px 3px rgba(17,18,20,0.05)',
-        pop: '0 8px 30px rgba(17,18,20,0.12)'
+        card: '0 1px 2px rgba(0,0,0,0.30)',
+        pop: '0 10px 40px rgba(0,0,0,0.55)'
       },
       keyframes: {
         'alert-in': {
