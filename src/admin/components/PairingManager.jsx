@@ -13,6 +13,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
+import DeckPreviewStrip from './DeckPreviewStrip.jsx';
 import {
   Icon,
   Field,
@@ -261,8 +262,8 @@ export default function PairingManager({ onChange }) {
               const hasName = Boolean(p.label || p.client_info?.device_name);
               const codeText = `${p.code.slice(0, 3)}-${p.code.slice(3)}`;
               return (
+                <div key={p.id}>
                 <Row
-                  key={p.id}
                   media={
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-hair">
                       <span
@@ -347,6 +348,8 @@ export default function PairingManager({ onChange }) {
                     )
                   }
                 />
+                {paired && p.screen_id && <DeckPreviewStrip screenId={p.screen_id} />}
+                </div>
               );
             })}
           </GroupCard>

@@ -247,7 +247,8 @@ skjerm ved neste poll.
 
 **Navn på enheten** – admin-lista viser kallenavnet (`label`, satt via
 `POST /api/pairing/rename`) hvis satt, ellers `device_name` som TV-en rapporterer,
-ellers selve koden.
+ellers selve koden. Under hver parede enhet vises en miniatyr-stripe av alle
+lysbildene som spilles av på den tilkoblede skjermen.
 
 **Feilhåndtering** – `link` gir tydelige koder: `404` ukjent kode, `410` utløpt
 (`reason: "expired"`), `409` koden er alt brukt på en annen skjerm
