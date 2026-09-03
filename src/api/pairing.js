@@ -3,15 +3,22 @@
 // Flyt:
 //   1. TV-en starter  ->  POST /api/pairing/request
 //        Backend lager en `device_id` (opak UUID) + en kort kode ("ABC-DEF"),
-//        lagrer en `pending`-rad som utløper om 15 min, og svarer med begge.
-//        TV-en viser koden på skjermen og lagrer `device_id` lokalt.
-//   2. TV-en poller  ->  GET /api/pairing/status/<device_id>  hvert ~4. sekund.
-//   3. Admin taster inn koden i webpanelet og velger en skjerm
+//        lagrer en `pending`-rad som utløper om 15 min, og svarer med begge
+//        + en `pair_url` TV-en kan vise som QR-kode.
+//   2. TV-en poller  ->  GET /api/pairing/status/<device_id>  hvert ~4. sekund,
+//        og legger gjerne ved klient-info som query: ?app_version=&tvos_version=&resolution=&uptime=
+//   3. Admin taster inn koden i webpanelet (eller skanner QR-en) og velger skjerm
 //        ->  POST /api/pairing/link { pairing_code, screen_id }   (krever ADMIN_TOKEN)
 //        Raden settes til `paired`, får `screen_id` og en `auth_token`.
-//   4. Neste status-poll fra TV-en svarer { status:"paired", screen_id, auth_token, … }.
-//        TV-en henter så innhold fra /api/state?screen=<id> og lytter på
+//   4. Neste status-poll fra TV-en svarer { status:"paired", screen_id, auth_token, commands, … }.
+//        TV-en henter innhold fra /api/state?screen=<id> (med ETag) og lytter på
 //        /api/stream?screen=<id> (SSE), og sender `Authorization: Bearer <auth_token>`.
+//
+// Admin kan i tillegg:
+//   - POST /api/pairing/reassign { device_id, screen_id }  – flytte en TV til en annen skjerm
+//   - POST /api/pairing/command  { device_id|screen_id, command } – kø en fjernkommando
+//   - POST /api/pairing/unpair   { device_id|screen_id }
+//   - GET  /api/pairing          – liste over enheter (+ online + client_info)
 //
 // Rutene er prefiks-montert i src/worker.js: alt under /api/pairing/ havner her.
 
@@ -23,17 +30,30 @@ import {
   handleOptions,
   readJson,
   requireAdmin,
-  toIntOrNull
+  toIntOrNull,
+  safeJson
 } from './_shared.js';
 
 // Kode-alfabet uten forvekslbare tegn (ingen I, O, 0, 1).
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LEN = 6;
 const CODE_TTL_MIN = 15; // koden er gyldig i 15 minutter
-const POLL_SECONDS = 4; // anbefalt polleintervall for TV-en
+const POLL_SECONDS = 4; // anbefalt polleintervall før paring
+const PAIRED_POLL_SECONDS = 30; // roligere poll etter paring (henter også kommandoer)
+
+// Fjernkommandoer admin kan kø. TV-en henter uleverte i status-pollen.
+const COMMANDS = ['identify', 'reload', 'clear_cache', 'reboot'];
+
+// Hvitliste for klient-info fra TV-en (alt annet forkastes; verdier trimmes).
+const CLIENT_INFO_KEYS = ['app_version', 'tvos_version', 'model', 'resolution', 'uptime_seconds'];
 
 const nowIso = () => new Date().toISOString();
 const plusMinutes = (m) => new Date(Date.now() + m * 60_000).toISOString();
+const codeDisplay = (code) => `${code.slice(0, 3)}-${code.slice(3)}`;
+
+// /admin?view=pairing&code=ABC-DEF  – TV-en viser denne som QR ved siden av koden.
+const pairPath = (code) => `/admin?view=pairing&code=${encodeURIComponent(codeDisplay(code))}`;
+const absolute = (request, path) => new URL(path, request.url).toString();
 
 function randomCode() {
   const bytes = new Uint8Array(CODE_LEN);
@@ -51,6 +71,24 @@ function randomToken(byteLen = 32) {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+// Plukk ut kjente klient-info-felter fra et objekt (query-params eller JSON-body).
+// Returnerer en JSON-streng, eller null hvis ingenting brukbart var med.
+function pickClientInfo(source) {
+  if (!source) return null;
+  const out = {};
+  for (const k of CLIENT_INFO_KEYS) {
+    const v = source[k];
+    if (v === undefined || v === null || v === '') continue;
+    if (k === 'uptime_seconds') {
+      const n = Number.parseInt(v, 10);
+      if (!Number.isNaN(n)) out[k] = n;
+    } else {
+      out[k] = String(v).slice(0, 60);
+    }
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
+}
+
 // `pending` blir `expired` når `expires_at` er passert.
 function effectiveStatus(row) {
   if (row.status === 'pending' && row.expires_at && Date.parse(row.expires_at) < Date.now()) {
@@ -59,16 +97,24 @@ function effectiveStatus(row) {
   return row.status;
 }
 
-// Lat opprydding – fjern gamle pending/expired-rader så tabellen holdes liten.
+// Lat opprydding – hold tabellene små.
 async function sweep(env) {
+  const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const hourAgo = new Date(Date.now() - 3600_000).toISOString();
   try {
-    await env.DB.prepare(
-      `DELETE FROM pairings
-         WHERE status IN ('pending', 'expired')
-           AND created_at < ?`
-    )
-      .bind(new Date(Date.now() - 24 * 3600_000).toISOString())
-      .run();
+    await env.DB.batch([
+      env.DB
+        .prepare(`DELETE FROM pairings WHERE status IN ('pending', 'expired') AND created_at < ?`)
+        .bind(dayAgo),
+      // Leverte kommandoer ryddes fort; uleverte får et døgn i tilfelle TV-en er nede.
+      env.DB
+        .prepare(
+          `DELETE FROM pairing_commands
+             WHERE (delivered_at IS NOT NULL AND delivered_at < ?)
+                OR (delivered_at IS NULL AND created_at < ?)`
+        )
+        .bind(hourAgo, dayAgo)
+    ]);
   } catch {
     /* ikke kritisk */
   }
@@ -80,12 +126,15 @@ export async function onRequestPost(context) {
   const path = new URL(context.request.url).pathname.replace(/\/+$/, '');
   if (path === '/api/pairing/request') return handleRequest(context);
   if (path === '/api/pairing/link') return handleLink(context);
+  if (path === '/api/pairing/reassign') return handleReassign(context);
+  if (path === '/api/pairing/command') return handleCommand(context);
   if (path === '/api/pairing/unpair') return handleUnpair(context);
   return notFound('Ukjent parrings-endepunkt');
 }
 
 // POST /api/pairing/request  – kalles av TV-en ved oppstart. Åpent endepunkt.
-async function handleRequest({ env }) {
+// Valgfri body: { app_version, tvos_version, model, resolution }.
+async function handleRequest({ request, env }) {
   await sweep(env);
 
   // Enkel global brems mot flom (Cloudflare WAF/Rate Limiting bør stå foran i prod).
@@ -97,6 +146,7 @@ async function handleRequest({ env }) {
     return json({ error: 'For mange forespørsler. Prøv igjen om litt.' }, { status: 429 });
   }
 
+  const clientInfo = pickClientInfo(await readJson(request));
   const deviceId = crypto.randomUUID();
   const expiresAt = plusMinutes(CODE_TTL_MIN);
 
@@ -107,10 +157,10 @@ async function handleRequest({ env }) {
     try {
       await env.DB
         .prepare(
-          `INSERT INTO pairings (code, device_id, status, expires_at)
-           VALUES (?, ?, 'pending', ?)`
+          `INSERT INTO pairings (code, device_id, status, expires_at, client_info)
+           VALUES (?, ?, 'pending', ?, ?)`
         )
-        .bind(candidate, deviceId, expiresAt)
+        .bind(candidate, deviceId, expiresAt, clientInfo)
         .run();
       code = candidate;
       break;
@@ -126,9 +176,12 @@ async function handleRequest({ env }) {
     {
       device_id: deviceId,
       code,
-      code_display: `${code.slice(0, 3)}-${code.slice(3)}`, // pen visning på TV-en
+      code_display: codeDisplay(code),
       expires_at: expiresAt,
       status_url: `/api/pairing/status/${deviceId}`,
+      // Vis denne som QR ved siden av koden – skanning åpner admin med koden ferdig utfylt.
+      pair_path: pairPath(code),
+      pair_url: absolute(request, pairPath(code)),
       poll_interval_seconds: POLL_SECONDS
     },
     { status: 201 }
@@ -157,25 +210,36 @@ async function handleLink(context) {
 
   const row = await context.env.DB.prepare('SELECT * FROM pairings WHERE code = ?').bind(code).first();
   if (!row) {
-    return json({ error: 'Ukjent parringskode. Sjekk at du taster den riktig.', reason: 'not_found' }, { status: 404 });
+    return json(
+      { error: 'Ukjent parringskode. Sjekk at du taster den riktig.', reason: 'not_found' },
+      { status: 404 }
+    );
   }
 
   const eff = effectiveStatus(row);
 
   if (eff === 'expired') {
     if (row.status !== 'expired') {
-      await context.env.DB.prepare(`UPDATE pairings SET status = 'expired' WHERE id = ?`).bind(row.id).run();
+      await context.env.DB.prepare(`UPDATE pairings SET status = 'expired' WHERE id = ?`)
+        .bind(row.id)
+        .run();
     }
-    return json({ error: 'Parringskoden er utløpt. Start parring på nytt på TV-en.', reason: 'expired' }, { status: 410 });
+    return json(
+      { error: 'Parringskoden er utløpt. Start parring på nytt på TV-en.', reason: 'expired' },
+      { status: 410 }
+    );
   }
 
   if (eff === 'paired') {
-    // Idempotent: samme skjerm -> ok. Annen skjerm -> konflikt.
+    // Idempotent: samme skjerm -> ok. Annen skjerm -> konflikt (bruk /reassign i stedet).
     if (row.screen_id === screenId) {
       return json({ ok: true, already: true, screen_id: screenId, screen_name: screen.name });
     }
     return json(
-      { error: 'Denne koden er allerede brukt på en annen skjerm.', reason: 'already_paired' },
+      {
+        error: 'Denne koden er allerede brukt på en annen skjerm. Bruk «bytt skjerm» på enheten.',
+        reason: 'already_paired'
+      },
       { status: 409 }
     );
   }
@@ -193,6 +257,96 @@ async function handleLink(context) {
 
   // (auth_token returneres bevisst IKKE her – bare TV-en får den via /status.)
   return json({ ok: true, screen_id: screenId, screen_name: screen.name, device_id: row.device_id });
+}
+
+// POST /api/pairing/reassign  { device_id, screen_id }  – flytt en paret TV til en annen skjerm.
+// TV-en trenger ikke røres; den plukker opp ny screen_id ved neste status-poll.
+async function handleReassign(context) {
+  const denied = requireAdmin(context);
+  if (denied) return denied;
+
+  const b = await readJson(context.request);
+  const deviceId = b?.device_id ? String(b.device_id) : null;
+  const screenId = toIntOrNull(b?.screen_id);
+  if (!deviceId) return badRequest('device_id er påkrevd');
+  if (!screenId) return badRequest('screen_id er påkrevd');
+
+  const screen = await context.env.DB
+    .prepare('SELECT id, name FROM screens WHERE id = ?')
+    .bind(screenId)
+    .first();
+  if (!screen) return notFound('Skjermen finnes ikke');
+
+  const row = await context.env.DB
+    .prepare(`SELECT id, status FROM pairings WHERE device_id = ?`)
+    .bind(deviceId)
+    .first();
+  if (!row || row.status !== 'paired') return notFound('Enheten er ikke paret');
+
+  await context.env.DB
+    .prepare('UPDATE pairings SET screen_id = ? WHERE id = ?')
+    .bind(screenId, row.id)
+    .run();
+
+  // La TV-en laste innhold på nytt raskt i stedet for å vente på neste SSE-diff.
+  await queueCommand(context.env, deviceId, 'reload', null);
+
+  return json({ ok: true, screen_id: screenId, screen_name: screen.name });
+}
+
+// POST /api/pairing/command  { device_id | screen_id, command, payload? }
+async function handleCommand(context) {
+  const denied = requireAdmin(context);
+  if (denied) return denied;
+
+  const b = await readJson(context.request);
+  const command = String(b?.command ?? '').toLowerCase();
+  if (!COMMANDS.includes(command)) {
+    return badRequest(`Ukjent kommando. Gyldige: ${COMMANDS.join(', ')}`);
+  }
+
+  const deviceId = b?.device_id ? String(b.device_id) : null;
+  const screenId = toIntOrNull(b?.screen_id);
+  if (!deviceId && !screenId) return badRequest('device_id eller screen_id er påkrevd');
+
+  // Finn målenhetene + skjermnavn (brukes som «identify»-etikett).
+  const targets = deviceId
+    ? await context.env.DB
+        .prepare(
+          `SELECT p.device_id, s.name AS screen_name
+             FROM pairings p LEFT JOIN screens s ON s.id = p.screen_id
+            WHERE p.device_id = ? AND p.status = 'paired'`
+        )
+        .bind(deviceId)
+        .all()
+    : await context.env.DB
+        .prepare(
+          `SELECT p.device_id, s.name AS screen_name
+             FROM pairings p LEFT JOIN screens s ON s.id = p.screen_id
+            WHERE p.screen_id = ? AND p.status = 'paired'`
+        )
+        .bind(screenId)
+        .all();
+
+  const rows = targets.results ?? [];
+  if (!rows.length) return notFound('Ingen paret enhet å sende til');
+
+  let payload = b?.payload ?? null;
+  for (const r of rows) {
+    const p =
+      command === 'identify' && !payload
+        ? { label: r.screen_name || 'Denne skjermen', seconds: 10 }
+        : payload;
+    await queueCommand(context.env, r.device_id, command, p);
+  }
+  return json({ ok: true, command, queued: rows.length });
+}
+
+async function queueCommand(env, deviceId, command, payload) {
+  await env.DB
+    .prepare(`INSERT INTO pairing_commands (device_id, command, payload) VALUES (?, ?, ?)`)
+    .bind(deviceId, command, payload ? JSON.stringify(payload) : null)
+    .run();
 }
 
 // POST /api/pairing/unpair  { device_id | screen_id }  – admin opphever en paring.
@@ -227,7 +381,8 @@ export async function onRequestGet(context) {
 
 // GET /api/pairing/status/<device_id>  – TV-en poller. Åpent, men avslører kun
 // data for en kjent, uraddbar device_id (128-bit UUID).
-async function handleStatus({ env }, deviceId) {
+// Valgfrie query-params: ?app_version=&tvos_version=&model=&resolution=&uptime_seconds=
+async function handleStatus({ request, env }, deviceId) {
   const row = await env.DB.prepare('SELECT * FROM pairings WHERE device_id = ?').bind(deviceId).first();
   if (!row) {
     // Ukjent enhet (slettet/opphevet) – be TV-en starte parring på nytt.
@@ -243,17 +398,62 @@ async function handleStatus({ env }, deviceId) {
     return json({ status: 'expired', poll_interval_seconds: POLL_SECONDS });
   }
 
-  if (eff === 'paired') {
-    // Marker enheten (og skjermen) som «sett» – gir online-status i admin.
-    const ts = nowIso();
-    try {
+  // Oppdater last_seen (+ evt. fersk klient-info) på hver poll.
+  const ts = nowIso();
+  const clientInfo = pickClientInfo(Object.fromEntries(new URL(request.url).searchParams));
+  try {
+    if (clientInfo) {
+      await env.DB
+        .prepare('UPDATE pairings SET last_seen = ?, client_info = ? WHERE id = ?')
+        .bind(ts, clientInfo, row.id)
+        .run();
+    } else {
       await env.DB.prepare('UPDATE pairings SET last_seen = ? WHERE id = ?').bind(ts, row.id).run();
+    }
+  } catch {
+    /* ikke kritisk */
+  }
+
+  if (eff === 'paired') {
+    // Speil «sist sett» til skjermen (online-status i admin).
+    try {
       if (row.screen_id) {
-        await env.DB.prepare('UPDATE screens SET last_seen = ? WHERE id = ?').bind(ts, row.screen_id).run();
+        await env.DB.prepare('UPDATE screens SET last_seen = ? WHERE id = ?')
+          .bind(ts, row.screen_id)
+          .run();
       }
     } catch {
       /* ikke kritisk */
     }
+
+    // Hent uleverte fjernkommandoer og marker dem levert (leveres nøyaktig én gang).
+    let commands = [];
+    try {
+      const { results } = await env.DB
+        .prepare(
+          `SELECT id, command, payload FROM pairing_commands
+             WHERE device_id = ? AND delivered_at IS NULL
+             ORDER BY id ASC LIMIT 20`
+        )
+        .bind(deviceId)
+        .all();
+      commands = (results ?? []).map((c) => ({
+        id: c.id,
+        command: c.command,
+        payload: c.payload ? safeJson(c.payload, null) : null
+      }));
+      if (commands.length) {
+        await env.DB
+          .prepare(
+            `UPDATE pairing_commands SET delivered_at = ? WHERE device_id = ? AND delivered_at IS NULL`
+          )
+          .bind(ts, deviceId)
+          .run();
+      }
+    } catch {
+      /* ikke kritisk */
+    }
+
     return json({
       status: 'paired',
       screen_id: row.screen_id,
@@ -262,7 +462,8 @@ async function handleStatus({ env }, deviceId) {
       state_url: `/api/state?screen=${row.screen_id}`,
       stream_url: `/api/stream?screen=${row.screen_id}`,
       display_url: `/display/${row.screen_id}`,
-      poll_interval_seconds: 30 // langsommere polling etter paring
+      commands,
+      poll_interval_seconds: PAIRED_POLL_SECONDS
     });
   }
 
@@ -270,8 +471,10 @@ async function handleStatus({ env }, deviceId) {
   return json({
     status: 'pending',
     code: row.code,
-    code_display: `${row.code.slice(0, 3)}-${row.code.slice(3)}`,
+    code_display: codeDisplay(row.code),
     expires_at: row.expires_at,
+    pair_path: pairPath(row.code),
+    pair_url: absolute(request, pairPath(row.code)),
     poll_interval_seconds: POLL_SECONDS
   });
 }
@@ -284,7 +487,7 @@ async function handleList(context) {
   const { results } = await context.env.DB
     .prepare(
       `SELECT p.id, p.code, p.device_id, p.status, p.screen_id,
-              p.created_at, p.expires_at, p.paired_at, p.last_seen,
+              p.created_at, p.expires_at, p.paired_at, p.last_seen, p.client_info,
               s.name AS screen_name
          FROM pairings p
          LEFT JOIN screens s ON s.id = p.screen_id
@@ -295,8 +498,17 @@ async function handleList(context) {
 
   return json(
     (results ?? []).map((r) => ({
-      ...r,
+      id: r.id,
+      code: r.code,
+      device_id: r.device_id,
       status: effectiveStatus(r),
+      screen_id: r.screen_id,
+      screen_name: r.screen_name,
+      created_at: r.created_at,
+      expires_at: r.expires_at,
+      paired_at: r.paired_at,
+      last_seen: r.last_seen,
+      client_info: r.client_info ? safeJson(r.client_info, null) : null,
       online: r.last_seen ? Date.now() - Date.parse(r.last_seen) < 90_000 : false
     }))
   );

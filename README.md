@@ -108,6 +108,7 @@ npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0003_pl
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0004_slidetypes_dayparting_trash.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0005_canvas_decks.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0006_pairing.sql
+npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0007_pairing_commands.sql
 ```
 
 `0005` bytter til canvas-modellen (`deck_slides` + `deck_elements`, `orientation`
@@ -115,7 +116,8 @@ på skjerm). Sone-tabellene (`screen_slides` / `playlists`) blir liggende urørt
 men brukes ikke lenger – eksisterende skjermer beholder navn, men lysbildene må
 bygges på nytt i den nye editoren.
 
-`0006` legger til `pairings`-tabellen for enhets-parring (Apple TV m.fl.) – se
+`0006`/`0007` legger til enhets-parring (Apple TV m.fl.): tabellen `pairings`,
+kolonnen `client_info` og tabellen `pairing_commands` – se
 [Enhets-parring](#enhets-parring-tv-klienter). `0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
 auto-status. `0003` legger til spillelister, mediebibliotek og maler. `0004`
 legger til tidsstyring på slides og en papirkurv. SQLite har ikke «ADD COLUMN
@@ -177,12 +179,14 @@ Under `/api`, rutet av `src/worker.js`. Skriveoperasjoner krever
 | `/api/sponsors` | `GET POST PUT DELETE` | Sponsorer. |
 | `/api/alerts` | `GET POST DELETE` | Hastemeldinger (`?id=` / `?all=1` arkiverer). |
 | `/api/heartbeat` | `POST` | `?screen=` – Viewer melder at den er i live. |
-| `/api/state` | `GET` | Samlet tilstand for én skjerm (`?screen=`). |
+| `/api/state` | `GET` | Samlet tilstand for én skjerm (`?screen=`). Svarer med `ETag`; `If-None-Match` gir `304`. |
 | `/api/stream` | `GET` | SSE: `snapshot` ved tilkobling, `update` ved endring. |
-| `/api/pairing/request` | `POST` | TV-klient ber om en kode. Åpent. Gir `{ device_id, code, code_display, expires_at, poll_interval_seconds }`. |
-| `/api/pairing/status/:deviceId` | `GET` | TV-klient poller. Åpent. `pending` / `paired` (+ `auth_token`, `state_url`, `stream_url`) / `expired` / `unknown`. |
+| `/api/pairing/request` | `POST` | TV-klient ber om en kode. Åpent. Valgfri body `{ app_version, tvos_version, model, resolution }`. Gir `{ device_id, code, code_display, expires_at, pair_url, poll_interval_seconds }`. |
+| `/api/pairing/status/:deviceId` | `GET` | TV-klient poller. Åpent. Valgfri query `?app_version=&tvos_version=&model=&resolution=&uptime_seconds=`. `pending` (+ `pair_url`) / `paired` (+ `auth_token`, `state_url`, `stream_url`, `commands[]`) / `expired` / `unknown`. |
 | `/api/pairing/link` | `POST` | Admin kobler `{ pairing_code, screen_id }` til en skjerm. Krever token. |
-| `/api/pairing` | `GET` | Admin: liste over enheter (+ `online`). Krever token. |
+| `/api/pairing/reassign` | `POST` | Admin flytter en paret enhet: `{ device_id, screen_id }`. Krever token. |
+| `/api/pairing/command` | `POST` | Admin køer en fjernkommando: `{ device_id\|screen_id, command }` (`identify\|reload\|clear_cache\|reboot`). Krever token. |
+| `/api/pairing` | `GET` | Admin: liste over enheter (+ `online`, `client_info`). Krever token. |
 | `/api/pairing/unpair` | `POST` | Admin fjerner en paring (`{ device_id }` eller `{ screen_id }`). Krever token. |
 
 ### Sanntid
@@ -198,36 +202,60 @@ uten å endre klienten.
 
 En dedikert infoskjerm-app (Apple TV / tvOS, Fire TV, nettleser-kiosk …) knyttes
 til en skjerm uten å taste inn URL-er eller tokens. Backend: `src/api/pairing.js`
-+ tabellen `pairings` (migrering `0006`). Admin-UI: **Visning → Parring**.
++ tabellene `pairings` og `pairing_commands` (migrering `0006`/`0007`). Admin-UI:
+**Visning → Parring**.
 
 **Flyt**
 
-1. **TV-en starter** → `POST /api/pairing/request`. Backend lager en opak
+1. **TV-en starter** → `POST /api/pairing/request` (legg gjerne ved
+   `{ app_version, tvos_version, model, resolution }`). Backend lager en opak
    `device_id` (UUID) + en kort, lettlest kode (6 tegn, uten `I/O/0/1`), lagrer en
-   `pending`-rad som utløper om 15 min, og svarer med begge. TV-en lagrer
-   `device_id` permanent på enheten og viser `code_display` (`"ABC-DEF"`) stort på
-   skjermen.
+   `pending`-rad som utløper om 15 min. TV-en lagrer `device_id` permanent og viser
+   `code_display` (`"ABC-DEF"`) stort – **og `pair_url` som QR ved siden av**
+   (`…/admin?view=pairing&code=ABC-DEF`; skanning åpner admin med koden utfylt).
 2. **TV-en poller** `GET /api/pairing/status/<device_id>` hvert `poll_interval_seconds`
-   (4 s) så lenge koden vises.
-3. **Admin** åpner Parring-fanen, taster koden fra TV-en, velger skjerm og lagrer
+   (4 s) så lenge koden vises. Legg ved fersk klient-info som query
+   (`?app_version=…&uptime_seconds=…`) – den vises i admin-lista.
+3. **Admin** åpner Parring-fanen, taster/skanner koden, velger skjerm og lagrer
    → `POST /api/pairing/link { pairing_code, screen_id }` (krever `ADMIN_TOKEN`).
    Raden settes til `paired`, får `screen_id` og en tilfeldig `auth_token`.
 4. **Neste status-poll** svarer `{ status: "paired", screen_id, auth_token,
-   state_url, stream_url, display_url }`. TV-en lagrer `auth_token`, senker
-   polle-frekvensen, og henter innhold fra `state_url` + lytter på `stream_url`
-   (SSE) – med `Authorization: Bearer <auth_token>` på hver forespørsel.
+   state_url, stream_url, display_url, commands }`. TV-en lagrer `auth_token`,
+   senker polle-frekvensen (30 s), og henter innhold fra `state_url` + lytter på
+   `stream_url` (SSE) – med `Authorization: Bearer <auth_token>` på hver forespørsel.
+
+**Fjernkommandoer** – admin kan kø kommandoer som TV-en henter i `commands`-feltet
+på neste status-poll (leveres nøyaktig én gang):
+
+| kommando | forventet handling på TV-en |
+| --- | --- |
+| `identify` | vis `payload.label` (skjermnavnet) stort i `payload.seconds` (10) |
+| `reload` | last innholdet på nytt (hentes automatisk etter «bytt skjerm») |
+| `clear_cache` | tøm lokal cache og last på nytt |
+| `reboot` | start appen/enheten på nytt |
+
+**Bytt skjerm uten å røre TV-en** – `POST /api/pairing/reassign { device_id,
+screen_id }` oppdaterer `screen_id` og køer en `reload`. TV-en plukker opp ny
+skjerm ved neste poll.
 
 **Feilhåndtering** – `link` gir tydelige koder: `404` ukjent kode, `410` utløpt
 (`reason: "expired"`), `409` koden er alt brukt på en annen skjerm
-(`reason: "already_paired"`; samme skjerm er idempotent). `status` gir `expired`
-når 15-minuttersvinduet er passert og `unknown` (404) hvis enheten er slettet /
-opphevet – da starter TV-en parring på nytt.
+(`reason: "already_paired"` – bruk `reassign`; samme skjerm er idempotent).
+`status` gir `expired` når 15-minuttersvinduet er passert og `unknown` (404) hvis
+enheten er slettet / opphevet – da starter TV-en parring på nytt.
 
 **Sikkerhet** – `device_id` er en 128-bits UUID; `status` avslører kun data for en
 kjent id. `auth_token` sendes bare til TV-en via `status`, aldri i `link`-svaret.
-`request` har en enkel innebygd brems (>60 rader/min → `429`); sett Cloudflare
-Rate Limiting / WAF foran endepunktet i produksjon. Gamle `pending`/`expired`-rader
-ryddes automatisk etter 24 t.
+Klient-info filtreres mot en hvitliste (`app_version`, `tvos_version`, `model`,
+`resolution`, `uptime_seconds`). `request` har en enkel innebygd brems
+(>60 rader/min → `429`); sett Cloudflare Rate Limiting / WAF foran endepunktet i
+produksjon. Gamle `pending`/`expired`-rader og leverte kommandoer ryddes
+automatisk.
+
+**Offline-robusthet** – `/api/state` svarer med `ETag` (innholds-signaturen).
+TV-en sender siste `ETag` som `If-None-Match`; uendret innhold gir `304` uten
+kropp. Cache siste `200`-svar lokalt på enheten, så skjermen kan fortsette å vise
+innhold når nettet faller. En `heartbeat` endrer ikke lenger `ETag`/SSE-signaturen.
 
 **Låse ned innholds-endepunktene (valgfritt)** – `/api/state` og `/api/stream` er i
 dag åpne (nettleser-forhåndsvisning i admin bruker dem uten token). Vil du kreve
@@ -237,55 +265,68 @@ parrings-token for TV-trafikk, bruk `verifyPairingToken(env, request)` fra
 **tvOS-klient (skisse)**
 
 ```swift
-// Ved oppstart: hent (eller gjenbruk lagret) device_id.
-struct Pairing: Decodable { let device_id, code, code_display: String
+struct Pairing: Decodable { let device_id, code, code_display, pair_url: String
                             let poll_interval_seconds: Int }
-struct Status: Decodable { let status: String
-                           let screen_id: Int?; let auth_token, state_url, stream_url: String?
-                           let code_display: String?; let poll_interval_seconds: Int }
+struct Command: Decodable { let id: Int; let command: String; let payload: [String: JSONValue]? }
+struct Status: Decodable {
+    let status: String
+    let screen_id: Int?; let auth_token, state_url, stream_url: String?
+    let commands: [Command]?; let poll_interval_seconds: Int
+}
 
 let base = URL(string: "https://<ditt-worker-domene>")!
+let client = "app_version=1.0.3&tvos_version=18.2&model=Apple%20TV%204K&resolution=1920x1080"
 
+// 1) Oppstart – gjenbruk lagret device_id, ellers be om en ny kode.
 func startPairing() async throws -> Pairing {
-    if let saved = Keychain.string("device_id") {          // gjenbruk – overlever omstart
-        let s = try await status(deviceId: saved)
-        if s.status == "paired" { begin(screen: s); return … }
-    }
     var r = URLRequest(url: base.appending(path: "/api/pairing/request"))
-    r.httpMethod = "POST"
+    r.httpMethod = "POST"; r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    r.httpBody = try JSONSerialization.data(withJSONObject:
+        ["app_version": "1.0.3", "tvos_version": "18.2", "resolution": "1920x1080"])
     let p = try JSONDecoder().decode(Pairing.self, from: try await URLSession.shared.data(for: r).0)
     Keychain.set(p.device_id, "device_id")
-    show(p.code_display)                                    // stor kode på skjermen
+    show(code: p.code_display, qr: qrImage(from: p.pair_url))   // CIQRCodeGenerator
     return p
 }
 
-func status(deviceId: String) async throws -> Status {
-    let url = base.appending(path: "/api/pairing/status/\(deviceId)")
+func status(_ deviceId: String) async throws -> Status {
+    let url = base.appending(path: "/api/pairing/status/\(deviceId)?\(client)&uptime_seconds=\(uptime())")
     return try JSONDecoder().decode(Status.self, from: try await URLSession.shared.data(from: url).0)
 }
 
-// Poll-løkke mens koden vises:
+// 2) Poll-løkke – kjør kontinuerlig, også etter paring (henter kommandoer).
 while true {
-    let s = try await status(deviceId: p.device_id)
+    let s = try await status(Keychain.string("device_id")!)
     switch s.status {
     case "paired":
         Keychain.set(s.auth_token!, "auth_token")
-        begin(screen: s)                                    // hent s.state_url, lytt på s.stream_url
-        return
+        begin(screen: s)                                       // hent s.state_url, lytt på s.stream_url
+        for c in s.commands ?? [] { handle(c) }                // identify / reload / clear_cache / reboot
     case "expired", "unknown":
-        return try await startPairing()                     // ny kode
-    default:
-        try await Task.sleep(for: .seconds(s.poll_interval_seconds))
+        _ = try await startPairing()                           // ny kode
+    default: break                                             // pending – fortsett å vise koden
     }
+    try await Task.sleep(for: .seconds(s.poll_interval_seconds))
 }
 
-// Alle innholds-kall etter parring:
-var req = URLRequest(url: base.appending(path: s.state_url!))
-req.setValue("Bearer \(Keychain.string("auth_token")!)", forHTTPHeaderField: "Authorization")
+// 3) Innhold etter parring – betinget henting + siste gyldige som fallback.
+func fetchState(_ path: String) async throws -> Data {
+    var req = URLRequest(url: base.appending(path: path))
+    req.setValue("Bearer \(Keychain.string("auth_token")!)", forHTTPHeaderField: "Authorization")
+    if let tag = Cache.etag { req.setValue(tag, forHTTPHeaderField: "If-None-Match") }
+    do {
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let http = resp as! HTTPURLResponse
+        if http.statusCode == 304 { return Cache.body }        // uendret – behold det vi viser
+        Cache.etag = http.value(forHTTPHeaderField: "ETag"); Cache.body = data
+        return data
+    } catch { return Cache.body }                              // nett nede – vis siste gyldige
+}
 ```
 
 Enkleste variant: etter `paired` kan TV-en bare laste `display_url`
-(`/display/<screen_id>`) i en `WKWebView` – da gjenbrukes hele Viewer-en som den er.
+(`/display/<screen_id>`) i en `WKWebView` – da gjenbrukes hele Viewer-en som den
+er, og `identify`/`reload` kan implementeres som JS-injeksjon i webviewen.
 
 ---
 
@@ -294,7 +335,7 @@ Enkleste variant: etter `paired` kan TV-en bare laste `display_url`
 ```
 ├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1 (DB) + R2 (MEDIA)
 ├── schema.sql                # fullt skjema + demo-data
-├── migrations/               # 0001 … 0006 (siste: enhets-parring)
+├── migrations/               # 0001 … 0007 (siste: parrings-kommandoer)
 └── src/
     ├── worker.js             # ruter /api/* + ASSETS-fallback
     ├── main.jsx              # ruter: /admin · /display/:id · /s/:id

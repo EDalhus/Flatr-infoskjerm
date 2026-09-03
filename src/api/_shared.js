@@ -179,10 +179,13 @@ export async function buildState(env, screenId) {
   return state;
 }
 
-/** Lettvekts endrings-signatur (djb2) over innhold – uten serverTime. */
+/** Lettvekts endrings-signatur (djb2) over innhold – uten serverTime.
+ *  `last_seen` på skjermen utelates: en heartbeat skal ikke trigge SSE-update
+ *  eller endre ETag på /api/state. */
 export function signature(state) {
+  const { last_seen, ...screen } = state.screen || {};
   const basis = JSON.stringify({
-    screen: state.screen,
+    screen,
     deck: state.deck,
     categories: state.categories,
     schedule: state.schedule,

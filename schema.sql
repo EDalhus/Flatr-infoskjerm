@@ -121,7 +121,18 @@ CREATE TABLE IF NOT EXISTS pairings (
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   expires_at  TEXT NOT NULL,
   paired_at   TEXT,
-  last_seen   TEXT
+  last_seen   TEXT,
+  client_info TEXT                          -- JSON fra klienten (app-/tvOS-versjon, oppløsning, uptime)
+);
+
+-- Fjernkommandoer til parede TV-er. TV-en henter uleverte i status-pollen.
+CREATE TABLE IF NOT EXISTS pairing_commands (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  device_id    TEXT NOT NULL,
+  command      TEXT NOT NULL,               -- identify | reload | clear_cache | reboot
+  payload      TEXT,                        -- valgfri JSON (f.eks. { label, seconds })
+  created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  delivered_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS alerts (
@@ -169,6 +180,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pairings_device       ON pairings (device_
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pairings_code_pending ON pairings (code) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS idx_pairings_status ON pairings (status);
 CREATE INDEX IF NOT EXISTS idx_pairings_token  ON pairings (auth_token);
+CREATE INDEX IF NOT EXISTS idx_pairing_commands_pending ON pairing_commands (device_id, delivered_at);
 
 -- ---------------------------------------------------------------------------
 -- Demo-data (valgfritt – fjern hele blokken for tom database)

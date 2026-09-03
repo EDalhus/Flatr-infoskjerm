@@ -111,8 +111,13 @@ export const api = {
     // Admin: koble en kode (vist på TV-en) til en skjerm.
     link: (pairing_code, screen_id) =>
       req('/pairing/link', { method: 'POST', body: { pairing_code, screen_id } }),
-    // Admin: liste over parringer (pending + paired).
+    // Admin: liste over parringer (pending + paired + client_info).
     list: () => req('/pairing'),
+    // Admin: flytt en paret enhet til en annen skjerm (TV-en trenger ikke røres).
+    reassign: (device_id, screen_id) =>
+      req('/pairing/reassign', { method: 'POST', body: { device_id, screen_id } }),
+    // Admin: kø en fjernkommando (identify | reload | clear_cache | reboot).
+    command: (body) => req('/pairing/command', { method: 'POST', body }),
     // Admin: opphev en paring (device_id eller screen_id).
     unpair: (body) => req('/pairing/unpair', { method: 'POST', body })
   },

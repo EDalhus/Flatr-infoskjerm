@@ -1,12 +1,15 @@
 // Admin-panel for enhets-parring.
 //
 // Slik henger det sammen:
-//   1. Apple TV-en viser en kode (f.eks. "ABC-DEF") ved oppstart.
-//   2. Du taster koden inn her, velger hvilken skjerm den skal vise, og lagrer.
+//   1. Apple TV-en viser en kode (f.eks. "ABC-DEF") + en QR ved oppstart.
+//   2. Du taster koden inn her (eller skanner QR-en → koden er forhåndsutfylt),
+//      velger hvilken skjerm den skal vise, og lagrer.
 //      -> POST /api/pairing/link  (api.pairing.link)
 //   3. TV-en oppdager parringen ved neste status-poll og begynner å vise skjermen.
 //
 // Lista under viser alle enheter (ventende + parede) og oppdateres hvert 5. sek.
+// For parede enheter kan du bytte skjerm, «identifisere» (blinker skjermnavnet på
+// TV-en i 10 sek) eller be den laste innholdet på nytt.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
@@ -46,14 +49,32 @@ function timeAgo(iso) {
   return `${Math.floor(s / 86400)} d siden`;
 }
 
+// Kompakt oppsummering av klient-info: "Apple TV · tvOS 18.2 · app 1.0.3 · 1920×1080".
+function clientSummary(ci) {
+  if (!ci) return null;
+  const parts = [];
+  if (ci.model) parts.push(ci.model);
+  if (ci.tvos_version) parts.push(`tvOS ${ci.tvos_version}`);
+  if (ci.app_version) parts.push(`app ${ci.app_version}`);
+  if (ci.resolution) parts.push(ci.resolution.replace('x', '×'));
+  return parts.join(' · ') || null;
+}
+
+// Forhåndsutfyll koden hvis admin ble åpnet fra QR-en (?code=ABC-DEF).
+const codeFromUrl = () => {
+  if (typeof window === 'undefined') return '';
+  return normalize(new URLSearchParams(window.location.search).get('code') || '');
+};
+
 export default function PairingManager({ onChange }) {
   const [screens, setScreens] = useState([]);
   const [pairings, setPairings] = useState([]);
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(codeFromUrl);
   const [screenId, setScreenId] = useState('');
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [busy, setBusy] = useState(false);
+  const [flash, setFlash] = useState(''); // kort kvittering på kommando/bytte
   const codeRef = useRef(null);
 
   useEffect(() => {
@@ -61,6 +82,7 @@ export default function PairingManager({ onChange }) {
       .list()
       .then((rows) => setScreens(rows || []))
       .catch((e) => setError(e.message));
+    if (codeFromUrl()) codeRef.current?.focus();
   }, []);
 
   const loadPairings = () =>
@@ -81,6 +103,11 @@ export default function PairingManager({ onChange }) {
     () => pairings.filter((p) => p.status === 'pending').length,
     [pairings]
   );
+
+  const say = (msg) => {
+    setFlash(msg);
+    setTimeout(() => setFlash(''), 2500);
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -106,6 +133,27 @@ export default function PairingManager({ onChange }) {
       setError(err.message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const reassign = async (p, newScreenId) => {
+    if (!newScreenId || Number(newScreenId) === p.screen_id) return;
+    try {
+      const res = await api.pairing.reassign(p.device_id, Number(newScreenId));
+      say(`Flyttet til «${res.screen_name}».`);
+      await loadPairings();
+      onChange?.();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const sendCommand = async (p, command, label) => {
+    try {
+      await api.pairing.command({ device_id: p.device_id, command });
+      say(`${label} sendt til enheten.`);
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -136,7 +184,7 @@ export default function PairingManager({ onChange }) {
       <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
         <Card title="Koble til en ny enhet">
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-            <Field label="Parringskode" hint="Vises på TV-en ved oppstart.">
+            <Field label="Parringskode" hint="Vises på TV-en ved oppstart (eller skann QR-en).">
               <Input
                 ref={codeRef}
                 value={pretty(code)}
@@ -159,7 +207,7 @@ export default function PairingManager({ onChange }) {
                 ))}
               </Select>
             </Field>
-            <div className="flex items-center gap-3 sm:col-span-2">
+            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
               <Button type="submit" disabled={busy}>
                 {busy ? 'Kobler til …' : 'Koble til'}
               </Button>
@@ -176,6 +224,12 @@ export default function PairingManager({ onChange }) {
           </form>
         </Card>
 
+        {flash && (
+          <p className="rounded-lg border border-ok/30 bg-ok-tint px-3 py-2 text-sm font-medium text-ok">
+            {flash}
+          </p>
+        )}
+
         {pairings.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-5 py-8 text-center text-muted">
             Ingen enheter ennå. Start infoskjerm-appen på en Apple TV for å få en kode.
@@ -184,15 +238,15 @@ export default function PairingManager({ onChange }) {
           <GroupCard label={`Enheter · ${pairings.length}`} icon="monitor">
             {pairings.map((p) => {
               const badge = STATUS_BADGE[p.status] ?? STATUS_BADGE.pending;
+              const paired = p.status === 'paired';
+              const summary = clientSummary(p.client_info);
               return (
                 <Row
                   key={p.id}
                   media={
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-hair">
                       <span
-                        className={`h-2.5 w-2.5 rounded-full ${
-                          p.online ? 'bg-ok' : 'bg-muted/40'
-                        }`}
+                        className={`h-2.5 w-2.5 rounded-full ${p.online ? 'bg-ok' : 'bg-muted/40'}`}
                         title={p.online ? 'Online' : 'Offline'}
                       />
                     </span>
@@ -211,20 +265,56 @@ export default function PairingManager({ onChange }) {
                   }
                   meta={
                     <>
-                      <span>{p.screen_name ? `→ ${p.screen_name}` : 'ingen skjerm'}</span>
+                      {!paired && <span>{p.screen_name ? `→ ${p.screen_name}` : 'ingen skjerm'}</span>}
                       {p.status === 'pending' && <span>· utløper {timeAgo(p.expires_at)}</span>}
-                      {p.status === 'paired' && p.last_seen && (
-                        <span>· sist sett {timeAgo(p.last_seen)}</span>
-                      )}
+                      {paired && p.last_seen && <span>sist sett {timeAgo(p.last_seen)}</span>}
+                      {summary && <span>· {summary}</span>}
                     </>
                   }
                   actions={
-                    <IconButton
-                      name="x"
-                      label="Opphev parring"
-                      tone="danger"
-                      onClick={() => unpair(p)}
-                    />
+                    paired ? (
+                      <>
+                        <Select
+                          value={p.screen_id ?? ''}
+                          onChange={(e) => reassign(p, e.target.value)}
+                          className="w-40"
+                          title="Bytt skjerm"
+                        >
+                          {screens.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </Select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendCommand(p, 'identify', 'Identifiser')}
+                        >
+                          Identifiser
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendCommand(p, 'reload', 'Last inn')}
+                        >
+                          Last inn
+                        </Button>
+                        <IconButton
+                          name="x"
+                          label="Opphev parring"
+                          tone="danger"
+                          onClick={() => unpair(p)}
+                        />
+                      </>
+                    ) : (
+                      <IconButton
+                        name="x"
+                        label="Fjern"
+                        tone="danger"
+                        onClick={() => unpair(p)}
+                      />
+                    )
                   }
                 />
               );
