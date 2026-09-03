@@ -225,10 +225,10 @@ export function ErrorText({ children }) {
 export function PageHeader({ crumbs = [], action }) {
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-line bg-paper/85 px-6 py-4 backdrop-blur sm:px-8">
-      <nav className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-brand">
+      <nav className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
         {crumbs.map((c, i) => (
           <span key={c} className="flex items-center gap-1.5">
-            {i > 0 && <Icon name="chevron" className="h-3 w-3 text-muted" />}
+            {i > 0 && <Icon name="chevron" className="h-3 w-3 text-muted/60" />}
             <span className={i === crumbs.length - 1 ? 'text-ink' : ''}>{c}</span>
           </span>
         ))}

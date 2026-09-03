@@ -12,7 +12,6 @@ import {
   Row,
   MediaTile,
   PageHeader,
-  Segmented,
   ErrorText
 } from './ui.jsx';
 
@@ -191,16 +190,22 @@ function ScreenList({ onEdit, onChange }) {
                 }
                 actions={
                   <>
-                    <Segmented
+                    <Select
                       value={s.orientation === 'portrait' ? 'portrait' : 'landscape'}
-                      onChange={(o) => patchScreen(s.id, { orientation: o })}
-                      options={ORIENTATION_OPTIONS}
-                      className="w-[104px]"
-                    />
+                      onChange={(e) => patchScreen(s.id, { orientation: e.target.value })}
+                      className="w-[88px]"
+                      title="Orientering (design-lerret)"
+                    >
+                      {ORIENTATION_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
                     <Select
                       value={s.rotation ?? 0}
                       onChange={(e) => patchScreen(s.id, { rotation: Number(e.target.value) })}
-                      className="w-[76px]"
+                      className="w-[84px]"
                       title="Skjermrotasjon (fysisk montering)"
                     >
                       {ROTATION_OPTIONS.map((r) => (

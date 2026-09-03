@@ -71,23 +71,23 @@ export default function Admin() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-paper text-ink">
-      <div className="hidden w-14 shrink-0 flex-col items-center bg-brand py-4 text-white sm:flex">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-white text-lg font-black text-brand">
+      <div className="hidden w-14 shrink-0 flex-col items-center border-r border-line bg-card py-4 sm:flex">
+        <div className="grid h-9 w-9 place-items-center rounded-lg bg-ink text-lg font-black text-white">
           F
         </div>
-        <div className="mt-4 grid h-9 w-9 place-items-center rounded-lg bg-white/15">
+        <div className="mt-4 grid h-9 w-9 place-items-center rounded-lg bg-hair text-muted">
           <Icon name="calendar" className="h-5 w-5" />
         </div>
         <a
           href="/display/1"
-          className="mt-auto grid h-9 w-9 place-items-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          className="mt-auto grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-hair hover:text-ink"
           title="Åpne en skjermvisning"
         >
           <Icon name="external" className="h-5 w-5" />
         </a>
       </div>
 
-      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-paper sm:w-64">
+      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-card sm:w-64">
         <div className="px-5 py-5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
             Infoskjerm
@@ -108,16 +108,19 @@ export default function Admin() {
                     <button
                       key={n.id}
                       onClick={() => go(n.id)}
-                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
                         active
-                          ? 'bg-brand-tint text-brand'
-                          : 'text-ink/80 hover:bg-black/[0.04] hover:text-ink'
+                          ? 'bg-paper font-semibold text-ink shadow-card'
+                          : 'font-medium text-ink/70 hover:bg-paper hover:text-ink'
                       }`}
                     >
-                      <Icon name={n.icon} className="h-4 w-4 shrink-0" />
+                      <Icon
+                        name={n.icon}
+                        className={`h-4 w-4 shrink-0 ${active ? 'text-brand' : ''}`}
+                      />
                       <span className="flex-1 text-left">{n.label}</span>
                       {n.id === 'screens' && screenCount != null && (
-                        <span className="rounded-full bg-ok-tint px-1.5 text-xs font-bold text-ok">
+                        <span className="rounded-full bg-badge px-1.5 text-xs font-bold text-badge-ink">
                           {screenCount}
                         </span>
                       )}

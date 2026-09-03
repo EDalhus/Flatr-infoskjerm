@@ -7,27 +7,27 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
       },
       colors: {
-        // Varm, rolig admin-palett – inspirert av referansedesignet.
-        paper: '#ece9df', // sidebakgrunn
+        // Nøytral, moderne admin-palett med oransje aksent.
+        paper: '#f6f6f7', // sidebakgrunn (kjølig off-white)
         card: '#ffffff',
-        ink: '#20303a', // primærtekst
-        muted: '#8a94a0', // sekundærtekst
-        line: '#e0ddd2', // kant mot paper
-        hair: '#e9edee', // kant inne i kort
+        ink: '#1c1d1f', // primærtekst (nær-svart)
+        muted: '#8b8d94', // sekundærtekst
+        line: '#e9e9ec', // kant mot paper
+        hair: '#f0f0f2', // kant inne i kort
         brand: {
-          DEFAULT: '#1f5566',
-          dark: '#17414f',
-          tint: '#e6eef0'
+          DEFAULT: '#f15a29', // oransje aksent
+          dark: '#d94d1e',
+          tint: '#fdeee7'
         },
-        zone: '#dce9f1', // gruppe-header
-        zoneink: '#3c5a68',
-        ok: { DEFAULT: '#1f9d55', tint: '#dcf1e3' },
-        danger: { DEFAULT: '#c0392b', tint: '#f8e2df', hover: '#f2d1cc' },
-        badge: { DEFAULT: '#cfe3ee', ink: '#1f5566' }
+        zone: '#f4f4f6', // gruppe-header
+        zoneink: '#6a6c72',
+        ok: { DEFAULT: '#16a34a', tint: '#e4f6ea' },
+        danger: { DEFAULT: '#e0393a', tint: '#fdeceb', hover: '#f9dcdb' },
+        badge: { DEFAULT: '#eeeef0', ink: '#52545a' }
       },
       boxShadow: {
-        card: '0 1px 2px rgba(20,32,40,0.04), 0 1px 3px rgba(20,32,40,0.06)',
-        pop: '0 12px 40px rgba(20,32,40,0.16)'
+        card: '0 1px 2px rgba(17,18,20,0.04), 0 1px 3px rgba(17,18,20,0.05)',
+        pop: '0 8px 30px rgba(17,18,20,0.12)'
       },
       keyframes: {
         'alert-in': {
