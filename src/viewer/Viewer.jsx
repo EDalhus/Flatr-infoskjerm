@@ -46,7 +46,12 @@ export default function Viewer() {
 
   const orientation = state.screen?.orientation === 'portrait' ? 'portrait' : 'landscape';
   const base = BASE_SIZE[orientation];
-  const { containerRef, scale } = useFitScale(base.w, base.h);
+  // Fjernstyrt rotasjon (grader) for fysisk montering – styres fra admin.
+  const rotation = (((Number(state.screen?.rotation) || 0) % 360) + 360) % 360;
+  const rad = (rotation * Math.PI) / 180;
+  const boxW = Math.abs(base.w * Math.cos(rad)) + Math.abs(base.h * Math.sin(rad));
+  const boxH = Math.abs(base.w * Math.sin(rad)) + Math.abs(base.h * Math.cos(rad));
+  const { containerRef, scale } = useFitScale(boxW, boxH);
 
   const ctx = useMemo(
     () => ({
@@ -69,7 +74,7 @@ export default function Viewer() {
         style={{
           width: base.w,
           height: base.h,
-          transform: `translate(-50%, -50%) scale(${scale})`
+          transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${scale})`
         }}
       >
         {loaded && !state.screen ? (

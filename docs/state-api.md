@@ -42,7 +42,8 @@ innholdskontrakten. Alt annet er stabilt.
   "id": 5,
   "name": "Skjerm 1",
   "location": "Inngang",
-  "orientation": "portrait",          // "portrait" | "landscape"
+  "orientation": "portrait",          // "portrait" | "landscape" – design-lerretet
+  "rotation": 90,                     // grader visningen skal roteres (fysisk montering)
   "layout": "main-side",              // historisk, ubrukt
   "custom_layout": null,              // historisk, ubrukt
   "rotation_seconds": 15,             // historisk fallback, ubrukt av deck-modellen
@@ -51,13 +52,20 @@ innholdskontrakten. Alt annet er stabilt.
 }
 ```
 
-Bare **`orientation`** betyr noe for en viewer. Den gir lerret-størrelsen som all
-posisjonering er relativ til:
+**`orientation`** gir lerret-størrelsen som all posisjonering er relativ til:
 
 | `orientation` | lerret (px) |
 | --- | --- |
 | `landscape` | 1920 × 1080 |
 | `portrait` | 1080 × 1920 |
+
+**`rotation`** (multiplum av 45, som regel `0` / `90` / `180` / `270`) er hvor mye
+den ferdige, sammensatte visningen skal roteres med klokka for å matche et fysisk
+rotert panel. Styres kun fra webappen – den parrede TV-en skal ikke overstyre den.
+Rendrer du deck-et selv: tegn på lerretet som normalt og legg
+`.rotationEffect(.degrees(rotation))` (eller tilsvarende) på ytterste container,
+og bytt om bredde/høyde på ytre flate ved `90` / `270`. Laster du `display_url` i
+en `WKWebView` er rotasjonen allerede påført av web-vieweren.
 
 ---
 
@@ -215,6 +223,7 @@ Ekte data fra prod (2026-09-03). `serverTime`/`version` er runtime-verdier.
     "name": "Skjerm 1",
     "location": "Inngang",
     "orientation": "portrait",
+    "rotation": 0,
     "layout": "main-side",
     "custom_layout": null,
     "rotation_seconds": 15,
@@ -369,6 +378,9 @@ Ekte data fra prod (2026-09-03). `serverTime`/`version` er runtime-verdier.
 - **`kind` er alltid satt** på hvert element – ikke utled fra filendelse.
 - **`x/y/w/h` er prosent (0–100)** av lerretet, ikke piksler. Lerret = 1080×1920
   (portrait) / 1920×1080 (landscape) fra `screen.orientation`.
+- **`screen.rotation`** (grader) roterer hele den sammensatte visningen for fysisk
+  montering – påfør på ytterste container, ikke på hvert element. `WKWebView` på
+  `display_url` har den allerede.
 - **`config` er alltid et objekt** (server tvinger `{}` ved feil). Slå sammen med
   defaultene i tabellen over.
 - **`background` er alltid et objekt** med `type` ∈ `color|gradient|dynamic|image`.

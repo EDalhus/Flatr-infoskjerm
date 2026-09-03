@@ -11,8 +11,9 @@ assets** og **D1**. To deler:
 
 ## Skjermer og lysbilder
 
-Hver **skjerm** har orientering (16:9 eller 9:16) og en rekke **lysbilder**
-(`deck_slides`). Et lysbilde er én fri canvas med posisjonerte **widgets**
+Hver **skjerm** har orientering (16:9 eller 9:16), en fjernstyrt rotasjon for
+fysisk montering (`rotation`, grader – settes i admin, ikke på TV-en) og en rekke
+**lysbilder** (`deck_slides`). Et lysbilde er én fri canvas med posisjonerte **widgets**
 (`deck_elements`, x/y/b/h i prosent). Skjermen spiller lysbildene i rekkefølge –
 hvert i sitt `duration_seconds`, med valgt **overgang** (ingen / ton inn /
 kryss-ton / skyv).
@@ -110,6 +111,7 @@ npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0005_ca
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0006_pairing.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0007_pairing_commands.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0008_pairing_label.sql
+npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0009_screen_rotation.sql
 ```
 
 `0005` bytter til canvas-modellen (`deck_slides` + `deck_elements`, `orientation`
@@ -119,7 +121,8 @@ bygges på nytt i den nye editoren.
 
 `0006`–`0008` legger til enhets-parring (Apple TV m.fl.): tabellen `pairings`,
 kolonnene `client_info`/`label` og tabellen `pairing_commands` – se
-[Enhets-parring](#enhets-parring-tv-klienter). `0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
+[Enhets-parring](#enhets-parring-tv-klienter). `0009` legger til `screens.rotation`
+(fjernstyrt skjermrotasjon for fysisk montering). `0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
 auto-status. `0003` legger til spillelister, mediebibliotek og maler. `0004`
 legger til tidsstyring på slides og en papirkurv. SQLite har ikke «ADD COLUMN
 IF NOT EXISTS» – har du alt kjørt en migrering, feiler `ALTER`-linjene med
@@ -343,7 +346,7 @@ er, og `identify`/`reload` kan implementeres som JS-injeksjon i webviewen.
 ```
 ├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1 (DB) + R2 (MEDIA)
 ├── schema.sql                # fullt skjema + demo-data
-├── migrations/               # 0001 … 0008 (siste: kallenavn på enheter)
+├── migrations/               # 0001 … 0009 (siste: fjernstyrt skjermrotasjon)
 └── src/
     ├── worker.js             # ruter /api/* + ASSETS-fallback
     ├── main.jsx              # ruter: /admin · /display/:id · /s/:id

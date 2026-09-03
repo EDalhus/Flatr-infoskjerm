@@ -193,6 +193,15 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
     }
   };
 
+  const setRotation = async (r) => {
+    try {
+      await api.screens.update(screenId, { rotation: r });
+      setScreen((sc) => ({ ...sc, rotation: r }));
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
   const saveTemplate = async (s) => {
     const name = window.prompt('Navn på lysbilde-mal:');
     if (!name) return;
@@ -248,6 +257,19 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
             </button>
           ))}
         </div>
+
+        <select
+          value={screen?.rotation ?? 0}
+          onChange={(e) => setRotation(Number(e.target.value))}
+          title="Skjermrotasjon (fysisk montering) – styres herfra, ikke fra TV-en"
+          className="rounded-lg border border-line bg-card px-2 py-1.5 text-xs font-bold text-ink focus:border-brand focus:outline-none"
+        >
+          {[0, 90, 135, 180, 270].map((r) => (
+            <option key={r} value={r}>
+              {r}°
+            </option>
+          ))}
+        </select>
 
         <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
           <Icon name="plus" className="h-4 w-4" />

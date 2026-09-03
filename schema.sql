@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS screens (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   name             TEXT NOT NULL,
   location         TEXT,
-  orientation      TEXT NOT NULL DEFAULT 'landscape',  -- landscape | portrait
+  orientation      TEXT NOT NULL DEFAULT 'landscape',  -- landscape | portrait (design-lerret)
+  rotation         INTEGER NOT NULL DEFAULT 0,         -- grader visningen roteres (fysisk montering), multipler av 45
   layout           TEXT NOT NULL DEFAULT 'main-side',  -- historikk, ubrukt
   custom_layout    TEXT,                                -- historikk, ubrukt
   rotation_seconds INTEGER NOT NULL DEFAULT 15,

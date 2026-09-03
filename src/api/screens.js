@@ -15,6 +15,12 @@ const ONLINE_MS = 90_000;
 const normOrientation = (v, f = 'landscape') =>
   v === 'portrait' ? 'portrait' : v === 'landscape' ? 'landscape' : f;
 
+// Skjermrotasjon i grader – multipler av 45, 0–315. Ugyldig -> fallback.
+const normRotation = (v, f = 0) => {
+  const n = Number.parseInt(v, 10);
+  return Number.isInteger(n) && n >= 0 && n < 360 && n % 45 === 0 ? n : f;
+};
+
 function decorate(row) {
   return {
     ...row,
@@ -98,12 +104,13 @@ export async function onRequestPost(context) {
 
     const copy = await env.DB
       .prepare(
-        `INSERT INTO screens (name, location, orientation, rotation_seconds) VALUES (?, ?, ?, ?) RETURNING *`
+        `INSERT INTO screens (name, location, orientation, rotation, rotation_seconds) VALUES (?, ?, ?, ?, ?) RETURNING *`
       )
       .bind(
         b?.name ? String(b.name).trim() : `${src.name} (kopi)`,
         src.location,
         src.orientation,
+        src.rotation ?? 0,
         src.rotation_seconds
       )
       .first();
@@ -155,18 +162,19 @@ export async function onRequestPost(context) {
 
   if (!b?.name) return badRequest('name er påkrevd');
   const row = await env.DB
-    .prepare('INSERT INTO screens (name, location, orientation) VALUES (?, ?, ?) RETURNING *')
+    .prepare('INSERT INTO screens (name, location, orientation, rotation) VALUES (?, ?, ?, ?) RETURNING *')
     .bind(
       String(b.name).trim(),
       b.location ? String(b.location).trim() : null,
-      normOrientation(b.orientation)
+      normOrientation(b.orientation),
+      normRotation(b.rotation)
     )
     .first();
   await seedFirstSlide(env, row.id, row.name);
   return json(decorate({ ...row, slide_count: 1 }), { status: 201 });
 }
 
-// PUT /api/screens?id=1  { name?, location?, orientation? }
+// PUT /api/screens?id=1  { name?, location?, orientation?, rotation? }
 export async function onRequestPut(context) {
   const denied = requireAdmin(context);
   if (denied) return denied;
@@ -179,11 +187,14 @@ export async function onRequestPut(context) {
   if (!cur) return notFound('Skjerm finnes ikke');
 
   const row = await context.env.DB
-    .prepare('UPDATE screens SET name = ?, location = ?, orientation = ? WHERE id = ? RETURNING *')
+    .prepare(
+      'UPDATE screens SET name = ?, location = ?, orientation = ?, rotation = ? WHERE id = ? RETURNING *'
+    )
     .bind(
       b.name !== undefined ? String(b.name).trim() : cur.name,
       b.location !== undefined ? (b.location ? String(b.location).trim() : null) : cur.location,
       b.orientation !== undefined ? normOrientation(b.orientation, cur.orientation) : cur.orientation,
+      b.rotation !== undefined ? normRotation(b.rotation, cur.rotation ?? 0) : (cur.rotation ?? 0),
       id
     )
     .first();

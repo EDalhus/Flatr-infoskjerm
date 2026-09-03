@@ -20,6 +20,9 @@ const ORIENTATION_OPTIONS = [
   { value: 'landscape', label: '16:9' },
   { value: 'portrait', label: '9:16' }
 ];
+
+// Fjernstyrt rotasjon for fysisk montering (grader). Styres herfra, ikke fra TV-en.
+const ROTATION_OPTIONS = [0, 90, 135, 180, 270];
 import DeckEditor from './deck/DeckEditor.jsx';
 
 function OnlineDot({ online }) {
@@ -33,7 +36,7 @@ function OnlineDot({ online }) {
 
 function ScreenList({ onEdit, onChange }) {
   const [screens, setScreens] = useState([]);
-  const [form, setForm] = useState({ name: '', location: '', orientation: 'landscape' });
+  const [form, setForm] = useState({ name: '', location: '', orientation: 'landscape', rotation: 0 });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -57,9 +60,10 @@ function ScreenList({ onEdit, onChange }) {
       const created = await api.screens.create({
         name: form.name,
         location: form.location || null,
-        orientation: form.orientation
+        orientation: form.orientation,
+        rotation: form.rotation
       });
-      setForm({ name: '', location: '', orientation: 'landscape' });
+      setForm({ name: '', location: '', orientation: 'landscape', rotation: 0 });
       await load();
       onChange?.();
       if (created?.id) onEdit(created.id);
@@ -70,10 +74,10 @@ function ScreenList({ onEdit, onChange }) {
     }
   };
 
-  const changeOrientation = async (id, orientation) => {
-    setScreens((prev) => prev.map((s) => (s.id === id ? { ...s, orientation } : s)));
+  const patchScreen = async (id, patch) => {
+    setScreens((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
     try {
-      await api.screens.update(id, { orientation });
+      await api.screens.update(id, patch);
       onChange?.();
     } catch (err) {
       setError(err.message);
@@ -109,7 +113,7 @@ function ScreenList({ onEdit, onChange }) {
       <PageHeader crumbs={['Visning', 'Skjermer']} />
       <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
         <Card title="Ny skjerm">
-          <form onSubmit={create} className="grid gap-4 sm:grid-cols-3">
+          <form onSubmit={create} className="grid gap-4 sm:grid-cols-2">
             <Field label="Navn">
               <Input
                 required
@@ -125,7 +129,7 @@ function ScreenList({ onEdit, onChange }) {
                 placeholder="Storsalen"
               />
             </Field>
-            <Field label="Orientering">
+            <Field label="Orientering" hint="Design-lerretet lysbildene bygges på.">
               <Select
                 value={form.orientation}
                 onChange={(e) => setForm({ ...form, orientation: e.target.value })}
@@ -134,7 +138,19 @@ function ScreenList({ onEdit, onChange }) {
                 <option value="portrait">Stående 9:16</option>
               </Select>
             </Field>
-            <div className="sm:col-span-3">
+            <Field label="Rotasjon" hint="Roterer visningen for fysisk montering.">
+              <Select
+                value={form.rotation}
+                onChange={(e) => setForm({ ...form, rotation: Number(e.target.value) })}
+              >
+                {ROTATION_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}°
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <div className="sm:col-span-2">
               <Button type="submit" disabled={busy}>
                 {busy ? 'Oppretter …' : 'Opprett og rediger'}
               </Button>
@@ -169,6 +185,7 @@ function ScreenList({ onEdit, onChange }) {
                   <>
                     <Icon name="layers" className="h-3.5 w-3.5" />
                     <span>{s.slide_count ?? 0} lysbilder</span>
+                    {s.rotation ? <span>· {s.rotation}° rotert</span> : null}
                     {s.location && <span>· {s.location}</span>}
                   </>
                 }
@@ -176,10 +193,22 @@ function ScreenList({ onEdit, onChange }) {
                   <>
                     <Segmented
                       value={s.orientation === 'portrait' ? 'portrait' : 'landscape'}
-                      onChange={(o) => changeOrientation(s.id, o)}
+                      onChange={(o) => patchScreen(s.id, { orientation: o })}
                       options={ORIENTATION_OPTIONS}
                       className="w-[104px]"
                     />
+                    <Select
+                      value={s.rotation ?? 0}
+                      onChange={(e) => patchScreen(s.id, { rotation: Number(e.target.value) })}
+                      className="w-[76px]"
+                      title="Skjermrotasjon (fysisk montering)"
+                    >
+                      {ROTATION_OPTIONS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}°
+                        </option>
+                      ))}
+                    </Select>
                     <IconButton name="x" label="Slett" tone="danger" onClick={() => remove(s.id)} />
                     <IconButton name="copy" label="Dupliser" onClick={() => duplicate(s.id)} />
                     <a
