@@ -21,7 +21,7 @@ Alle svar er JSON. `Access-Control-Allow-Origin: *`. Tidsstempler er ISO-8601 UT
 | Gruppe | Auth |
 | --- | --- |
 | TV-endepunkt (`request`, `status`) | ingen |
-| Admin-endepunkt (`link`, `reassign`, `command`, `unpair`, `GET /api/pairing`) | `Authorization: Bearer <ADMIN_TOKEN>` når secreten er satt i miljøet. Er den ikke satt, er endepunktene åpne. |
+| Admin-endepunkt (`link`, `reassign`, `rename`, `command`, `unpair`, `GET /api/pairing`) | `Authorization: Bearer <ADMIN_TOKEN>` når secreten er satt i miljøet. Er den ikke satt, er endepunktene åpne. |
 | Innhold (`/api/state`, `/api/stream`) | ingen i dag. Send `Authorization: Bearer <auth_token>` likevel for framtidig innstramming (`verifyPairingToken` finnes klar i `pairing.js`). |
 
 ---
@@ -58,10 +58,14 @@ Be aldri om ny kode når du har en lagret `device_id`; poll status i stedet.
 Kalles én gang ved oppstart hvis `device_id` ikke er lagret.
 
 **Body** (valgfritt, hvitlistet – ukjente nøkler forkastes, strenger kappes til 60 tegn):
+`device_name` · `app_version` · `tvos_version` · `model` · `resolution` (`uptime_seconds` som tall).
 
 ```json
-{ "app_version": "1.0.3", "tvos_version": "18.2", "model": "Apple TV 4K", "resolution": "1920x1080" }
+{ "device_name": "Stue Apple TV", "app_version": "1.0.3", "tvos_version": "18.2",
+  "model": "Apple TV 4K", "resolution": "1920x1080" }
 ```
+
+`device_name` vises i admin-lista (med mindre en admin har satt et eget kallenavn).
 
 **201 Created**
 
@@ -94,7 +98,7 @@ Poll hvert `poll_interval_seconds`. Legg gjerne ved fersk klient-info som query 
 den vises i admin-lista:
 
 ```
-?app_version=1.0.3&tvos_version=18.2&model=Apple%20TV%204K&resolution=1920x1080&uptime_seconds=3600
+?device_name=Stue%20Apple%20TV&app_version=1.0.3&tvos_version=18.2&model=Apple%20TV%204K&resolution=1920x1080&uptime_seconds=3600
 ```
 
 **200 – pending**
@@ -222,6 +226,18 @@ Flytt en paret enhet til en annen skjerm uten å røre TV-en. Køer automatisk e
 `200 { "ok": true, "screen_id": 2, "screen_name": "Inngangsparti" }` ·
 `404` hvis enheten ikke er paret · `404` hvis skjermen ikke finnes.
 
+### `POST /api/pairing/rename`
+
+Sett eller fjern et kallenavn (`label`) på en enhet. Tom streng fjerner det.
+Kallenavnet overstyrer `device_name` i admin-visningen.
+
+```json
+{ "device_id": "…", "label": "Inngang venstre" }
+```
+
+`200 { "ok": true, "label": "Inngang venstre" }` · `400` uten `device_id` ·
+`404` hvis enheten ikke finnes.
+
 ### `POST /api/pairing/command`
 
 ```json
@@ -255,13 +271,14 @@ Liste over alle enheter (nyeste + ventende først), maks 100.
     "code": "6FEAWJ",
     "device_id": "…",
     "status": "paired",
+    "label": "Inngang venstre",
     "screen_id": 2,
     "screen_name": "Inngangsparti",
     "created_at": "2026-09-03T20:12:46.711Z",
     "expires_at": "2026-09-03T20:27:46.710Z",
     "paired_at": "2026-09-03T20:12:46.853Z",
     "last_seen": "2026-09-03T20:14:02.934Z",
-    "client_info": { "app_version": "1.0.4", "tvos_version": "18.2", "resolution": "1920x1080", "uptime_seconds": 3600 },
+    "client_info": { "device_name": "Stue Apple TV", "app_version": "1.0.4", "tvos_version": "18.2", "resolution": "1920x1080", "uptime_seconds": 3600 },
     "online": true
   }
 ]

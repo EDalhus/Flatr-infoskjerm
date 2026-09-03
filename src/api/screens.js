@@ -12,7 +12,8 @@ import {
 } from './_shared.js';
 
 const ONLINE_MS = 90_000;
-const normOrientation = (v, f = 'landscape') => (v === 'portrait' ? 'portrait' : f);
+const normOrientation = (v, f = 'landscape') =>
+  v === 'portrait' ? 'portrait' : v === 'landscape' ? 'landscape' : f;
 
 function decorate(row) {
   return {

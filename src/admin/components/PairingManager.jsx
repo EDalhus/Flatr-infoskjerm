@@ -49,7 +49,7 @@ function timeAgo(iso) {
   return `${Math.floor(s / 86400)} d siden`;
 }
 
-// Kompakt oppsummering av klient-info: "Apple TV · tvOS 18.2 · app 1.0.3 · 1920×1080".
+// Kompakt oppsummering av klient-info: "arm64 · tvOS 18.2 · app 1.0.3 · 1920×1080".
 function clientSummary(ci) {
   if (!ci) return null;
   const parts = [];
@@ -59,6 +59,10 @@ function clientSummary(ci) {
   if (ci.resolution) parts.push(ci.resolution.replace('x', '×'));
   return parts.join(' · ') || null;
 }
+
+// Navn på enheten: eget kallenavn > enhetens rapporterte navn > selve koden.
+const displayName = (p) =>
+  p.label || p.client_info?.device_name || `${p.code.slice(0, 3)}-${p.code.slice(3)}`;
 
 // Forhåndsutfyll koden hvis admin ble åpnet fra QR-en (?code=ABC-DEF).
 const codeFromUrl = () => {
@@ -157,6 +161,20 @@ export default function PairingManager({ onChange }) {
     }
   };
 
+  const rename = async (p) => {
+    const current = p.label || p.client_info?.device_name || '';
+    const next = window.prompt('Kallenavn for enheten (tomt = fjern):', current);
+    if (next === null) return;
+    try {
+      await api.pairing.rename(p.device_id, next.trim());
+      say(next.trim() ? 'Navn lagret.' : 'Navn fjernet.');
+      await loadPairings();
+      onChange?.();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const unpair = async (p) => {
     if (!confirm(`Opphev parringen${p.screen_name ? ` med «${p.screen_name}»` : ''}?`)) return;
     try {
@@ -240,6 +258,8 @@ export default function PairingManager({ onChange }) {
               const badge = STATUS_BADGE[p.status] ?? STATUS_BADGE.pending;
               const paired = p.status === 'paired';
               const summary = clientSummary(p.client_info);
+              const hasName = Boolean(p.label || p.client_info?.device_name);
+              const codeText = `${p.code.slice(0, 3)}-${p.code.slice(3)}`;
               return (
                 <Row
                   key={p.id}
@@ -253,11 +273,19 @@ export default function PairingManager({ onChange }) {
                   }
                   title={
                     <span className="flex items-center gap-2">
-                      <span className="font-mono">
-                        {p.code.slice(0, 3)}-{p.code.slice(3)}
+                      <span className={hasName ? 'truncate' : 'truncate font-mono'}>
+                        {displayName(p)}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => rename(p)}
+                        title="Gi enheten et kallenavn"
+                        className="shrink-0 text-muted transition-colors hover:text-ink"
+                      >
+                        <Icon name="edit" className="h-3.5 w-3.5" />
+                      </button>
                       <span
-                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badge.cls}`}
+                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badge.cls}`}
                       >
                         {badge.label}
                       </span>
@@ -265,6 +293,8 @@ export default function PairingManager({ onChange }) {
                   }
                   meta={
                     <>
+                      {hasName && <span className="font-mono">{codeText}</span>}
+                      {hasName && <span aria-hidden>·</span>}
                       {!paired && <span>{p.screen_name ? `→ ${p.screen_name}` : 'ingen skjerm'}</span>}
                       {p.status === 'pending' && <span>· utløper {timeAgo(p.expires_at)}</span>}
                       {paired && p.last_seen && <span>sist sett {timeAgo(p.last_seen)}</span>}

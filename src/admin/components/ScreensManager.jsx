@@ -12,8 +12,14 @@ import {
   Row,
   MediaTile,
   PageHeader,
+  Segmented,
   ErrorText
 } from './ui.jsx';
+
+const ORIENTATION_OPTIONS = [
+  { value: 'landscape', label: '16:9' },
+  { value: 'portrait', label: '9:16' }
+];
 import DeckEditor from './deck/DeckEditor.jsx';
 
 function OnlineDot({ online }) {
@@ -61,6 +67,17 @@ function ScreenList({ onEdit, onChange }) {
       setError(err.message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const changeOrientation = async (id, orientation) => {
+    setScreens((prev) => prev.map((s) => (s.id === id ? { ...s, orientation } : s)));
+    try {
+      await api.screens.update(id, { orientation });
+      onChange?.();
+    } catch (err) {
+      setError(err.message);
+      load();
     }
   };
 
@@ -152,12 +169,17 @@ function ScreenList({ onEdit, onChange }) {
                   <>
                     <Icon name="layers" className="h-3.5 w-3.5" />
                     <span>{s.slide_count ?? 0} lysbilder</span>
-                    <span>· {s.orientation === 'portrait' ? '9:16' : '16:9'}</span>
                     {s.location && <span>· {s.location}</span>}
                   </>
                 }
                 actions={
                   <>
+                    <Segmented
+                      value={s.orientation === 'portrait' ? 'portrait' : 'landscape'}
+                      onChange={(o) => changeOrientation(s.id, o)}
+                      options={ORIENTATION_OPTIONS}
+                      className="w-[104px]"
+                    />
                     <IconButton name="x" label="Slett" tone="danger" onClick={() => remove(s.id)} />
                     <IconButton name="copy" label="Dupliser" onClick={() => duplicate(s.id)} />
                     <a

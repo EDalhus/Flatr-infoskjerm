@@ -45,7 +45,14 @@ const PAIRED_POLL_SECONDS = 30; // roligere poll etter paring (henter også komm
 const COMMANDS = ['identify', 'reload', 'clear_cache', 'reboot'];
 
 // Hvitliste for klient-info fra TV-en (alt annet forkastes; verdier trimmes).
-const CLIENT_INFO_KEYS = ['app_version', 'tvos_version', 'model', 'resolution', 'uptime_seconds'];
+const CLIENT_INFO_KEYS = [
+  'device_name', // enhetens eget navn (f.eks. "Stue Apple TV")
+  'app_version',
+  'tvos_version',
+  'model',
+  'resolution',
+  'uptime_seconds'
+];
 
 const nowIso = () => new Date().toISOString();
 const plusMinutes = (m) => new Date(Date.now() + m * 60_000).toISOString();
@@ -127,6 +134,7 @@ export async function onRequestPost(context) {
   if (path === '/api/pairing/request') return handleRequest(context);
   if (path === '/api/pairing/link') return handleLink(context);
   if (path === '/api/pairing/reassign') return handleReassign(context);
+  if (path === '/api/pairing/rename') return handleRename(context);
   if (path === '/api/pairing/command') return handleCommand(context);
   if (path === '/api/pairing/unpair') return handleUnpair(context);
   return notFound('Ukjent parrings-endepunkt');
@@ -292,6 +300,25 @@ async function handleReassign(context) {
   await queueCommand(context.env, deviceId, 'reload', null);
 
   return json({ ok: true, screen_id: screenId, screen_name: screen.name });
+}
+
+// POST /api/pairing/rename  { device_id, label }  – sett/fjern kallenavn på en enhet.
+async function handleRename(context) {
+  const denied = requireAdmin(context);
+  if (denied) return denied;
+
+  const b = await readJson(context.request);
+  const deviceId = b?.device_id ? String(b.device_id) : null;
+  if (!deviceId) return badRequest('device_id er påkrevd');
+  const label = String(b?.label ?? '').trim().slice(0, 80) || null;
+
+  const res = await context.env.DB
+    .prepare('UPDATE pairings SET label = ? WHERE device_id = ?')
+    .bind(label, deviceId)
+    .run();
+  if (!res.meta?.changes) return notFound('Enheten finnes ikke');
+
+  return json({ ok: true, label });
 }
 
 // POST /api/pairing/command  { device_id | screen_id, command, payload? }
@@ -486,7 +513,7 @@ async function handleList(context) {
 
   const { results } = await context.env.DB
     .prepare(
-      `SELECT p.id, p.code, p.device_id, p.status, p.screen_id,
+      `SELECT p.id, p.code, p.device_id, p.status, p.screen_id, p.label,
               p.created_at, p.expires_at, p.paired_at, p.last_seen, p.client_info,
               s.name AS screen_name
          FROM pairings p
@@ -502,6 +529,7 @@ async function handleList(context) {
       code: r.code,
       device_id: r.device_id,
       status: effectiveStatus(r),
+      label: r.label,
       screen_id: r.screen_id,
       screen_name: r.screen_name,
       created_at: r.created_at,

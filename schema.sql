@@ -122,7 +122,8 @@ CREATE TABLE IF NOT EXISTS pairings (
   expires_at  TEXT NOT NULL,
   paired_at   TEXT,
   last_seen   TEXT,
-  client_info TEXT                          -- JSON fra klienten (app-/tvOS-versjon, oppløsning, uptime)
+  client_info TEXT,                         -- JSON fra klienten (app-/tvOS-versjon, oppløsning, uptime, enhetsnavn)
+  label       TEXT                          -- fritt kallenavn satt i admin
 );
 
 -- Fjernkommandoer til parede TV-er. TV-en henter uleverte i status-pollen.

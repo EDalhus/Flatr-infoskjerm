@@ -116,6 +116,9 @@ export const api = {
     // Admin: flytt en paret enhet til en annen skjerm (TV-en trenger ikke røres).
     reassign: (device_id, screen_id) =>
       req('/pairing/reassign', { method: 'POST', body: { device_id, screen_id } }),
+    // Admin: sett/fjern kallenavn på en enhet (tom streng fjerner).
+    rename: (device_id, label) =>
+      req('/pairing/rename', { method: 'POST', body: { device_id, label } }),
     // Admin: kø en fjernkommando (identify | reload | clear_cache | reboot).
     command: (body) => req('/pairing/command', { method: 'POST', body }),
     // Admin: opphev en paring (device_id eller screen_id).

@@ -109,6 +109,7 @@ npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0004_sl
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0005_canvas_decks.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0006_pairing.sql
 npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0007_pairing_commands.sql
+npx wrangler d1 execute event-infoscreen-db --remote --file=./migrations/0008_pairing_label.sql
 ```
 
 `0005` bytter til canvas-modellen (`deck_slides` + `deck_elements`, `orientation`
@@ -116,8 +117,8 @@ på skjerm). Sone-tabellene (`screen_slides` / `playlists`) blir liggende urørt
 men brukes ikke lenger – eksisterende skjermer beholder navn, men lysbildene må
 bygges på nytt i den nye editoren.
 
-`0006`/`0007` legger til enhets-parring (Apple TV m.fl.): tabellen `pairings`,
-kolonnen `client_info` og tabellen `pairing_commands` – se
+`0006`–`0008` legger til enhets-parring (Apple TV m.fl.): tabellen `pairings`,
+kolonnene `client_info`/`label` og tabellen `pairing_commands` – se
 [Enhets-parring](#enhets-parring-tv-klienter). `0002` legger til kategorier, per-skjerm layout/soner/slides, skjermstatus og
 auto-status. `0003` legger til spillelister, mediebibliotek og maler. `0004`
 legger til tidsstyring på slides og en papirkurv. SQLite har ikke «ADD COLUMN
@@ -181,12 +182,13 @@ Under `/api`, rutet av `src/worker.js`. Skriveoperasjoner krever
 | `/api/heartbeat` | `POST` | `?screen=` – Viewer melder at den er i live. |
 | `/api/state` | `GET` | Samlet tilstand for én skjerm (`?screen=`). Svarer med `ETag`; `If-None-Match` gir `304`. |
 | `/api/stream` | `GET` | SSE: `snapshot` ved tilkobling, `update` ved endring. |
-| `/api/pairing/request` | `POST` | TV-klient ber om en kode. Åpent. Valgfri body `{ app_version, tvos_version, model, resolution }`. Gir `{ device_id, code, code_display, expires_at, pair_url, poll_interval_seconds }`. |
-| `/api/pairing/status/:deviceId` | `GET` | TV-klient poller. Åpent. Valgfri query `?app_version=&tvos_version=&model=&resolution=&uptime_seconds=`. `pending` (+ `pair_url`) / `paired` (+ `auth_token`, `state_url`, `stream_url`, `commands[]`) / `expired` / `unknown`. |
+| `/api/pairing/request` | `POST` | TV-klient ber om en kode. Åpent. Valgfri body `{ device_name, app_version, tvos_version, model, resolution }`. Gir `{ device_id, code, code_display, expires_at, pair_url, poll_interval_seconds }`. |
+| `/api/pairing/status/:deviceId` | `GET` | TV-klient poller. Åpent. Valgfri query `?device_name=&app_version=&tvos_version=&model=&resolution=&uptime_seconds=`. `pending` (+ `pair_url`) / `paired` (+ `auth_token`, `state_url`, `stream_url`, `commands[]`) / `expired` / `unknown`. |
 | `/api/pairing/link` | `POST` | Admin kobler `{ pairing_code, screen_id }` til en skjerm. Krever token. |
 | `/api/pairing/reassign` | `POST` | Admin flytter en paret enhet: `{ device_id, screen_id }`. Krever token. |
+| `/api/pairing/rename` | `POST` | Admin setter/fjerner kallenavn: `{ device_id, label }`. Krever token. |
 | `/api/pairing/command` | `POST` | Admin køer en fjernkommando: `{ device_id\|screen_id, command }` (`identify\|reload\|clear_cache\|reboot`). Krever token. |
-| `/api/pairing` | `GET` | Admin: liste over enheter (+ `online`, `client_info`). Krever token. |
+| `/api/pairing` | `GET` | Admin: liste over enheter (+ `online`, `label`, `client_info`). Krever token. |
 | `/api/pairing/unpair` | `POST` | Admin fjerner en paring (`{ device_id }` eller `{ screen_id }`). Krever token. |
 
 ### Sanntid
@@ -240,6 +242,10 @@ på neste status-poll (leveres nøyaktig én gang):
 screen_id }` oppdaterer `screen_id` og køer en `reload`. TV-en plukker opp ny
 skjerm ved neste poll.
 
+**Navn på enheten** – admin-lista viser kallenavnet (`label`, satt via
+`POST /api/pairing/rename`) hvis satt, ellers `device_name` som TV-en rapporterer,
+ellers selve koden.
+
 **Feilhåndtering** – `link` gir tydelige koder: `404` ukjent kode, `410` utløpt
 (`reason: "expired"`), `409` koden er alt brukt på en annen skjerm
 (`reason: "already_paired"` – bruk `reassign`; samme skjerm er idempotent).
@@ -248,8 +254,8 @@ enheten er slettet / opphevet – da starter TV-en parring på nytt.
 
 **Sikkerhet** – `device_id` er en 128-bits UUID; `status` avslører kun data for en
 kjent id. `auth_token` sendes bare til TV-en via `status`, aldri i `link`-svaret.
-Klient-info filtreres mot en hvitliste (`app_version`, `tvos_version`, `model`,
-`resolution`, `uptime_seconds`). `request` har en enkel innebygd brems
+Klient-info filtreres mot en hvitliste (`device_name`, `app_version`,
+`tvos_version`, `model`, `resolution`, `uptime_seconds`). `request` har en enkel innebygd brems
 (>60 rader/min → `429`); sett Cloudflare Rate Limiting / WAF foran endepunktet i
 produksjon. Gamle `pending`/`expired`-rader og leverte kommandoer ryddes
 automatisk.
@@ -337,7 +343,7 @@ er, og `identify`/`reload` kan implementeres som JS-injeksjon i webviewen.
 ```
 ├── wrangler.jsonc            # Worker: main + assets (ASSETS) + D1 (DB) + R2 (MEDIA)
 ├── schema.sql                # fullt skjema + demo-data
-├── migrations/               # 0001 … 0007 (siste: parrings-kommandoer)
+├── migrations/               # 0001 … 0008 (siste: kallenavn på enheter)
 └── src/
     ├── worker.js             # ruter /api/* + ASSETS-fallback
     ├── main.jsx              # ruter: /admin · /display/:id · /s/:id
