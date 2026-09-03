@@ -203,7 +203,7 @@ uten å endre klienten.
 En dedikert infoskjerm-app (Apple TV / tvOS, Fire TV, nettleser-kiosk …) knyttes
 til en skjerm uten å taste inn URL-er eller tokens. Backend: `src/api/pairing.js`
 + tabellene `pairings` og `pairing_commands` (migrering `0006`/`0007`). Admin-UI:
-**Visning → Parring**.
+**Visning → Parring**. Full API-kontrakt for TV-appen: [`docs/pairing-api.md`](docs/pairing-api.md).
 
 **Flyt**
 
