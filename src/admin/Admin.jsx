@@ -11,6 +11,7 @@ import AlertsManager from './components/AlertsManager.jsx';
 import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 import ThemePicker from './components/ThemePicker.jsx';
+import { LogoMarkSquare, LogoLockup } from './components/Logo.jsx';
 
 const NAV = [
   { id: 'screens', label: 'Skjermer', icon: 'monitor', section: 'Visning', Component: ScreensManager },
@@ -73,9 +74,7 @@ export default function Admin() {
   return (
     <div className="flex h-screen overflow-hidden bg-paper text-ink">
       <div className="hidden w-14 shrink-0 flex-col items-center border-r border-line bg-card py-4 sm:flex">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-lg font-black text-white">
-          F
-        </div>
+        <LogoMarkSquare className="h-9 w-9" />
         <div className="mt-4 grid h-9 w-9 place-items-center rounded-lg bg-hair text-muted">
           <Icon name="calendar" className="h-5 w-5" />
         </div>
@@ -90,10 +89,10 @@ export default function Admin() {
 
       <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-card sm:w-64">
         <div className="px-5 py-5">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-            Infoskjerm
+          <LogoLockup className="h-6 w-auto text-ink" />
+          <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+            Admin
           </div>
-          <div className="text-sm font-black tracking-tight text-ink">FLATR ADMIN</div>
         </div>
 
         <div className="px-3">
