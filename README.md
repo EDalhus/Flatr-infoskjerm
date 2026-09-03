@@ -245,10 +245,14 @@ på neste status-poll (leveres nøyaktig én gang):
 screen_id }` oppdaterer `screen_id` og køer en `reload`. TV-en plukker opp ny
 skjerm ved neste poll.
 
-**Navn på enheten** – admin-lista viser kallenavnet (`label`, satt via
-`POST /api/pairing/rename`) hvis satt, ellers `device_name` som TV-en rapporterer,
-ellers selve koden. Under hver parede enhet vises en miniatyr-stripe av alle
-lysbildene som spilles av på den tilkoblede skjermen.
+**Admin-panelet** (fleet-oversikt à la ScreenCloud): søkbar enhetsliste med
+status (`Live` / `Frakoblet` / `Venter` / `Utløpt`), miniatyr-stripe av lysbildene
+som spilles av, avkryssing for **bulk-handlinger** (last inn / tøm cache / restart
+/ bytt skjerm / opphev), og et **detaljpanel** pr. enhet med faner: Oversikt
+(telemetri-kort + IP/hostname/device-ID + hurtigkommandoer), Skjerm
+(lysbilde-forhåndsvisning) og Innstillinger (kallenavn, bytt skjerm, opphev).
+Navnet som vises er kallenavnet (`label`, via `POST /api/pairing/rename`) hvis
+satt, ellers `device_name` fra TV-en, ellers koden.
 
 **Feilhåndtering** – `link` gir tydelige koder: `404` ukjent kode, `410` utløpt
 (`reason: "expired"`), `409` koden er alt brukt på en annen skjerm
@@ -259,7 +263,9 @@ enheten er slettet / opphevet – da starter TV-en parring på nytt.
 **Sikkerhet** – `device_id` er en 128-bits UUID; `status` avslører kun data for en
 kjent id. `auth_token` sendes bare til TV-en via `status`, aldri i `link`-svaret.
 Klient-info filtreres mot en hvitliste (`device_name`, `app_version`,
-`tvos_version`, `model`, `resolution`, `uptime_seconds`). `request` har en enkel innebygd brems
+`player_version`, `tvos_version`, `os_version`, `model`, `resolution`, `ip`,
+`hostname` + tallene `uptime_seconds`, `storage_pct`, `memory_pct`, `cpu_temp`,
+`gpu_temp`) og flettes ved hver poll. `request` har en enkel innebygd brems
 (>60 rader/min → `429`); sett Cloudflare Rate Limiting / WAF foran endepunktet i
 produksjon. Gamle `pending`/`expired`-rader og leverte kommandoer ryddes
 automatisk.

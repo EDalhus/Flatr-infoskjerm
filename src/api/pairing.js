@@ -48,11 +48,27 @@ const COMMANDS = ['identify', 'reload', 'clear_cache', 'reboot'];
 const CLIENT_INFO_KEYS = [
   'device_name', // enhetens eget navn (f.eks. "Stue Apple TV")
   'app_version',
+  'player_version',
   'tvos_version',
+  'os_version',
   'model',
   'resolution',
-  'uptime_seconds'
+  'ip',
+  'hostname',
+  'uptime_seconds',
+  'storage_pct',
+  'memory_pct',
+  'cpu_temp',
+  'gpu_temp'
 ];
+// Disse tolkes som tall (resten som tekst, maks 60 tegn).
+const CLIENT_INFO_NUM = new Set([
+  'uptime_seconds',
+  'storage_pct',
+  'memory_pct',
+  'cpu_temp',
+  'gpu_temp'
+]);
 
 const nowIso = () => new Date().toISOString();
 const plusMinutes = (m) => new Date(Date.now() + m * 60_000).toISOString();
@@ -86,9 +102,9 @@ function pickClientInfo(source) {
   for (const k of CLIENT_INFO_KEYS) {
     const v = source[k];
     if (v === undefined || v === null || v === '') continue;
-    if (k === 'uptime_seconds') {
-      const n = Number.parseInt(v, 10);
-      if (!Number.isNaN(n)) out[k] = n;
+    if (CLIENT_INFO_NUM.has(k)) {
+      const n = Number(v);
+      if (Number.isFinite(n)) out[k] = Math.round(n * 10) / 10;
     } else {
       out[k] = String(v).slice(0, 60);
     }
@@ -425,14 +441,17 @@ async function handleStatus({ request, env }, deviceId) {
     return json({ status: 'expired', poll_interval_seconds: POLL_SECONDS });
   }
 
-  // Oppdater last_seen (+ evt. fersk klient-info) på hver poll.
+  // Oppdater last_seen (+ evt. fersk klient-info) på hver poll. Klient-info flettes
+  // sammen med det som allerede er lagret, så en poll med bare noen felt ikke
+  // nuller resten.
   const ts = nowIso();
-  const clientInfo = pickClientInfo(Object.fromEntries(new URL(request.url).searchParams));
+  const fresh = pickClientInfo(Object.fromEntries(new URL(request.url).searchParams));
   try {
-    if (clientInfo) {
+    if (fresh) {
+      const merged = { ...safeJson(row.client_info, {}), ...JSON.parse(fresh) };
       await env.DB
         .prepare('UPDATE pairings SET last_seen = ?, client_info = ? WHERE id = ?')
-        .bind(ts, clientInfo, row.id)
+        .bind(ts, JSON.stringify(merged), row.id)
         .run();
     } else {
       await env.DB.prepare('UPDATE pairings SET last_seen = ? WHERE id = ?').bind(ts, row.id).run();

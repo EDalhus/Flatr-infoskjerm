@@ -58,14 +58,20 @@ Be aldri om ny kode når du har en lagret `device_id`; poll status i stedet.
 Kalles én gang ved oppstart hvis `device_id` ikke er lagret.
 
 **Body** (valgfritt, hvitlistet – ukjente nøkler forkastes, strenger kappes til 60 tegn):
-`device_name` · `app_version` · `tvos_version` · `model` · `resolution` (`uptime_seconds` som tall).
+
+| tekstfelt | tallfelt |
+| --- | --- |
+| `device_name` · `app_version` · `player_version` · `tvos_version` · `os_version` · `model` · `resolution` · `ip` · `hostname` | `uptime_seconds` · `storage_pct` · `memory_pct` · `cpu_temp` · `gpu_temp` |
 
 ```json
 { "device_name": "Stue Apple TV", "app_version": "1.0.3", "tvos_version": "18.2",
-  "model": "Apple TV 4K", "resolution": "1920x1080" }
+  "model": "Apple TV 4K", "resolution": "1920x1080", "ip": "192.168.40.123",
+  "hostname": "atv-stue", "storage_pct": 51, "memory_pct": 78, "cpu_temp": 42 }
 ```
 
-`device_name` vises i admin-lista (med mindre en admin har satt et eget kallenavn).
+`device_name` vises i admin-lista (med mindre en admin har satt et eget kallenavn);
+resten fyller telemetri-kortene i enhetens detaljpanel. Feltene **flettes** – en
+`status`-poll med bare noen av dem nuller ikke resten.
 
 **201 Created**
 
@@ -98,7 +104,7 @@ Poll hvert `poll_interval_seconds`. Legg gjerne ved fersk klient-info som query 
 den vises i admin-lista:
 
 ```
-?device_name=Stue%20Apple%20TV&app_version=1.0.3&tvos_version=18.2&model=Apple%20TV%204K&resolution=1920x1080&uptime_seconds=3600
+?device_name=Stue%20Apple%20TV&app_version=1.0.3&tvos_version=18.2&model=Apple%20TV%204K&resolution=1920x1080&ip=192.168.40.123&uptime_seconds=3600&storage_pct=51&memory_pct=78&cpu_temp=42
 ```
 
 **200 – pending**
@@ -278,7 +284,12 @@ Liste over alle enheter (nyeste + ventende først), maks 100.
     "expires_at": "2026-09-03T20:27:46.710Z",
     "paired_at": "2026-09-03T20:12:46.853Z",
     "last_seen": "2026-09-03T20:14:02.934Z",
-    "client_info": { "device_name": "Stue Apple TV", "app_version": "1.0.4", "tvos_version": "18.2", "resolution": "1920x1080", "uptime_seconds": 3600 },
+    "client_info": {
+      "device_name": "Stue Apple TV", "app_version": "1.0.4", "tvos_version": "18.2",
+      "model": "Apple TV 4K", "resolution": "1920x1080", "ip": "192.168.40.123",
+      "hostname": "atv-stue", "uptime_seconds": 3600,
+      "storage_pct": 51, "memory_pct": 78, "cpu_temp": 42, "gpu_temp": 40
+    },
     "online": true
   }
 ]
