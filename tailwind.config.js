@@ -7,28 +7,39 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
       },
       colors: {
-        // Mørk lilla admin-palett med magenta aksent og gul highlight.
-        paper: '#2b0d40', // sidebakgrunn (mørkeste lilla)
-        card: '#3a1f73', // flate / kort (indigo)
-        ink: '#f2edff', // primærtekst (nær-hvit lavendel)
-        muted: '#a999cf', // sekundærtekst
-        line: '#4e3196', // kant mot paper
-        hair: '#472c88', // kant inne i kort
+        // Tokens peker på CSS-variabler så temaet kan byttes i runtime
+        // (se src/index.css + ThemePicker). Verdiene er "R G B"-tripler.
+        paper: 'rgb(var(--c-paper) / <alpha-value>)', // sidebakgrunn
+        card: 'rgb(var(--c-card) / <alpha-value>)', // flate / kort
+        ink: 'rgb(var(--c-ink) / <alpha-value>)', // primærtekst
+        muted: 'rgb(var(--c-muted) / <alpha-value>)', // sekundærtekst
+        line: 'rgb(var(--c-line) / <alpha-value>)', // kant mot paper
+        hair: 'rgb(var(--c-hair) / <alpha-value>)', // kant inne i kort
         brand: {
-          DEFAULT: '#bc17bf', // magenta aksent
-          dark: '#9d0fa0',
-          tint: '#4a1566' // mørk magenta-vask (aktiv nav-bakgrunn)
+          DEFAULT: 'rgb(var(--c-brand) / <alpha-value>)',
+          dark: 'rgb(var(--c-brand-dark) / <alpha-value>)',
+          tint: 'rgb(var(--c-brand-tint) / <alpha-value>)'
         },
-        focus: '#3e22f2', // elektrisk blå – fokusring / avkryssing
-        zone: '#33195f', // gruppe-header
-        zoneink: '#bcabde',
-        ok: { DEFAULT: '#34d399', tint: '#123a30' },
-        danger: { DEFAULT: '#fb7185', tint: '#4a1626', hover: '#5c1b2f' },
-        badge: { DEFAULT: '#f2ea79', ink: '#2b0d40' } // gul brikke, mørk tekst
+        focus: 'rgb(var(--c-focus) / <alpha-value>)', // fokusring / avkryssing
+        zone: 'rgb(var(--c-zone) / <alpha-value>)', // gruppe-header
+        zoneink: 'rgb(var(--c-zoneink) / <alpha-value>)',
+        ok: {
+          DEFAULT: 'rgb(var(--c-ok) / <alpha-value>)',
+          tint: 'rgb(var(--c-ok-tint) / <alpha-value>)'
+        },
+        danger: {
+          DEFAULT: 'rgb(var(--c-danger) / <alpha-value>)',
+          tint: 'rgb(var(--c-danger-tint) / <alpha-value>)',
+          hover: 'rgb(var(--c-danger-hover) / <alpha-value>)'
+        },
+        badge: {
+          DEFAULT: 'rgb(var(--c-badge) / <alpha-value>)',
+          ink: 'rgb(var(--c-badge-ink) / <alpha-value>)'
+        }
       },
       boxShadow: {
-        card: '0 1px 2px rgba(0,0,0,0.30)',
-        pop: '0 10px 40px rgba(0,0,0,0.55)'
+        card: 'var(--shadow-card)',
+        pop: 'var(--shadow-pop)'
       },
       keyframes: {
         'alert-in': {

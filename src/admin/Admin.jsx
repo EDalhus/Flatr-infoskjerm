@@ -10,6 +10,7 @@ import ScreensManager from './components/ScreensManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
 import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
+import ThemePicker from './components/ThemePicker.jsx';
 
 const NAV = [
   { id: 'screens', label: 'Skjermer', icon: 'monitor', section: 'Visning', Component: ScreensManager },
@@ -132,8 +133,9 @@ export default function Admin() {
           ))}
         </div>
 
-        <div className="mt-auto border-t border-line p-4">
-          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+        <div className="mt-auto space-y-3 border-t border-line p-4">
+          <ThemePicker />
+          <div className="mb-1.5 border-t border-line pt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
             Admin-token
           </div>
           <div className="flex gap-1.5">

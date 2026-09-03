@@ -10,16 +10,137 @@ body,
 
 body {
   margin: 0;
-  background: #2b0d40;
-  color: #f2edff;
+  background: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Mørkt tema for admin: la nettleser-kontroller (datovelger, select-pil,
-   scrollbar) følge med. Viewer/-display overstyrer selv der det trengs. */
+/* ============================================================
+   Temaer. Byttes i runtime via <html data-theme="…"> (ThemePicker).
+   Verdier er "R G B"-tripler for rgb(var(--c-x) / <alpha>).
+   :root = standardtema (også det offentlige programmet /s/:id ser).
+   Lyse temaer arver --shadow-* fra :root; bare aubergine overstyrer.
+   ============================================================ */
 :root {
+  /* Slate – lyst, nøytralt, oransje aksent */
+  --c-paper: 246 246 247;
+  --c-card: 255 255 255;
+  --c-ink: 28 29 31;
+  --c-muted: 139 141 148;
+  --c-line: 233 233 236;
+  --c-hair: 240 240 242;
+  --c-brand: 241 90 41;
+  --c-brand-dark: 217 77 30;
+  --c-brand-tint: 253 238 231;
+  --c-focus: 37 99 235;
+  --c-zone: 244 244 246;
+  --c-zoneink: 106 108 114;
+  --c-ok: 22 163 74;
+  --c-ok-tint: 228 246 234;
+  --c-danger: 224 57 58;
+  --c-danger-tint: 253 236 235;
+  --c-danger-hover: 249 220 219;
+  --c-badge: 238 238 240;
+  --c-badge-ink: 82 84 90;
+  --shadow-card: 0 1px 2px rgba(17, 18, 20, 0.04), 0 1px 3px rgba(17, 18, 20, 0.05);
+  --shadow-pop: 0 8px 30px rgba(17, 18, 20, 0.12);
+  color-scheme: light;
+}
+
+[data-theme='aubergine'] {
+  /* Mørk lilla, magenta aksent, gul highlight */
+  --c-paper: 43 13 64;
+  --c-card: 58 31 115;
+  --c-ink: 242 237 255;
+  --c-muted: 169 153 207;
+  --c-line: 78 49 150;
+  --c-hair: 71 44 136;
+  --c-brand: 188 23 191;
+  --c-brand-dark: 157 15 160;
+  --c-brand-tint: 74 21 102;
+  --c-focus: 62 34 242;
+  --c-zone: 51 25 95;
+  --c-zoneink: 188 171 222;
+  --c-ok: 52 211 153;
+  --c-ok-tint: 18 58 48;
+  --c-danger: 251 113 133;
+  --c-danger-tint: 74 22 38;
+  --c-danger-hover: 92 27 47;
+  --c-badge: 242 234 121;
+  --c-badge-ink: 43 13 64;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-pop: 0 10px 40px rgba(0, 0, 0, 0.55);
   color-scheme: dark;
+}
+
+[data-theme='skog'] {
+  /* Lyst, smaragdgrønn aksent */
+  --c-paper: 242 242 242;
+  --c-card: 255 255 255;
+  --c-ink: 13 13 13;
+  --c-muted: 107 125 117;
+  --c-line: 224 227 225;
+  --c-hair: 236 240 238;
+  --c-brand: 2 115 83;
+  --c-brand-dark: 1 92 66;
+  --c-brand-tint: 224 238 233;
+  --c-focus: 63 140 118;
+  --c-zone: 232 240 237;
+  --c-zoneink: 63 140 118;
+  --c-ok: 2 115 83;
+  --c-ok-tint: 219 238 231;
+  --c-danger: 193 58 52;
+  --c-danger-tint: 250 234 233;
+  --c-danger-hover: 244 216 214;
+  --c-badge: 226 237 232;
+  --c-badge-ink: 2 115 83;
+}
+
+[data-theme='lagune'] {
+  /* Lyst, turkis aksent, korall for fare */
+  --c-paper: 244 246 247;
+  --c-card: 255 255 255;
+  --c-ink: 13 13 13;
+  --c-muted: 120 132 134;
+  --c-line: 222 227 228;
+  --c-hair: 235 240 241;
+  --c-brand: 31 152 166;
+  --c-brand-dark: 26 130 142;
+  --c-brand-tint: 222 240 242;
+  --c-focus: 38 166 153;
+  --c-zone: 229 240 241;
+  --c-zoneink: 26 130 142;
+  --c-ok: 38 166 153;
+  --c-ok-tint: 220 240 237;
+  --c-danger: 217 105 95;
+  --c-danger-tint: 250 233 231;
+  --c-danger-hover: 244 214 210;
+  --c-badge: 224 238 240;
+  --c-badge-ink: 31 152 166;
+}
+
+[data-theme='mist'] {
+  /* Mykt lyst, blålilla aksent */
+  --c-paper: 238 237 245;
+  --c-card: 255 255 255;
+  --c-ink: 40 40 51;
+  --c-muted: 139 138 158;
+  --c-line: 223 220 242;
+  --c-hair: 237 236 247;
+  --c-brand: 108 106 217;
+  --c-brand-dark: 92 90 196;
+  --c-brand-tint: 223 220 242;
+  --c-focus: 108 106 217;
+  --c-zone: 231 230 246;
+  --c-zoneink: 96 94 180;
+  --c-ok: 22 163 74;
+  --c-ok-tint: 226 240 231;
+  --c-danger: 216 92 92;
+  --c-danger-tint: 250 234 234;
+  --c-danger-hover: 244 216 216;
+  --c-badge: 223 220 242;
+  --c-badge-ink: 92 90 196;
 }
 
 /* Skjul markør på infoskjermer i kiosk-modus */
