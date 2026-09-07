@@ -165,6 +165,23 @@ på D1-bindingen `DB`.
 Manuelt: `npm run deploy`. Admin-token i prod: `npx wrangler secret put ADMIN_TOKEN`.
 For mediebibliotek: `npx wrangler r2 bucket create flatr-infoscreen-media` (én gang).
 
+### Innlogging (Cloudflare Access)
+
+Admin og samarbeids-editoren identifiserer brukere via **Cloudflare Access**:
+
+1. Zero Trust → Access → **Add an application** (Self-hosted), domene `flatr.no`
+   (og evt. `*.flatr.no`). La `/display/*` og `/s/*` stå **utenfor** (bypass) så
+   TV-er og publikum slipper innlogging.
+2. Policy: **Allow** når *Emails ending in* `@dittdomene.no` (whitelistet domene).
+3. Kopier **Application Audience (AUD) tag** og **team-domenet**
+   (`<team>.cloudflareaccess.com`) inn i `wrangler.jsonc` → `vars`:
+   `ACCESS_AUD` og `ACCESS_TEAM_DOMAIN`. Deploy.
+
+Worker-en verifiserer `Cf-Access-Jwt-Assertion` mot teamets JWKS. Alle med en
+gyldig konto får full redigeringstilgang; brukernavnet er delen før `@`, og hver
+bruker får sin egen faste farge. Er `ACCESS_*` tomme kjører alt uten innlogging
+(lokal utvikling – sett `DEV_USER_EMAIL` i `.dev.vars`, evt. `?as=navn` pr. fane).
+
 ---
 
 ## API

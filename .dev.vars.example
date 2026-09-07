@@ -1,3 +1,7 @@
-# Kopier til .dev.vars for lokal utvikling (leses av `wrangler pages dev`).
-# Hvis ADMIN_TOKEN ikke er satt er admin-API-et åpent (praktisk lokalt).
+# Kopier til .dev.vars for lokal utvikling.
+# Uten ADMIN_TOKEN er admin-API-et åpent lokalt (praktisk).
 ADMIN_TOKEN=dev-secret-change-me
+
+# Cloudflare Access finnes ikke lokalt – hvem du "er" i samarbeids-editoren.
+# Overstyres pr. fane med ?as=<navn> for å teste flere brukere samtidig.
+DEV_USER_EMAIL=deg@flatr.no

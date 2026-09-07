@@ -21,7 +21,7 @@ export async function onRequestGet({ env }) {
 
 // POST /api/categories  { name, color? }
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -37,7 +37,7 @@ export async function onRequestPost(context) {
 
 // PUT /api/categories?id=1  { name?, color? }
 export async function onRequestPut(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
@@ -61,7 +61,7 @@ export async function onRequestPut(context) {
 
 // DELETE /api/categories?id=1  (programposter beholdes, category_id nulles)
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));

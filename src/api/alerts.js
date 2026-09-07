@@ -27,7 +27,7 @@ export async function onRequestGet({ request, env }) {
 // POST /api/alerts  { message, target_screen_id? }
 // target_screen_id = null/utelatt  -> vises på ALLE skjermer
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -50,7 +50,7 @@ export async function onRequestPost(context) {
 // DELETE /api/alerts?id=1   -> arkiver én melding (active = 0)
 // DELETE /api/alerts?all=1  -> arkiver alle aktive meldinger
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const url = new URL(context.request.url);

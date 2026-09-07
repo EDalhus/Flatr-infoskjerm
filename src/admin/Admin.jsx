@@ -37,9 +37,11 @@ export default function Admin() {
   const [tab, setTab] = useState(initialTab);
   const [screenCount, setScreenCount] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [me, setMe] = useState(null);
 
   useEffect(() => {
     document.title = 'Flatr';
+    api.me().then(setMe).catch(() => setMe(null));
   }, []);
 
   useEffect(() => {
@@ -117,8 +119,19 @@ export default function Admin() {
           ))}
         </div>
 
-        <div className="mt-auto border-t border-line p-4">
+        <div className="mt-auto space-y-3 border-t border-line p-4">
           <ThemePicker />
+          {me?.name && (
+            <div className="flex items-center gap-2 border-t border-line pt-3 text-xs text-muted">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: me.color }}
+              />
+              <span className="truncate">
+                Innlogget som <span className="font-semibold text-ink">{me.name}</span>
+              </span>
+            </div>
+          )}
         </div>
       </aside>
 

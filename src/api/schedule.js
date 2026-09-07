@@ -34,7 +34,7 @@ export async function onRequestGet({ request, env }) {
 // POST /api/schedule
 // { title, start_time, description?, end_time?, stage?, status?, auto_status?, category_id? }
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -64,7 +64,7 @@ export async function onRequestPost(context) {
 
 // PUT /api/schedule?id=1  { ...felter som skal endres }
 export async function onRequestPut(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
@@ -112,7 +112,7 @@ export async function onRequestPut(context) {
 
 // DELETE /api/schedule?id=1
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));

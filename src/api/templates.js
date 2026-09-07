@@ -36,7 +36,7 @@ export async function onRequestGet({ request, env }) {
 
 // POST /api/templates  { name, kind, payload }
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const b = await readJson(context.request);
   if (!b?.name) return badRequest('name er påkrevd');
@@ -51,7 +51,7 @@ export async function onRequestPost(context) {
 
 // DELETE /api/templates?id=1
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');

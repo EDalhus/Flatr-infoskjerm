@@ -128,7 +128,7 @@ export async function onRequestGet({ env }) {
 
 // POST /api/trash?id=1  -> gjenopprett
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
@@ -148,7 +148,7 @@ export async function onRequestPost(context) {
 // DELETE /api/trash?id=1   -> slett permanent
 // DELETE /api/trash?all=1  -> tøm papirkurv
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const url = new URL(context.request.url);
   const all = url.searchParams.get('all');

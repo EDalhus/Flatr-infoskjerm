@@ -20,7 +20,7 @@ export async function onRequestGet({ env }) {
 
 // POST /api/sponsors  { name, image_url, duration_seconds? }
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -41,7 +41,7 @@ export async function onRequestPost(context) {
 
 // PUT /api/sponsors?id=1  { name?, image_url?, duration_seconds? }
 export async function onRequestPut(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const url = new URL(context.request.url);
@@ -77,7 +77,7 @@ export async function onRequestPut(context) {
 
 // DELETE /api/sponsors?id=1
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const url = new URL(context.request.url);

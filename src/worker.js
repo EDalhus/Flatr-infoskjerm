@@ -21,6 +21,7 @@ import * as heartbeat from './api/heartbeat.js';
 import * as state from './api/state.js';
 import * as stream from './api/stream.js';
 import * as pairing from './api/pairing.js';
+import * as me from './api/me.js';
 
 const ROUTES = {
   '/api/screens': screens,
@@ -37,7 +38,8 @@ const ROUTES = {
   '/api/health': health,
   '/api/heartbeat': heartbeat,
   '/api/state': state,
-  '/api/stream': stream
+  '/api/stream': stream,
+  '/api/me': me
 };
 
 const METHOD_HANDLER = {

@@ -124,6 +124,7 @@ export const api = {
     // Admin: opphev en paring (device_id eller screen_id).
     unpair: (body) => req('/pairing/unpair', { method: 'POST', body })
   },
+  me: () => req('/me'),
   heartbeat: (screenId) =>
     req(`/heartbeat?screen=${encodeURIComponent(screenId)}`, { method: 'POST' }),
   getState: (screenId) =>

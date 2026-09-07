@@ -214,7 +214,7 @@ async function handleRequest({ request, env }) {
 
 // POST /api/pairing/link  { pairing_code, screen_id }  – fra web-admin. Krever ADMIN_TOKEN når satt.
 async function handleLink(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -286,7 +286,7 @@ async function handleLink(context) {
 // POST /api/pairing/reassign  { device_id, screen_id }  – flytt en paret TV til en annen skjerm.
 // TV-en trenger ikke røres; den plukker opp ny screen_id ved neste status-poll.
 async function handleReassign(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -320,7 +320,7 @@ async function handleReassign(context) {
 
 // POST /api/pairing/rename  { device_id, label }  – sett/fjern kallenavn på en enhet.
 async function handleRename(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -339,7 +339,7 @@ async function handleRename(context) {
 
 // POST /api/pairing/command  { device_id | screen_id, command, payload? }
 async function handleCommand(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -394,7 +394,7 @@ async function queueCommand(env, deviceId, command, payload) {
 
 // POST /api/pairing/unpair  { device_id | screen_id }  – admin opphever en paring.
 async function handleUnpair(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const b = await readJson(context.request);
@@ -527,7 +527,7 @@ async function handleStatus({ request, env }, deviceId) {
 
 // GET /api/pairing  – admin: liste over parringer (til admin-UI).
 async function handleList(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
 
   const { results } = await context.env.DB

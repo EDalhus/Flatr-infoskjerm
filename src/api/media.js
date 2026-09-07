@@ -54,7 +54,7 @@ export async function onRequestGet({ request, env }) {
 // POST /api/media?name=logo.png&type=image/png&folder=Logoer
 // Body = rå fil-bytes.
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   if (!context.env.MEDIA) return noBucket();
 
@@ -80,7 +80,7 @@ export async function onRequestPost(context) {
 
 // DELETE /api/media?id=1
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');

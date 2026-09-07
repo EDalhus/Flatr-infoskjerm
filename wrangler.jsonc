@@ -42,7 +42,13 @@
 	],
 	// Ikke-hemmelige variabler. Hemmeligheter (ADMIN_TOKEN) settes med
 	// `wrangler secret put ADMIN_TOKEN` eller i .dev.vars lokalt.
+	//
+	// Cloudflare Access foran Worker-en: sett ACCESS_TEAM_DOMAIN +
+	// ACCESS_AUD (fra Zero Trust → Access → applikasjonen). Er de tomme
+	// kjører alt uten innlogging (lokal utvikling).
 	"vars": {
-		"SSE_POLL_MS": "3000"
+		"SSE_POLL_MS": "3000",
+		"ACCESS_TEAM_DOMAIN": "",
+		"ACCESS_AUD": ""
 	}
 }

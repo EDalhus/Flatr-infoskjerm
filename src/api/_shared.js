@@ -1,5 +1,7 @@
 // Delte hjelpere for alle API-Functions. Filnavn med _ rutes ikke av Pages.
 
+import { getUser } from './_access.js';
+
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -31,7 +33,15 @@ export async function readJson(request) {
   }
 }
 
-export function requireAdmin({ request, env }) {
+// Autorisasjon for skriveoperasjoner. Returnerer null hvis OK, ellers en 401.
+//   1. Cloudflare Access-bruker på whitelistet domene  -> full tilgang
+//   2. Ellers: Authorization: Bearer <ADMIN_TOKEN>      (skript / uten Access)
+//   3. Er ingen av delene konfigurert                   -> åpent (lokalt)
+export async function requireAdmin({ request, env }) {
+  if (env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD) {
+    const user = await getUser(request, env);
+    return user ? null : json({ error: 'Ikke innlogget' }, { status: 401 });
+  }
   const configured = env.ADMIN_TOKEN;
   if (!configured) return null;
   const header = request.headers.get('Authorization') || '';

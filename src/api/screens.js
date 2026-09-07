@@ -92,7 +92,7 @@ export async function onRequestGet({ request, env }) {
 //   { name, location?, orientation? }   -> ny skjerm (+ ett tomt lysbilde)
 //   { duplicate_of, name? }             -> klon skjerm inkl. alle lysbilder/elementer
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const env = context.env;
   const b = await readJson(context.request);
@@ -176,7 +176,7 @@ export async function onRequestPost(context) {
 
 // PUT /api/screens?id=1  { name?, location?, orientation?, rotation? }
 export async function onRequestPut(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
@@ -207,7 +207,7 @@ export async function onRequestPut(context) {
 
 // DELETE /api/screens?id=1
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');

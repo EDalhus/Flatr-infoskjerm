@@ -28,7 +28,7 @@ const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
 
 // POST /api/deck-elements  { slide_id, kind, x,y,w,h,z,rotation,config }
 export async function onRequestPost(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const b = await readJson(context.request);
   const slideId = toIntOrNull(b?.slide_id);
@@ -71,7 +71,7 @@ export async function onRequestPost(context) {
 
 // PUT /api/deck-elements?id=1
 export async function onRequestPut(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
@@ -106,7 +106,7 @@ export async function onRequestPut(context) {
 
 // DELETE /api/deck-elements?id=1
 export async function onRequestDelete(context) {
-  const denied = requireAdmin(context);
+  const denied = await requireAdmin(context);
   if (denied) return denied;
   const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
   if (!id) return badRequest('id er påkrevd');
