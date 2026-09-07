@@ -90,9 +90,6 @@ export default function Admin() {
       <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-card sm:w-64">
         <div className="px-5 py-5">
           <LogoLockup className="h-6 w-auto text-ink" />
-          <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-            Admin
-          </div>
         </div>
 
         <div className="px-3">

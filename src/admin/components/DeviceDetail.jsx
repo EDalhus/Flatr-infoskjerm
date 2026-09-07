@@ -38,8 +38,10 @@ function Stat({ label, value, sub, pct }) {
 function InfoRow({ label, value }) {
   if (!value) return null;
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-hair py-2 last:border-0">
-      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">{label}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-hair py-2 last:border-0">
+      <span className="shrink-0 whitespace-nowrap text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+        {label}
+      </span>
       <span className="truncate font-mono text-sm text-ink">{value}</span>
     </div>
   );
@@ -70,16 +72,12 @@ export default function DeviceDetail({
   const paired = p.status === 'paired';
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-8"
-      onClick={onClose}
+    <aside
+      className="fixed right-0 top-0 z-40 flex h-full w-[420px] max-w-[calc(100vw-2rem)] flex-col border-l border-line bg-paper shadow-pop"
+      style={{ animation: 'drawerIn 0.22s ease' }}
     >
-      <div
-        className="w-full max-w-3xl overflow-hidden rounded-xl border border-hair bg-paper shadow-pop"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* topp */}
-        <div className="flex items-start gap-3 border-b border-hair bg-card px-5 py-4">
+      {/* topp */}
+      <div className="flex items-start gap-3 border-b border-hair bg-card px-5 py-4">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand">
             <Icon name="monitor" className="h-5 w-5" />
           </div>
@@ -118,7 +116,7 @@ export default function DeviceDetail({
           ))}
         </div>
 
-        <div className="max-h-[70vh] overflow-y-auto p-5">
+      <div className="flex-1 overflow-y-auto p-5">
           {tab === 'oversikt' && (
             <div className="space-y-5">
               {paired && (
@@ -139,7 +137,7 @@ export default function DeviceDetail({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2">
                 <Stat label="Modell" value={ci.model} />
                 <Stat
                   label="OS"
@@ -194,7 +192,7 @@ export default function DeviceDetail({
             ))}
 
           {tab === 'innstillinger' && (
-            <div className="max-w-md space-y-5">
+            <div className="space-y-5">
               <div>
                 <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
                   Kallenavn
@@ -246,8 +244,7 @@ export default function DeviceDetail({
               </div>
             </div>
           )}
-        </div>
       </div>
-    </div>
+    </aside>
   );
 }

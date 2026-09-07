@@ -148,6 +148,16 @@ body {
   cursor: none;
 }
 
+/* Detalj-panel som glir inn fra høyre */
+@keyframes drawerIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 @keyframes deckFadeIn {
   from {
     opacity: 0;
