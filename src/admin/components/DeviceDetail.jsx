@@ -10,11 +10,7 @@ import {
   aspectOf
 } from './pairingHelpers.js';
 
-const TABS = [
-  { id: 'oversikt', label: 'Oversikt' },
-  { id: 'skjerm', label: 'Skjerm' },
-  { id: 'innstillinger', label: 'Innstillinger' }
-];
+const HEADING = 'text-[11px] font-bold uppercase tracking-[0.14em] text-muted';
 
 function Stat({ label, value, sub, pct }) {
   if (value === null || value === undefined || value === '') return null;
@@ -56,7 +52,6 @@ export default function DeviceDetail({
   onReassign,
   onUnpair
 }) {
-  const [tab, setTab] = useState('oversikt');
   const [labelDraft, setLabelDraft] = useState(p.label || '');
 
   useEffect(() => {
@@ -72,178 +67,162 @@ export default function DeviceDetail({
   const paired = p.status === 'paired';
 
   return (
-    <aside
-      className="fixed right-0 top-0 z-40 flex h-full w-[420px] max-w-[calc(100vw-2rem)] flex-col border-l border-line bg-paper shadow-pop"
-      style={{ animation: 'drawerIn 0.22s ease' }}
-    >
+    <aside className="flex h-full flex-col bg-paper" style={{ animation: 'drawerIn 0.18s ease' }}>
       {/* topp */}
-      <div className="flex items-start gap-3 border-b border-hair bg-card px-5 py-4">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand">
-            <Icon name="monitor" className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-lg font-black text-ink">{displayName(p)}</h2>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${status.cls}`}
-              >
-                {status.label}
-              </span>
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
-              <span className="font-mono">{codeDisplay(p.code)}</span>
-              {p.screen_name && <span>· {p.screen_name}</span>}
-              {paired && p.last_seen && <span>· sist sett {timeAgo(p.last_seen)}</span>}
-            </div>
-          </div>
-          <IconButton name="x" label="Lukk" onClick={onClose} />
+      <div className="flex shrink-0 items-start gap-3 border-b border-hair bg-card px-5 py-4">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand">
+          <Icon name="monitor" className="h-5 w-5" />
         </div>
-
-        {/* faner */}
-        <div className="flex gap-1 border-b border-hair bg-card px-4">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
-                tab === t.id
-                  ? 'border-brand text-brand'
-                  : 'border-transparent text-muted hover:text-ink'
-              }`}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-lg font-black text-ink">{displayName(p)}</h2>
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${status.cls}`}
             >
-              {t.label}
-            </button>
-          ))}
+              {status.label}
+            </span>
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+            <span className="font-mono">{codeDisplay(p.code)}</span>
+            {p.screen_name && <span>· {p.screen_name}</span>}
+            {paired && p.last_seen && <span>· sist sett {timeAgo(p.last_seen)}</span>}
+          </div>
         </div>
+        <IconButton name="x" label="Lukk" onClick={onClose} />
+      </div>
 
-      <div className="flex-1 overflow-y-auto p-5">
-          {tab === 'oversikt' && (
-            <div className="space-y-5">
-              {paired && (
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => onCommand('identify', 'Identifiser')}>
-                    <Icon name="pin" className="h-4 w-4" />
-                    Identifiser
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => onCommand('reload', 'Last inn')}>
-                    Last inn
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => onCommand('clear_cache', 'Tøm cache')}>
-                    Tøm cache
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => onCommand('reboot', 'Restart')}>
-                    Restart
-                  </Button>
-                </div>
-              )}
+      {/* alt på én side */}
+      <div className="flex-1 space-y-6 overflow-y-auto p-5">
+        {paired && (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => onCommand('identify', 'Identifiser')}>
+              <Icon name="pin" className="h-4 w-4" />
+              Identifiser
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onCommand('reload', 'Last inn')}>
+              Last inn
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onCommand('clear_cache', 'Tøm cache')}>
+              Tøm cache
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onCommand('reboot', 'Restart')}>
+              Restart
+            </Button>
+          </div>
+        )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <Stat label="Modell" value={ci.model} />
-                <Stat
-                  label="OS"
-                  value={ci.os_version || (ci.tvos_version ? `tvOS ${ci.tvos_version}` : null)}
-                />
-                <Stat label="App" value={ci.app_version || ci.player_version} />
-                <Stat
-                  label="Oppløsning"
-                  value={ci.resolution ? ci.resolution.replace('x', '×') : null}
-                  sub={aspectOf(ci.resolution)}
-                />
-                <Stat label="Tilkoblet tid" value={fmtUptime(ci.uptime_seconds)} />
-                <Stat label="Sist sett" value={p.last_seen ? timeAgo(p.last_seen) : null} />
-                <Stat
-                  label="Lagring"
-                  value={ci.storage_pct != null ? `${ci.storage_pct}%` : null}
-                  pct={ci.storage_pct}
-                />
-                <Stat
-                  label="Minne"
-                  value={ci.memory_pct != null ? `${ci.memory_pct}%` : null}
-                  pct={ci.memory_pct}
-                />
-                <Stat label="CPU-temp" value={ci.cpu_temp != null ? `${ci.cpu_temp}°C` : null} />
-                <Stat label="GPU-temp" value={ci.gpu_temp != null ? `${ci.gpu_temp}°C` : null} />
-              </div>
+        <section className="space-y-2">
+          <h3 className={HEADING}>Telemetri</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <Stat label="Modell" value={ci.model} />
+            <Stat
+              label="OS"
+              value={ci.os_version || (ci.tvos_version ? `tvOS ${ci.tvos_version}` : null)}
+            />
+            <Stat label="App" value={ci.app_version || ci.player_version} />
+            <Stat
+              label="Oppløsning"
+              value={ci.resolution ? ci.resolution.replace('x', '×') : null}
+              sub={aspectOf(ci.resolution)}
+            />
+            <Stat label="Tilkoblet tid" value={fmtUptime(ci.uptime_seconds)} />
+            <Stat label="Sist sett" value={p.last_seen ? timeAgo(p.last_seen) : null} />
+            <Stat
+              label="Lagring"
+              value={ci.storage_pct != null ? `${ci.storage_pct}%` : null}
+              pct={ci.storage_pct}
+            />
+            <Stat
+              label="Minne"
+              value={ci.memory_pct != null ? `${ci.memory_pct}%` : null}
+              pct={ci.memory_pct}
+            />
+            <Stat label="CPU-temp" value={ci.cpu_temp != null ? `${ci.cpu_temp}°C` : null} />
+            <Stat label="GPU-temp" value={ci.gpu_temp != null ? `${ci.gpu_temp}°C` : null} />
+          </div>
+        </section>
 
-              <div className="rounded-lg border border-hair bg-card px-4 py-1">
-                <InfoRow label="Skjerm" value={p.screen_name} />
-                <InfoRow label="IP-adresse" value={ci.ip} />
-                <InfoRow label="Hostname" value={ci.hostname} />
-                <InfoRow label="Paret" value={p.paired_at ? timeAgo(p.paired_at) : null} />
-                <InfoRow label="Device-ID" value={p.device_id} />
-              </div>
-            </div>
-          )}
+        <section className="space-y-2">
+          <h3 className={HEADING}>Detaljer</h3>
+          <div className="rounded-lg border border-hair bg-card px-4 py-1">
+            <InfoRow label="Skjerm" value={p.screen_name} />
+            <InfoRow label="IP-adresse" value={ci.ip} />
+            <InfoRow label="Hostname" value={ci.hostname} />
+            <InfoRow label="Paret" value={p.paired_at ? timeAgo(p.paired_at) : null} />
+            <InfoRow label="Device-ID" value={p.device_id} />
+          </div>
+        </section>
 
-          {tab === 'skjerm' &&
-            (p.screen_id ? (
-              <div className="space-y-3">
+        <section className="space-y-2">
+          <h3 className={HEADING}>Lysbilder</h3>
+          {p.screen_id ? (
+            <div className="space-y-2">
+              <div className="overflow-hidden rounded-lg border border-hair bg-card">
                 <DeckPreviewStrip screenId={p.screen_id} />
-                <a
-                  href={`/admin?view=screens&edit=${p.screen_id}`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
-                >
-                  <Icon name="edit" className="h-3.5 w-3.5" />
-                  Rediger lysbilder
-                </a>
               </div>
-            ) : (
-              <p className="text-sm text-muted">Enheten er ikke koblet til en skjerm ennå.</p>
-            ))}
+              <a
+                href={`/admin?view=screens&edit=${p.screen_id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
+              >
+                <Icon name="edit" className="h-3.5 w-3.5" />
+                Rediger lysbilder
+              </a>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Enheten er ikke koblet til en skjerm ennå.</p>
+          )}
+        </section>
 
-          {tab === 'innstillinger' && (
-            <div className="space-y-5">
-              <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                  Kallenavn
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={labelDraft}
-                    onChange={(e) => setLabelDraft(e.target.value)}
-                    placeholder={ci.device_name || 'f.eks. Inngang venstre'}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onSetLabel(labelDraft.trim())}
-                    disabled={labelDraft.trim() === (p.label || '')}
-                  >
-                    Lagre
-                  </Button>
-                </div>
+        <section className="space-y-4">
+          <h3 className={HEADING}>Innstillinger</h3>
+
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+              Kallenavn
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={labelDraft}
+                onChange={(e) => setLabelDraft(e.target.value)}
+                placeholder={ci.device_name || 'f.eks. Inngang venstre'}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onSetLabel(labelDraft.trim())}
+                disabled={labelDraft.trim() === (p.label || '')}
+              >
+                Lagre
+              </Button>
+            </div>
+          </div>
+
+          {paired && (
+            <div>
+              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                Skjerm
               </div>
-
-              {paired && (
-                <div>
-                  <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                    Skjerm
-                  </div>
-                  <Select
-                    value={p.screen_id ?? ''}
-                    onChange={(e) => onReassign(Number(e.target.value))}
-                  >
-                    {screens.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                        {s.location ? ` – ${s.location}` : ''}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-
-              <div className="border-t border-hair pt-4">
-                <Button variant="danger" size="sm" onClick={onUnpair}>
-                  <Icon name="x" className="h-4 w-4" />
-                  Opphev parring
-                </Button>
-                <p className="mt-1.5 text-xs text-muted">
-                  Enheten kobles fra og viser en ny parringskode.
-                </p>
-              </div>
+              <Select value={p.screen_id ?? ''} onChange={(e) => onReassign(Number(e.target.value))}>
+                {screens.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                    {s.location ? ` – ${s.location}` : ''}
+                  </option>
+                ))}
+              </Select>
             </div>
           )}
+
+          <div className="border-t border-hair pt-4">
+            <Button variant="danger" size="sm" onClick={onUnpair}>
+              <Icon name="x" className="h-4 w-4" />
+              Opphev parring
+            </Button>
+            <p className="mt-1.5 text-xs text-muted">
+              Enheten kobles fra og viser en ny parringskode.
+            </p>
+          </div>
+        </section>
       </div>
     </aside>
   );

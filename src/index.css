@@ -148,12 +148,14 @@ body {
   cursor: none;
 }
 
-/* Detalj-panel som glir inn fra høyre */
+/* Detalj-panel som toner inn fra høyre */
 @keyframes drawerIn {
   from {
-    transform: translateX(100%);
+    opacity: 0;
+    transform: translateX(16px);
   }
   to {
+    opacity: 1;
     transform: translateX(0);
   }
 }

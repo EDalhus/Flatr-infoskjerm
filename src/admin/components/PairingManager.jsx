@@ -206,7 +206,7 @@ export default function PairingManager({ onChange }) {
     setSelected(allShownSelected ? new Set() : new Set(filtered.map((p) => p.device_id)));
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       <PageHeader
         crumbs={['Visning', 'Parring']}
         action={
@@ -218,8 +218,10 @@ export default function PairingManager({ onChange }) {
         }
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-6 p-6 pb-24 sm:p-8">
-        <Card title="Koble til en ny enhet">
+      <div className="flex min-h-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-5xl space-y-6 p-6 pb-24 sm:p-8">
+            <Card title="Koble til en ny enhet">
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
             <Field label="Parringskode" hint="Vises på TV-en ved oppstart (eller skann QR-en).">
               <Input
@@ -361,7 +363,23 @@ export default function PairingManager({ onChange }) {
               })}
             </ul>
           )}
-        </section>
+            </section>
+          </div>
+        </div>
+
+        {detailPairing && (
+          <div className="w-[380px] shrink-0 overflow-hidden border-l border-line sm:w-[400px] xl:w-[440px]">
+            <DeviceDetail
+              pairing={detailPairing}
+              screens={screens}
+              onClose={() => setDetailId(null)}
+              onCommand={(cmd, label) => runCommand([detailPairing.device_id], cmd, label)}
+              onSetLabel={(label) => setLabel(detailPairing.device_id, label)}
+              onReassign={(sid) => reassignDevice(detailPairing.device_id, sid)}
+              onUnpair={() => unpairDevices([detailPairing.device_id])}
+            />
+          </div>
+        )}
       </div>
 
       {selected.size > 0 && (
@@ -404,18 +422,6 @@ export default function PairingManager({ onChange }) {
           </button>
         </div>
       )}
-
-      {detailPairing && (
-        <DeviceDetail
-          pairing={detailPairing}
-          screens={screens}
-          onClose={() => setDetailId(null)}
-          onCommand={(cmd, label) => runCommand([detailPairing.device_id], cmd, label)}
-          onSetLabel={(label) => setLabel(detailPairing.device_id, label)}
-          onReassign={(sid) => reassignDevice(detailPairing.device_id, sid)}
-          onUnpair={() => unpairDevices([detailPairing.device_id])}
-        />
-      )}
-    </>
+    </div>
   );
 }
