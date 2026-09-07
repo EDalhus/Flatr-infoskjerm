@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, getToken, setToken } from '../lib/api.js';
-import { Icon, Input, Button } from './components/ui.jsx';
+import { api } from '../lib/api.js';
+import { Icon } from './components/ui.jsx';
 import ScheduleManager from './components/ScheduleManager.jsx';
 import CategoriesManager from './components/CategoriesManager.jsx';
 import SponsorsManager from './components/SponsorsManager.jsx';
@@ -35,13 +35,11 @@ const initialTab = () => {
 
 export default function Admin() {
   const [tab, setTab] = useState(initialTab);
-  const [token, setTokenState] = useState(getToken());
-  const [savedToken, setSavedToken] = useState(getToken());
   const [screenCount, setScreenCount] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    document.title = 'Admin · Infoskjerm';
+    document.title = 'Flatr';
   }, []);
 
   useEffect(() => {
@@ -50,13 +48,6 @@ export default function Admin() {
       .then((r) => setScreenCount(Array.isArray(r) ? r.length : null))
       .catch(() => setScreenCount(null));
   }, [tab, refreshKey]);
-
-  const saveToken = () => {
-    const t = token.trim();
-    setToken(t);
-    setSavedToken(t);
-    setRefreshKey((k) => k + 1);
-  };
 
   const bump = () => setRefreshKey((k) => k + 1);
   const Active = useMemo(() => NAV.find((n) => n.id === tab)?.Component ?? ScheduleManager, [tab]);
@@ -75,9 +66,6 @@ export default function Admin() {
     <div className="flex h-screen overflow-hidden bg-paper text-ink">
       <div className="hidden w-14 shrink-0 flex-col items-center border-r border-line bg-card py-4 sm:flex">
         <LogoMarkSquare className="h-9 w-9" />
-        <div className="mt-4 grid h-9 w-9 place-items-center rounded-lg bg-hair text-muted">
-          <Icon name="calendar" className="h-5 w-5" />
-        </div>
         <a
           href="/display/1"
           className="mt-auto grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-hair hover:text-ink"
@@ -129,27 +117,8 @@ export default function Admin() {
           ))}
         </div>
 
-        <div className="mt-auto space-y-3 border-t border-line p-4">
+        <div className="mt-auto border-t border-line p-4">
           <ThemePicker />
-          <div className="mb-1.5 border-t border-line pt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
-            Admin-token
-          </div>
-          <div className="flex gap-1.5">
-            <Input
-              type="password"
-              value={token}
-              onChange={(e) => setTokenState(e.target.value)}
-              placeholder="valgfritt"
-              className="h-9 text-sm"
-            />
-            <Button size="sm" variant="outline" onClick={saveToken}>
-              {savedToken ? 'OK' : 'Lagre'}
-            </Button>
-          </div>
-          <p className="mt-2 text-xs leading-snug text-muted">
-            Kreves bare når <code className="rounded bg-white/10 px-1">ADMIN_TOKEN</code> er satt i
-            produksjon.
-          </p>
         </div>
       </aside>
 

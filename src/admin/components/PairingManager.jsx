@@ -60,6 +60,19 @@ export default function PairingManager({ onChange }) {
   const [selected, setSelected] = useState(() => new Set());
   const [detailId, setDetailId] = useState(null);
   const codeRef = useRef(null);
+  const autoOpened = useRef(false);
+
+  const LAST_KEY = 'flatr.pairing.lastDevice';
+
+  // Husk hvilken enhet som ble sett på sist.
+  useEffect(() => {
+    if (!detailId) return;
+    try {
+      localStorage.setItem(LAST_KEY, detailId);
+    } catch {
+      /* ignore */
+    }
+  }, [detailId]);
 
   useEffect(() => {
     api.screens
@@ -80,6 +93,27 @@ export default function PairingManager({ onChange }) {
     const t = setInterval(loadPairings, 5000);
     return () => clearInterval(t);
   }, []);
+
+  // Åpne automatisk den sist sette enheten – ellers den nyest parede.
+  useEffect(() => {
+    if (autoOpened.current || detailId || !pairings.length) return;
+    autoOpened.current = true;
+    const paired = pairings.filter((p) => p.status === 'paired');
+    if (!paired.length) return;
+    let remembered = null;
+    try {
+      remembered = localStorage.getItem(LAST_KEY);
+    } catch {
+      /* ignore */
+    }
+    const byRemembered = remembered && paired.find((p) => p.device_id === remembered);
+    const newest = [...paired].sort(
+      (a, b) =>
+        Date.parse(b.paired_at || b.created_at) - Date.parse(a.paired_at || a.created_at)
+    )[0];
+    const open = byRemembered || newest;
+    if (open) setDetailId(open.device_id);
+  }, [pairings, detailId]);
 
   const say = (msg) => {
     setFlash(msg);
