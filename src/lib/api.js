@@ -124,7 +124,12 @@ export const api = {
     // Admin: opphev en paring (device_id eller screen_id).
     unpair: (body) => req('/pairing/unpair', { method: 'POST', body })
   },
-  me: () => req('/me'),
+  me: () => {
+    // ?as=<navn> forwardes lokalt for fler-bruker-testing (ignoreres i prod).
+    const as =
+      typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('as');
+    return req(`/me${as ? `?as=${encodeURIComponent(as)}` : ''}`);
+  },
   heartbeat: (screenId) =>
     req(`/heartbeat?screen=${encodeURIComponent(screenId)}`, { method: 'POST' }),
   getState: (screenId) =>

@@ -11,7 +11,9 @@ import AlertsManager from './components/AlertsManager.jsx';
 import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 import ThemePicker from './components/ThemePicker.jsx';
+import OnlineBar from './components/OnlineBar.jsx';
 import { LogoMarkSquare, LogoLockup } from './components/Logo.jsx';
+import { useCollab } from '../hooks/useCollab.js';
 
 const NAV = [
   { id: 'screens', label: 'Kanaler', icon: 'monitor', section: 'Visning', Component: ScreensManager },
@@ -53,6 +55,9 @@ export default function Admin() {
 
   const bump = () => setRefreshKey((k) => k + 1);
   const Active = useMemo(() => NAV.find((n) => n.id === tab)?.Component ?? ScheduleManager, [tab]);
+
+  // Global tilstedeværelse – alle som er pålogget Flatr.
+  const lobby = useCollab('lobby', { where: NAV.find((n) => n.id === tab)?.label });
 
   const go = (id) => {
     setTab(id);
@@ -135,9 +140,14 @@ export default function Admin() {
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-        <Active onChange={bump} />
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-10 shrink-0 items-center justify-end border-b border-line bg-card px-4">
+          <OnlineBar peers={lobby.peers} selfId={lobby.selfId} connected={lobby.connected} />
+        </header>
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+          <Active onChange={bump} />
+        </main>
+      </div>
     </div>
   );
 }

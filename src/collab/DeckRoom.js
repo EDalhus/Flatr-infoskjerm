@@ -43,7 +43,8 @@ export class DeckRoom {
         name: a.name,
         color: a.color,
         slide: a.slide ?? null,
-        el: a.el ?? null
+        el: a.el ?? null,
+        where: a.where ?? null
       };
     });
   }
@@ -88,6 +89,10 @@ export class DeckRoom {
         break;
       case 'select':
         ws.serializeAttachment({ ...a, el: m.el ?? null });
+        this.broadcastPresence();
+        break;
+      case 'where':
+        ws.serializeAttachment({ ...a, where: (m.where ?? null) && String(m.where).slice(0, 60) });
         this.broadcastPresence();
         break;
       case 'cursor':

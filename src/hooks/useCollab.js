@@ -5,19 +5,21 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // andre brukere (peers) og relayer fokus / markering / markør / operasjoner.
 //
 //   const { peers, connected, selfId, setFocus, setSelect, sendCursor, sendOp }
-//     = useCollab(screenId, { onOp });
-export function useCollab(screenId, { onOp } = {}) {
+//     = useCollab(room, { onOp, where });
+// `room` = kanal-id (tall) for editoren, eller "lobby" for global tilstedeværelse.
+// `where` = valgfri etikett (hvilken side brukeren er på) som deles i lobbyen.
+export function useCollab(room, { onOp, where } = {}) {
   const [peers, setPeers] = useState([]);
   const [connected, setConnected] = useState(false);
   const [selfId, setSelfId] = useState(null);
 
   const wsRef = useRef(null);
-  const mineRef = useRef({ slide: null, el: null }); // gjeldende fokus, for re-announce
+  const mineRef = useRef({ slide: null, el: null, where: where ?? null });
   const onOpRef = useRef(onOp);
   onOpRef.current = onOp;
 
   useEffect(() => {
-    if (!screenId || typeof window === 'undefined') return undefined;
+    if (!room || typeof window === 'undefined') return undefined;
     let stopped = false;
     let attempt = 0;
     let timer = null;
@@ -29,7 +31,7 @@ export function useCollab(screenId, { onOp } = {}) {
       // ?as=<navn> på siden forwardes for lokal fler-bruker-testing (ignoreres i prod).
       const as = new URLSearchParams(window.location.search).get('as');
       const q = as ? `?as=${encodeURIComponent(as)}` : '';
-      ws = new WebSocket(`${proto}://${window.location.host}/api/collab/${screenId}${q}`);
+      ws = new WebSocket(`${proto}://${window.location.host}/api/collab/${room}${q}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -38,6 +40,7 @@ export function useCollab(screenId, { onOp } = {}) {
         const m = mineRef.current;
         ws.send(JSON.stringify({ t: 'focus', slide: m.slide ?? null }));
         if (m.el != null) ws.send(JSON.stringify({ t: 'select', el: m.el }));
+        if (m.where != null) ws.send(JSON.stringify({ t: 'where', where: m.where }));
       };
 
       ws.onmessage = (e) => {
@@ -87,7 +90,7 @@ export function useCollab(screenId, { onOp } = {}) {
       }
       wsRef.current = null;
     };
-  }, [screenId]);
+  }, [room]);
 
   const send = useCallback((obj) => {
     const ws = wsRef.current;
@@ -96,7 +99,7 @@ export function useCollab(screenId, { onOp } = {}) {
 
   const setFocus = useCallback(
     (slide) => {
-      mineRef.current = { slide: slide ?? null, el: null };
+      mineRef.current = { ...mineRef.current, slide: slide ?? null, el: null };
       send({ t: 'focus', slide: slide ?? null });
     },
     [send]
@@ -108,8 +111,20 @@ export function useCollab(screenId, { onOp } = {}) {
     },
     [send]
   );
+  const setWhere = useCallback(
+    (label) => {
+      mineRef.current.where = label ?? null;
+      send({ t: 'where', where: label ?? null });
+    },
+    [send]
+  );
   const sendCursor = useCallback((slide, x, y) => send({ t: 'cursor', slide, x, y }), [send]);
   const sendOp = useCallback((op) => send({ t: 'op', op }), [send]);
 
-  return { peers, connected, selfId, setFocus, setSelect, sendCursor, sendOp };
+  // Hold `where` synk når prop-en endrer seg.
+  useEffect(() => {
+    if (where !== undefined) setWhere(where);
+  }, [where, setWhere]);
+
+  return { peers, connected, selfId, setFocus, setSelect, setWhere, sendCursor, sendOp };
 }

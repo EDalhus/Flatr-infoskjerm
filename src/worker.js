@@ -66,8 +66,9 @@ export default {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       const key = url.pathname.replace(/\/+$/, '') || '/api';
 
-      // Samarbeids-WebSocket: /api/collab/<kanalId> -> Durable Object pr. kanal.
-      const collab = key.match(/^\/api\/collab\/(\d+)$/);
+      // Samarbeids-WebSocket: /api/collab/<rom> -> Durable Object.
+      //   <rom> = kanal-id (tall)  eller  "lobby" (global tilstedeværelse).
+      const collab = key.match(/^\/api\/collab\/([A-Za-z0-9:._-]{1,64})$/);
       if (collab) {
         if (request.headers.get('Upgrade') !== 'websocket') {
           return jsonError(426, 'forventet websocket');
