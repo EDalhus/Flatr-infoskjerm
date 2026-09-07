@@ -50,5 +50,11 @@
 		"SSE_POLL_MS": "3000",
 		"ACCESS_TEAM_DOMAIN": "",
 		"ACCESS_AUD": ""
-	}
+	},
+	// Samarbeids-rom: ett Durable Object pr. kanal for live tilstedeværelse
+	// og operasjons-relay. SQLite-klasse = gratis-nivå + hibernation.
+	"durable_objects": {
+		"bindings": [{ "name": "DECK_ROOM", "class_name": "DeckRoom" }]
+	},
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["DeckRoom"] }]
 }

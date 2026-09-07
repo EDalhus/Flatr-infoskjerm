@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { ELEMENT_KINDS, ELEMENT_ICON, defaultElement } from '../../../lib/deck.js';
+import { useCollab } from '../../../hooks/useCollab.js';
 import { Icon, Button, ErrorText } from '../ui.jsx';
 import SlideNavigator from './SlideNavigator.jsx';
 import CanvasStage from './CanvasStage.jsx';
 import Inspector from './Inspector.jsx';
 import LayoutPicker from './LayoutPicker.jsx';
+import PresenceStack from './PresenceStack.jsx';
 
 export default function DeckEditor({ screenId, onBack, onChange }) {
   const [screen, setScreen] = useState(null);
@@ -54,8 +56,68 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
     timers.current[key] = setTimeout(fn, ms);
   };
 
+  // ---- samarbeid (live) ----
+  const collabRef = useRef(null);
+
+  const onRemoteOp = useCallback((op) => {
+    if (!op) return;
+    if (op.k === 'el.patch') {
+      setSlides((ss) =>
+        ss.map((s) => ({
+          ...s,
+          elements: (s.elements || []).map((e) => (e.id === op.id ? { ...e, ...op.patch } : e))
+        }))
+      );
+    } else if (op.k === 'el.add' && op.el) {
+      setSlides((ss) =>
+        ss.map((s) =>
+          s.id === op.slideId
+            ? {
+                ...s,
+                elements: (s.elements || []).some((e) => e.id === op.el.id)
+                  ? s.elements
+                  : [...(s.elements || []), op.el]
+              }
+            : s
+        )
+      );
+    } else if (op.k === 'el.remove') {
+      setSlides((ss) =>
+        ss.map((s) => ({ ...s, elements: (s.elements || []).filter((e) => e.id !== op.id) }))
+      );
+      setSelEl((cur) => (cur === op.id ? null : cur));
+    } else if (op.k === 'slide.patch') {
+      setSlides((ss) => ss.map((s) => (s.id === op.id ? { ...s, ...op.patch } : s)));
+    } else {
+      // strukturell endring hos en annen – hent hele deck-et på nytt
+      debounce('remote-reload', () => reload(), 250);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const collab = useCollab(screenId, { onOp: onRemoteOp });
+  collabRef.current = collab;
+  const sendOp = (op) => collabRef.current?.sendOp(op);
+
+  useEffect(() => {
+    collab.setFocus(selSlide);
+  }, [selSlide, collab.setFocus]);
+  useEffect(() => {
+    collab.setSelect(selEl);
+  }, [selEl, collab.setSelect]);
+
+  const otherPeers = useMemo(
+    () => collab.peers.filter((p) => p.id && p.id !== collab.selfId),
+    [collab.peers, collab.selfId]
+  );
+  const slidePeers = useMemo(
+    () => otherPeers.filter((p) => p.slide === selSlide),
+    [otherPeers, selSlide]
+  );
+
   const patchSlide = (sid, patch, commit) => {
     setSlides((ss) => ss.map((s) => (s.id === sid ? { ...s, ...patch } : s)));
+    debounce(`op-s${sid}`, () => sendOp({ k: 'slide.patch', id: sid, patch }), 40);
     if (commit)
       debounce(`s${sid}`, () =>
         api.deck.slide
@@ -72,6 +134,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
         elements: (s.elements || []).map((e) => (e.id === eid ? { ...e, ...patch } : e))
       }))
     );
+    debounce(`op-e${eid}`, () => sendOp({ k: 'el.patch', id: eid, patch }), 40);
     if (commit)
       debounce(`e${eid}`, () =>
         api.deck.element.update(eid, patch).catch((e) => setErr(e.message))
@@ -88,6 +151,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
         ss.map((s) => (s.id === slide.id ? { ...s, elements: [...s.elements, created] } : s))
       );
       setSelEl(created.id);
+      sendOp({ k: 'el.add', slideId: slide.id, el: created });
     } catch (e) {
       setErr(e.message);
     }
@@ -100,6 +164,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
         ss.map((s) => ({ ...s, elements: s.elements.filter((e) => e.id !== eid) }))
       );
       setSelEl(null);
+      sendOp({ k: 'el.remove', id: eid });
     } catch (e) {
       setErr(e.message);
     }
@@ -117,6 +182,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
         api.deck.element.update(els[j].id, { z: els[i].z })
       ]);
       await reload(selSlide);
+      sendOp({ k: 'deck.reload' });
     } catch (e) {
       setErr(e.message);
     }
@@ -131,6 +197,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
       });
       await reload(s.id);
       onChange?.();
+      sendOp({ k: 'deck.reload' });
     } catch (e) {
       setErr(e.message);
     }
@@ -140,6 +207,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
       const s = await api.deck.slide.create({ screen_id: Number(screenId), template_id: tpl.id });
       await reload(s.id);
       onChange?.();
+      sendOp({ k: 'deck.reload' });
     } catch (e) {
       setErr(e.message);
     }
@@ -149,6 +217,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
       const s = await api.deck.slide.duplicate(sid);
       await reload(s.id);
       onChange?.();
+      sendOp({ k: 'deck.reload' });
     } catch (e) {
       setErr(e.message);
     }
@@ -163,6 +232,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
       await api.deck.slide.remove(sid);
       await reload();
       onChange?.();
+      sendOp({ k: 'deck.reload' });
     } catch (e) {
       setErr(e.message);
     }
@@ -179,6 +249,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           .map((s, i) => (s.position === i ? null : api.deck.slide.update(s.id, { position: i })))
           .filter(Boolean)
       );
+      sendOp({ k: 'deck.reload' });
     } catch (e) {
       setErr(e.message);
     }
@@ -188,6 +259,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
     try {
       await api.screens.update(screenId, { orientation: o });
       setScreen((sc) => ({ ...sc, orientation: o }));
+      sendOp({ k: 'deck.reload' });
     } catch (e) {
       setErr(e.message);
     }
@@ -197,6 +269,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
     try {
       await api.screens.update(screenId, { rotation: r });
       setScreen((sc) => ({ ...sc, rotation: r }));
+      sendOp({ k: 'deck.reload' });
     } catch (e) {
       setErr(e.message);
     }
@@ -297,10 +370,12 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           )}
         </div>
 
+        <PresenceStack peers={otherPeers} connected={collab.connected} className="ml-auto" />
+
         <button
           onClick={() => setSnap((v) => !v)}
           title="Snapping til senter/kanter"
-          className={`ml-auto inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] ${
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] ${
             snap ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-card text-muted hover:bg-hair'
           }`}
         >
@@ -330,6 +405,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           slides={slides}
           orientation={orientation}
           selectedId={selSlide}
+          peers={otherPeers}
           onSelect={setSelSlide}
           onAdd={() => setPickerOpen(true)}
           onDuplicate={dupSlide}
@@ -343,9 +419,11 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
               slide={slide}
               orientation={orientation}
               selectedId={selEl}
+              peers={slidePeers}
               onSelect={setSelEl}
               onChange={patchElement}
               onDeleteElement={deleteElement}
+              onCursor={collab.sendCursor}
               snapEnabled={snap}
             />
           ) : (

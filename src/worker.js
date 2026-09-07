@@ -22,6 +22,9 @@ import * as state from './api/state.js';
 import * as stream from './api/stream.js';
 import * as pairing from './api/pairing.js';
 import * as me from './api/me.js';
+import { getUser } from './api/_access.js';
+
+export { DeckRoom } from './collab/DeckRoom.js';
 
 const ROUTES = {
   '/api/screens': screens,
@@ -62,6 +65,25 @@ export default {
 
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       const key = url.pathname.replace(/\/+$/, '') || '/api';
+
+      // Samarbeids-WebSocket: /api/collab/<kanalId> -> Durable Object pr. kanal.
+      const collab = key.match(/^\/api\/collab\/(\d+)$/);
+      if (collab) {
+        if (request.headers.get('Upgrade') !== 'websocket') {
+          return jsonError(426, 'forventet websocket');
+        }
+        const user = await getUser(request, env);
+        if (env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD && !user) {
+          return jsonError(401, 'Ikke innlogget');
+        }
+        const u = user || { name: 'bruker', color: '#8b8d94', sub: 'anon' };
+        const stub = env.DECK_ROOM.get(env.DECK_ROOM.idFromName(`deck:${collab[1]}`));
+        const doUrl = new URL('https://deck-room/ws');
+        doUrl.searchParams.set('name', u.name);
+        doUrl.searchParams.set('color', u.color);
+        doUrl.searchParams.set('sub', u.sub);
+        return stub.fetch(new Request(doUrl, request));
+      }
 
       // Enhets-parring har dynamiske stier (/api/pairing/status/<device_id>),
       // så hele prefikset rutes til én modul som selv matcher underruten.

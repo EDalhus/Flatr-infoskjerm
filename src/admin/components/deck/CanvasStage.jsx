@@ -96,17 +96,36 @@ export default function CanvasStage({
   slide,
   orientation,
   selectedId,
+  peers = [],
   onSelect,
   onChange,
   onDeleteElement,
+  onCursor,
   snapEnabled = true
 }) {
   const base = BASE_SIZE[orientation] || BASE_SIZE.landscape;
   const { containerRef, scale } = useFitScale(base.w, base.h);
   const stageRef = useRef(null);
   const drag = useRef(null);
+  const cursorTs = useRef(0);
   const [guides, setGuides] = useState([]);
   const [dragId, setDragId] = useState(null);
+
+  const peerByEl = new Map();
+  for (const p of peers) if (p.el != null && !peerByEl.has(p.el)) peerByEl.set(p.el, p);
+
+  const trackCursor = (e) => {
+    if (!onCursor || !slide) return;
+    const now = Date.now();
+    if (now - cursorTs.current < 50) return;
+    const r = stageRef.current?.getBoundingClientRect();
+    if (!r || !r.width) return;
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+    if (x < -5 || x > 105 || y < -5 || y > 105) return;
+    cursorTs.current = now;
+    onCursor(slide.id, Math.round(x * 10) / 10, Math.round(y * 10) / 10);
+  };
 
   const elements = [...(slide?.elements || [])].sort((a, b) => a.z - b.z || a.id - b.id);
   const ctx = usePreviewCtx();
@@ -237,6 +256,7 @@ export default function CanvasStage({
       ref={containerRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      onPointerMove={trackCursor}
       className="absolute inset-0 overflow-hidden bg-[#1b1e24] outline-none"
     >
       <div
@@ -306,6 +326,59 @@ export default function CanvasStage({
         )}
 
         {dragEl && <DragMeasure el={dragEl} base={base} />}
+
+        {/* markeringer fra andre brukere */}
+        {elements.map((el) => {
+          const p = peerByEl.get(el.id);
+          if (!p) return null;
+          return (
+            <div
+              key={`peer-sel-${el.id}`}
+              className="pointer-events-none absolute"
+              style={{
+                left: `${el.x}%`,
+                top: `${el.y}%`,
+                width: `${el.w}%`,
+                height: `${el.h}%`,
+                outline: `2px solid ${p.color}`,
+                transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined
+              }}
+            >
+              <span
+                className="absolute left-0 top-0 -translate-y-full whitespace-nowrap rounded px-1 py-0.5 text-[11px] font-bold text-white"
+                style={{ background: p.color }}
+              >
+                {p.name}
+              </span>
+            </div>
+          );
+        })}
+
+        {/* live markører fra andre brukere */}
+        {peers.map((p) =>
+          p.cursor && p.cursor.slide === slide?.id ? (
+            <div
+              key={`peer-cur-${p.id}`}
+              className="pointer-events-none absolute z-10"
+              style={{ left: `${p.cursor.x}%`, top: `${p.cursor.y}%` }}
+            >
+              <svg viewBox="0 0 16 16" className="h-4 w-4 drop-shadow" style={{ color: p.color }}>
+                <path
+                  fill="currentColor"
+                  stroke="#fff"
+                  strokeWidth="1"
+                  d="M1 1l5.5 13.5 2-5.5 5.5-2z"
+                />
+              </svg>
+              <span
+                className="ml-3 -mt-1 inline-block whitespace-nowrap rounded px-1 py-0.5 text-[11px] font-bold text-white"
+                style={{ background: p.color }}
+              >
+                {p.name}
+              </span>
+            </div>
+          ) : null
+        )}
       </div>
     </div>
   );

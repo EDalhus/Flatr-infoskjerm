@@ -6,6 +6,7 @@ export default function SlideNavigator({
   slides,
   orientation,
   selectedId,
+  peers = [],
   onSelect,
   onAdd,
   onDuplicate,
@@ -26,7 +27,20 @@ export default function SlideNavigator({
               }`}
             >
               <div className="flex items-center justify-between px-0.5 pb-1">
-                <span className="text-[11px] font-bold text-muted">{i + 1}</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-[11px] font-bold text-muted">{i + 1}</span>
+                  {peers
+                    .filter((p) => p.slide === s.id)
+                    .slice(0, 4)
+                    .map((p) => (
+                      <span
+                        key={p.id}
+                        title={p.name}
+                        className="h-2 w-2 rounded-full ring-1 ring-card"
+                        style={{ background: p.color || '#8b8d94' }}
+                      />
+                    ))}
+                </span>
                 <span className="flex gap-0.5 opacity-0 group-hover:opacity-100">
                   <span
                     role="button"
