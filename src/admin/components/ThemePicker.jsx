@@ -13,9 +13,9 @@ export const THEMES = [
 const KEY = 'flatr.theme';
 const read = () => {
   try {
-    return localStorage.getItem(KEY) || 'slate';
+    return localStorage.getItem(KEY) || 'skog';
   } catch {
-    return 'slate';
+    return 'skog';
   }
 };
 
