@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { BASE_SIZE } from '../lib/deck.js';
 import { useNow } from '../hooks/useNow.js';
@@ -14,9 +14,12 @@ const EMPTY = { screen: null, deck: [], categories: [], schedule: [], sponsors: 
 
 export default function Viewer() {
   const { screenId } = useParams();
+  const [params] = useSearchParams();
+  // ?preview=1 – innebygd i admin-panelet: ikke meld heartbeat / hold skjermen våken.
+  const preview = params.get('preview') === '1';
   const now = useNow(1000);
-  useWakeLock(true);
-  useHeartbeat(screenId);
+  useWakeLock(!preview);
+  useHeartbeat(preview ? null : screenId);
 
   const [state, setState] = useState(EMPTY);
   const [loaded, setLoaded] = useState(false);
@@ -47,7 +50,8 @@ export default function Viewer() {
   const orientation = state.screen?.orientation === 'portrait' ? 'portrait' : 'landscape';
   const base = BASE_SIZE[orientation];
   // Fjernstyrt rotasjon (grader) for fysisk montering – styres fra admin.
-  const rotation = (((Number(state.screen?.rotation) || 0) % 360) + 360) % 360;
+  // I forhåndsvisning (admin-panel) vises innholdet slik det er designet, urotert.
+  const rotation = preview ? 0 : (((Number(state.screen?.rotation) || 0) % 360) + 360) % 360;
   const rad = (rotation * Math.PI) / 180;
   const boxW = Math.abs(base.w * Math.cos(rad)) + Math.abs(base.h * Math.sin(rad));
   const boxH = Math.abs(base.w * Math.sin(rad)) + Math.abs(base.h * Math.cos(rad));
@@ -91,12 +95,14 @@ export default function Viewer() {
 
       <AlertOverlay alerts={state.alerts} />
 
-      <div
-        className={`fixed bottom-3 right-3 h-2.5 w-2.5 rounded-full transition-colors ${
-          connected ? 'bg-ok' : loaded ? 'bg-amber-500' : 'bg-muted'
-        }`}
-        title={connected ? 'Live' : 'Kobler til …'}
-      />
+      {!preview && (
+        <div
+          className={`fixed bottom-3 right-3 h-2.5 w-2.5 rounded-full transition-colors ${
+            connected ? 'bg-ok' : loaded ? 'bg-amber-500' : 'bg-muted'
+          }`}
+          title={connected ? 'Live' : 'Kobler til …'}
+        />
+      )}
     </div>
   );
 }
