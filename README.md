@@ -58,6 +58,15 @@ hvis sett innen 90 s). «Dupliser» kopierer en kanal inkl. alle lysbilder.
 **Nylig slettet:** sletting legger elementet i en papirkurv i 30 dager
 (admin → Nylig slettet). Kanaler og lysbilder gjenopprettes med innholdet.
 
+**Live samarbeid:** flere kan redigere samme kanal samtidig. Et Durable Object
+(`DeckRoom`, ett pr. kanal) relayer over WebSocket: avatar-stabel i topplinja,
+fargede prikker på lysbilde-navigatoren for hvem som står hvor, farget ring +
+navn på elementer andre har markert, og live markører på canvas. Endringer
+(flytt / endre / legg til / slett) patches inn hos de andre umiddelbart
+(last-write-wins); strukturelle endringer trigger en refetch. Krever at
+**Durable Objects** er skrudd på for kontoen (gratis-nivå holder – SQLite-klasse
++ hibernation). Identitet kommer fra [Cloudflare Access](#innlogging-cloudflare-access).
+
 Alle endringer pushes til skjermene i sanntid (SSE).
 
 ## Teknologi
