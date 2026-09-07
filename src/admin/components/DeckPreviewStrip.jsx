@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import SlideThumb from './deck/SlideThumb.jsx';
 
-// Forhåndsvisning av alle lysbildene som spilles av på en gitt skjerm.
-// Henter skjermens tilstand én gang pr. montering (skjerm-id).
+// Forhåndsvisning av alle lysbildene som spilles av på en gitt kanal.
+// Henter kanalens tilstand én gang pr. montering (kanal-id).
 export default function DeckPreviewStrip({ screenId }) {
   const [state, setState] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -37,7 +37,7 @@ export default function DeckPreviewStrip({ screenId }) {
       {!state && !failed && <div className="text-xs text-muted">Laster forhåndsvisning …</div>}
       {failed && <div className="text-xs text-danger">Kunne ikke hente lysbildene.</div>}
       {state && slides.length === 0 && (
-        <div className="text-xs text-muted">Ingen lysbilder på denne skjermen ennå.</div>
+        <div className="text-xs text-muted">Ingen lysbilder på denne kanalen ennå.</div>
       )}
 
       {slides.length > 0 && (

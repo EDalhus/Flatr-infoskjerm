@@ -1,6 +1,10 @@
-# `GET /api/state` – tilstand for én skjerm
+# `GET /api/state` – tilstand for én kanal
 
-Alt en viewer trenger for å tegne en skjerm. Bygges av `buildState()` i
+> `screen` / `screen_id` / `?screen=` i API-et = det som heter **kanal** i
+> admin-UI-et (et lysbildeshow som kan spilles på flere skjermer). Feltnavnene er
+> uendret.
+
+Alt en viewer trenger for å tegne en kanal. Bygges av `buildState()` i
 [`src/api/_shared.js`](../src/api/_shared.js). Samme kropp sendes som `snapshot`/
 `update` på `GET /api/stream?screen=<id>` (SSE).
 

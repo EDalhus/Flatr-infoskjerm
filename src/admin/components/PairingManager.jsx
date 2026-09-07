@@ -2,7 +2,7 @@
 //
 // Slik henger det sammen:
 //   1. Apple TV-en viser en kode (+ QR) ved oppstart.
-//   2. Tast/skann koden her, velg skjerm, «Koble til» → POST /api/pairing/link.
+//   2. Tast/skann koden her, velg kanal, «Koble til» → POST /api/pairing/link.
 //   3. TV-en oppdager parringen ved neste status-poll og begynner å spille.
 //
 // Lista pollers hvert 5. sek. Velg flere for bulk-handlinger, eller åpne en
@@ -153,7 +153,7 @@ export default function PairingManager({ onChange }) {
     setOk('');
     const clean = normalize(code);
     if (clean.length < 4) return setError('Skriv inn koden som vises på TV-en.');
-    if (!screenId) return setError('Velg hvilken skjerm enheten skal vise.');
+    if (!screenId) return setError('Velg hvilken kanal enheten skal vise.');
     setBusy(true);
     try {
       const res = await api.pairing.link(clean, Number(screenId));
@@ -269,9 +269,9 @@ export default function PairingManager({ onChange }) {
                 className="font-mono text-lg tracking-[0.3em]"
               />
             </Field>
-            <Field label="Skjerm" hint="Hva enheten skal vise etter parring.">
+            <Field label="Kanal" hint="Hva enheten skal vise etter parring.">
               <Select value={screenId} onChange={(e) => setScreenId(e.target.value)}>
-                <option value="">Velg skjerm …</option>
+                <option value="">Velg kanal …</option>
                 {screens.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -323,7 +323,7 @@ export default function PairingManager({ onChange }) {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Søk enhet, kode, skjerm …"
+                placeholder="Søk enhet, kode, kanal …"
                 className="h-8 pl-8 text-xs"
               />
             </div>
@@ -434,7 +434,7 @@ export default function PairingManager({ onChange }) {
             className="rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold text-white focus:outline-none"
           >
             <option value="" className="text-ink">
-              Bytt skjerm …
+              Bytt kanal …
             </option>
             {screens.map((s) => (
               <option key={s.id} value={s.id} className="text-ink">

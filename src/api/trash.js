@@ -28,7 +28,7 @@ const KIND_LABEL = {
   media: 'Mediefil',
   deck_slide: 'Lysbilde',
   deck_element: 'Widget',
-  screen: 'Skjerm',
+  screen: 'Kanal',
   screen_slide: 'Slide (gammel)',
   playlist_item: 'Spilleliste-element (gammel)'
 };

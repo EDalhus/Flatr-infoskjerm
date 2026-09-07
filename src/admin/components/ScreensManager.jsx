@@ -95,7 +95,7 @@ function ScreenList({ onEdit, onChange }) {
   };
 
   const remove = async (id) => {
-    if (!confirm('Slette skjermen? Den havner i papirkurven med alle lysbilder.')) return;
+    if (!confirm('Slette kanalen? Den havner i papirkurven med alle lysbilder.')) return;
     try {
       await api.screens.remove(id);
       await load();
@@ -109,9 +109,12 @@ function ScreenList({ onEdit, onChange }) {
 
   return (
     <>
-      <PageHeader crumbs={['Visning', 'Skjermer']} />
+      <PageHeader crumbs={['Visning', 'Kanaler']} />
       <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
-        <Card title="Ny skjerm">
+        <p className="-mb-1 text-sm text-muted">
+          En kanal er et lysbildeshow du kobler én eller flere skjermer til.
+        </p>
+        <Card title="Ny kanal">
           <form onSubmit={create} className="grid gap-4 sm:grid-cols-2">
             <Field label="Navn">
               <Input
@@ -162,10 +165,10 @@ function ScreenList({ onEdit, onChange }) {
 
         {screens.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-5 py-8 text-center text-muted">
-            Ingen skjermer opprettet.
+            Ingen kanaler opprettet.
           </p>
         ) : (
-          <GroupCard label={`Skjermer · ${screens.length}`} icon="monitor">
+          <GroupCard label={`Kanaler · ${screens.length}`} icon="monitor">
             {screens.map((s) => (
               <Row
                 key={s.id}
@@ -206,7 +209,7 @@ function ScreenList({ onEdit, onChange }) {
                       value={s.rotation ?? 0}
                       onChange={(e) => patchScreen(s.id, { rotation: Number(e.target.value) })}
                       className="w-[84px]"
-                      title="Skjermrotasjon (fysisk montering)"
+                      title="Rotasjon for fysisk montering"
                     >
                       {ROTATION_OPTIONS.map((r) => (
                         <option key={r} value={r}>

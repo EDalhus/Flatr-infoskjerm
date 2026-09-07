@@ -14,7 +14,7 @@ import ThemePicker from './components/ThemePicker.jsx';
 import { LogoMarkSquare, LogoLockup } from './components/Logo.jsx';
 
 const NAV = [
-  { id: 'screens', label: 'Skjermer', icon: 'monitor', section: 'Visning', Component: ScreensManager },
+  { id: 'screens', label: 'Kanaler', icon: 'monitor', section: 'Visning', Component: ScreensManager },
   { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager },
   { id: 'pairing', label: 'Parring', icon: 'external', section: 'Visning', Component: PairingManager },
   { id: 'schedule', label: 'Program', icon: 'calendar', section: 'Innhold', Component: ScheduleManager },
@@ -69,7 +69,7 @@ export default function Admin() {
         <a
           href="/display/1"
           className="mt-auto grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-hair hover:text-ink"
-          title="Åpne en skjermvisning"
+          title="Åpne en kanalvisning"
         >
           <Icon name="external" className="h-5 w-5" />
         </a>

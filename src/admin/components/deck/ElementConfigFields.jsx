@@ -336,7 +336,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
         <Field label="Innhold">
           <Select value={c.mode || 'schedule'} onChange={(e) => set({ mode: e.target.value })}>
             <option value="url">Egendefinert lenke</option>
-            <option value="schedule">Programside for denne skjermen</option>
+            <option value="schedule">Programside for denne kanalen</option>
           </Select>
         </Field>
         {c.mode !== 'schedule' && (

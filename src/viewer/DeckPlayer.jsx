@@ -73,7 +73,7 @@ export default function DeckPlayer({ deck, ctx }) {
       <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-paper p-16 text-center text-ink">
         <div className="text-5xl font-black">Ingen lysbilder</div>
         <p className="max-w-xl text-2xl text-muted">
-          Legg til lysbilder for denne skjermen i admin → Skjermer.
+          Legg til lysbilder for denne kanalen i admin → Kanaler.
         </p>
       </div>
     );

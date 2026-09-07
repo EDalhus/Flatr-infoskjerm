@@ -230,7 +230,7 @@ async function handleLink(context) {
     .prepare('SELECT id, name FROM screens WHERE id = ?')
     .bind(screenId)
     .first();
-  if (!screen) return notFound('Skjermen finnes ikke');
+  if (!screen) return notFound('Kanalen finnes ikke');
 
   const row = await context.env.DB.prepare('SELECT * FROM pairings WHERE code = ?').bind(code).first();
   if (!row) {
@@ -261,7 +261,7 @@ async function handleLink(context) {
     }
     return json(
       {
-        error: 'Denne koden er allerede brukt på en annen skjerm. Bruk «bytt skjerm» på enheten.',
+        error: 'Denne koden er allerede brukt på en annen kanal. Bruk «bytt kanal» på enheten.',
         reason: 'already_paired'
       },
       { status: 409 }
@@ -299,7 +299,7 @@ async function handleReassign(context) {
     .prepare('SELECT id, name FROM screens WHERE id = ?')
     .bind(screenId)
     .first();
-  if (!screen) return notFound('Skjermen finnes ikke');
+  if (!screen) return notFound('Kanalen finnes ikke');
 
   const row = await context.env.DB
     .prepare(`SELECT id, status FROM pairings WHERE device_id = ?`)

@@ -109,7 +109,7 @@ export default function AlertsManager({ onChange }) {
             </div>
             <Field label="Mål">
               <Select value={target} onChange={(e) => setTarget(e.target.value)}>
-                <option value="">Alle skjermer</option>
+                <option value="">Alle kanaler</option>
                 {screens.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -159,7 +159,7 @@ export default function AlertsManager({ onChange }) {
                   <>
                     <Icon name="clock" className="h-3.5 w-3.5" />
                     <span>{formatTime(a.created_at)}</span>
-                    <span>· {a.target_screen_id ? screenName(a.target_screen_id) : 'Alle skjermer'}</span>
+                    <span>· {a.target_screen_id ? screenName(a.target_screen_id) : 'Alle kanaler'}</span>
                   </>
                 }
                 actions={

@@ -115,7 +115,7 @@ export async function onRequestPost(context) {
   const screenId = toIntOrNull(b?.screen_id);
   if (!screenId) return badRequest('screen_id er påkrevd');
   const screen = await env.DB.prepare('SELECT id FROM screens WHERE id = ?').bind(screenId).first();
-  if (!screen) return notFound('Skjerm finnes ikke');
+  if (!screen) return notFound('Kanal finnes ikke');
 
   const maxRow = await env.DB
     .prepare('SELECT COALESCE(MAX(position), -1) AS m FROM deck_slides WHERE screen_id = ?')

@@ -20,7 +20,7 @@ const router = createBrowserRouter([
           <p className="text-2xl font-semibold text-ink">Siden finnes ikke</p>
           <p className="mt-2">
             Prøv <code className="rounded bg-hair px-1">/admin</code> eller{' '}
-            <code className="rounded bg-hair px-1">/display/&lt;skjermId&gt;</code>
+            <code className="rounded bg-hair px-1">/display/&lt;kanalId&gt;</code>
           </p>
         </div>
       </div>

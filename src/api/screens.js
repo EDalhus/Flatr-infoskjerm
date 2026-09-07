@@ -80,7 +80,7 @@ export async function onRequestGet({ request, env }) {
       .prepare(`SELECT s.*, ${COUNT} FROM screens s WHERE s.id = ?`)
       .bind(id)
       .first();
-    return row ? json(decorate(row)) : notFound('Skjerm finnes ikke');
+    return row ? json(decorate(row)) : notFound('Kanal finnes ikke');
   }
   const { results } = await env.DB
     .prepare(`SELECT s.*, ${COUNT} FROM screens s ORDER BY s.name ASC`)
@@ -100,7 +100,7 @@ export async function onRequestPost(context) {
 
   if (cloneId) {
     const src = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(cloneId).first();
-    if (!src) return notFound('Skjerm å kopiere finnes ikke');
+    if (!src) return notFound('Kanal å kopiere finnes ikke');
 
     const copy = await env.DB
       .prepare(
@@ -184,7 +184,7 @@ export async function onRequestPut(context) {
   if (!b) return badRequest('ugyldig JSON');
 
   const cur = await context.env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first();
-  if (!cur) return notFound('Skjerm finnes ikke');
+  if (!cur) return notFound('Kanal finnes ikke');
 
   const row = await context.env.DB
     .prepare(

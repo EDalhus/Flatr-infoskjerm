@@ -83,9 +83,9 @@ export default function Viewer() {
       >
         {loaded && !state.screen ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-paper p-16 text-center text-ink">
-            <div className="text-5xl font-black">Skjerm {screenId}</div>
+            <div className="text-5xl font-black">Kanal {screenId}</div>
             <p className="max-w-xl text-2xl text-muted">
-              Fant ikke skjermen. Opprett den i admin, eller sjekk ID-en i adressen.
+              Fant ikke kanalen. Opprett den i admin, eller sjekk ID-en i adressen.
             </p>
           </div>
         ) : (

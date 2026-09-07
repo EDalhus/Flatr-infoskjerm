@@ -5,20 +5,24 @@ assets** og **D1**. To deler:
 
 | Del | Rute | Beskrivelse |
 | --- | --- | --- |
-| **Viewer** | `/display/:screenId` | Publikumsvisning. Spiller av skjermens lysbilder på rekke med overganger, 16:9 / 9:16, skalert design-lerret, sanntid via SSE, wake lock, hastemeldinger som overlay. |
-| **Admin** | `/admin` | Skjermer (Keynote-aktig editor), live alerts, program, kategorier, sponsorer, mediebibliotek, maler, nylig slettet. |
+| **Viewer** | `/display/:screenId` | Publikumsvisning. Spiller av kanalens lysbilder på rekke med overganger, 16:9 / 9:16, skalert design-lerret, sanntid via SSE, wake lock, hastemeldinger som overlay. |
+| **Admin** | `/admin` | Kanaler (Keynote-aktig editor), live alerts, program, kategorier, sponsorer, mediebibliotek, maler, nylig slettet. |
 | **Program** | `/s/:screenId` | Offentlig, mobilvennlig programside for publikum (QR fra skjermen). Nå/neste, dag for dag, kategorifarger, `.ics`-eksport, oppdateres selv. |
 
-## Skjermer og lysbilder
+## Kanaler og lysbilder
 
-Hver **skjerm** har orientering (16:9 eller 9:16), en fjernstyrt rotasjon for
+Hver **kanal** har orientering (16:9 eller 9:16), en fjernstyrt rotasjon for
 fysisk montering (`rotation`, grader – settes i admin, ikke på TV-en) og en rekke
 **lysbilder** (`deck_slides`). Et lysbilde er én fri canvas med posisjonerte **widgets**
-(`deck_elements`, x/y/b/h i prosent). Skjermen spiller lysbildene i rekkefølge –
+(`deck_elements`, x/y/b/h i prosent). Kanalen spiller lysbildene i rekkefølge –
 hvert i sitt `duration_seconds`, med valgt **overgang** (ingen / ton inn /
 kryss-ton / skyv).
 
-**Editoren** (admin → Skjermer → Rediger) er Keynote-aktig: lysbilde-navigator
+> En **kanal** er et lysbildeshow som kan spilles på én eller flere fysiske
+> skjermer samtidig. I API-et og databasen heter den fortsatt `screen` /
+> `screen_id` (`/api/screens`, `?screen=`, `deck_slides.screen_id` …).
+
+**Editoren** (admin → Kanaler → Rediger) er Keynote-aktig: lysbilde-navigator
 til venstre (legg til / dupliser / slett / dra for å omrokere), canvas i midten
 (klikk for å velge, dra for å flytte, håndtak for å endre størrelse, piltaster
 nudger, Delete sletter), inspektør til høyre (widget- eller lysbilde-egenskaper).
@@ -49,10 +53,10 @@ du legger til et nytt lysbilde.
 ferdig` automatisk etter klokka. `avlyst` overstyrer alltid.
 
 **Skjermstatus:** Viewer sender heartbeat, admin viser grønn/grå prikk (online
-hvis sett innen 90 s). «Dupliser» kopierer en skjerm inkl. alle lysbilder.
+hvis sett innen 90 s). «Dupliser» kopierer en kanal inkl. alle lysbilder.
 
 **Nylig slettet:** sletting legger elementet i en papirkurv i 30 dager
-(admin → Nylig slettet). Skjermer og lysbilder gjenopprettes med innholdet.
+(admin → Nylig slettet). Kanaler og lysbilder gjenopprettes med innholdet.
 
 Alle endringer pushes til skjermene i sanntid (SSE).
 
@@ -223,7 +227,7 @@ til en skjerm uten å taste inn URL-er eller tokens. Backend: `src/api/pairing.j
 2. **TV-en poller** `GET /api/pairing/status/<device_id>` hvert `poll_interval_seconds`
    (4 s) så lenge koden vises. Legg ved fersk klient-info som query
    (`?app_version=…&uptime_seconds=…`) – den vises i admin-lista.
-3. **Admin** åpner Parring-fanen, taster/skanner koden, velger skjerm og lagrer
+3. **Admin** åpner Parring-fanen, taster/skanner koden, velger kanal og lagrer
    → `POST /api/pairing/link { pairing_code, screen_id }` (krever `ADMIN_TOKEN`).
    Raden settes til `paired`, får `screen_id` og en tilfeldig `auth_token`.
 4. **Neste status-poll** svarer `{ status: "paired", screen_id, auth_token,
@@ -237,11 +241,11 @@ på neste status-poll (leveres nøyaktig én gang):
 | kommando | forventet handling på TV-en |
 | --- | --- |
 | `identify` | vis `payload.label` (skjermnavnet) stort i `payload.seconds` (10) |
-| `reload` | last innholdet på nytt (hentes automatisk etter «bytt skjerm») |
+| `reload` | last innholdet på nytt (hentes automatisk etter «bytt kanal») |
 | `clear_cache` | tøm lokal cache og last på nytt |
 | `reboot` | start appen/enheten på nytt |
 
-**Bytt skjerm uten å røre TV-en** – `POST /api/pairing/reassign { device_id,
+**Bytt kanal uten å røre TV-en** – `POST /api/pairing/reassign { device_id,
 screen_id }` oppdaterer `screen_id` og køer en `reload`. TV-en plukker opp ny
 skjerm ved neste poll.
 
@@ -255,8 +259,8 @@ Navnet som vises er kallenavnet (`label`, via `POST /api/pairing/rename`) hvis
 satt, ellers `device_name` fra TV-en, ellers koden.
 
 **Feilhåndtering** – `link` gir tydelige koder: `404` ukjent kode, `410` utløpt
-(`reason: "expired"`), `409` koden er alt brukt på en annen skjerm
-(`reason: "already_paired"` – bruk `reassign`; samme skjerm er idempotent).
+(`reason: "expired"`), `409` koden er alt brukt på en annen kanal
+(`reason: "already_paired"` – bruk `reassign`; samme kanal er idempotent).
 `status` gir `expired` når 15-minuttersvinduet er passert og `unknown` (404) hvis
 enheten er slettet / opphevet – da starter TV-en parring på nytt.
 

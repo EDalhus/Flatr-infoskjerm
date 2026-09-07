@@ -4,6 +4,9 @@ Kontrakt for en dedikert infoskjerm-app (Apple TV / tvOS, Fire TV, nettleser-kio
 Implementasjon: [`src/api/pairing.js`](../src/api/pairing.js). Se også
 [README → Enhets-parring](../README.md#enhets-parring-tv-klienter).
 
+> `screen_id` / `screen_name` i dette API-et = det admin-UI-et kaller en **kanal**
+> (et lysbildeshow som kan spilles på flere skjermer). Feltnavnene er uendret.
+
 ## Base-URL
 
 | Miljø | URL |

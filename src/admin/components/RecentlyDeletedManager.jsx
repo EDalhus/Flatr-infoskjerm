@@ -62,7 +62,7 @@ export default function RecentlyDeletedManager({ onChange }) {
       <PageHeader crumbs={['Visning', 'Nylig slettet']} />
       <div className="mx-auto w-full max-w-4xl space-y-6 p-6 sm:p-8">
         <p className="text-sm text-muted">
-          Slettede elementer ligger her i 30 dager og kan gjenopprettes. Skjermer og spillelister
+          Slettede elementer ligger her i 30 dager og kan gjenopprettes. Kanaler og lysbilder
           gjenopprettes med innholdet sitt.
         </p>
         <ErrorText>{error}</ErrorText>

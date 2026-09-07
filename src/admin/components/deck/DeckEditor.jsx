@@ -155,7 +155,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
   };
   const deleteSlide = async (sid) => {
     if (slides.length <= 1) {
-      setErr('En skjerm må ha minst ett lysbilde.');
+      setErr('En kanal må ha minst ett lysbilde.');
       return;
     }
     if (!confirm('Slette lysbildet? Det havner i papirkurven.')) return;
@@ -241,7 +241,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           Tilbake
         </Button>
         <div className="min-w-0 truncate text-sm font-bold text-ink">
-          {screen?.name || 'Skjerm'}
+          {screen?.name || 'Kanal'}
         </div>
 
         <div className="flex overflow-hidden rounded-lg border border-line">
@@ -261,7 +261,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
         <select
           value={screen?.rotation ?? 0}
           onChange={(e) => setRotation(Number(e.target.value))}
-          title="Skjermrotasjon (fysisk montering) – styres herfra, ikke fra TV-en"
+          title="Rotasjon for fysisk montering – styres herfra, ikke fra TV-en"
           className="rounded-lg border border-line bg-card px-2 py-1.5 text-xs font-bold text-ink focus:border-brand focus:outline-none"
         >
           {[0, 90, 135, 180, 270].map((r) => (

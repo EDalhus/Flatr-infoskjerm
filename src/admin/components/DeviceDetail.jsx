@@ -164,7 +164,7 @@ export default function DeviceDetail({
           {p.screen_id ? (
             <LiveScreenView screenId={p.screen_id} orientation={orientation} />
           ) : (
-            <p className="text-sm text-muted">Enheten er ikke koblet til en skjerm ennå.</p>
+            <p className="text-sm text-muted">Enheten er ikke koblet til en kanal ennå.</p>
           )}
         </section>
 
@@ -202,7 +202,7 @@ export default function DeviceDetail({
             <h3 className={HEADING}>Innstillinger</h3>
             <div>
               <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                Skjerm
+                Kanal
               </div>
               <Select value={p.screen_id ?? ''} onChange={(e) => onReassign(Number(e.target.value))}>
                 {screens.map((s) => (
