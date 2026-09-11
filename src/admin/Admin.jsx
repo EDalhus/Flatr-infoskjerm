@@ -75,7 +75,7 @@ export default function Admin() {
         <LogoMarkSquare className="h-9 w-9" />
         <a
           href="/display/1"
-          className="mt-auto grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-hair hover:text-ink"
+          className="mt-auto grid h-9 w-9 place-items-center rounded-xl text-muted transition-colors hover:bg-hair hover:text-ink"
           title="Åpne en kanalvisning"
         >
           <Icon name="external" className="h-5 w-5" />
@@ -100,9 +100,9 @@ export default function Admin() {
                     <button
                       key={n.id}
                       onClick={() => go(n.id)}
-                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all ${
                         active
-                          ? 'bg-brand-tint font-semibold text-ink'
+                          ? 'bg-brand-tint font-semibold text-ink shadow-card'
                           : 'font-medium text-ink/70 hover:bg-brand-tint/50 hover:text-ink'
                       }`}
                     >
@@ -141,7 +141,7 @@ export default function Admin() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-10 shrink-0 items-center justify-end border-b border-line bg-card px-4">
+        <header className="flex h-14 shrink-0 items-center justify-end border-b border-line bg-card px-5">
           <OnlineBar peers={lobby.peers} selfId={lobby.selfId} connected={lobby.connected} />
         </header>
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">

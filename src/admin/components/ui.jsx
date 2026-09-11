@@ -135,13 +135,14 @@ export function Icon({ name, className = 'h-4 w-4' }) {
 
 export function Button({ variant = 'primary', size = 'md', className = '', ...props }) {
   const base =
-    'inline-flex items-center justify-center gap-2 font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none';
+    'inline-flex items-center justify-center gap-2 font-semibold transition-all disabled:opacity-50 disabled:pointer-events-none';
   const sizes = {
-    sm: 'h-9 rounded-lg px-3 text-xs uppercase tracking-[0.08em]',
+    sm: 'h-9 rounded-xl px-3 text-xs uppercase tracking-[0.08em]',
     md: 'rounded-full px-4 py-2 text-sm'
   };
   const variants = {
-    primary: 'bg-brand text-white hover:bg-brand-dark',
+    primary:
+      'bg-gradient-to-br from-[rgb(var(--c-brand))] to-[rgb(var(--c-focus))] text-white shadow-card hover:shadow-pop hover:brightness-105',
     outline: 'border border-line bg-card text-ink hover:bg-hair',
     ghost: 'text-brand hover:bg-brand-tint',
     danger: 'bg-danger-tint text-danger hover:bg-danger-hover'
@@ -161,15 +162,15 @@ export function IconButton({ name, label, tone = 'muted', className = '', ...pro
       aria-label={label}
       title={label}
       {...props}
-      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hair transition-colors ${tones[tone]} ${className}`}
+      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hair transition-all hover:shadow-card ${tones[tone]} ${className}`}
     >
       <Icon name={name} className="h-4 w-4" />
     </button>
   );
 }
 
-// Felles: 36px høyde, rounded-lg, samme kant/fokus overalt.
-const CONTROL = 'h-9 rounded-lg border border-line bg-paper text-ink focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/30';
+// Felles: 36px høyde, rounded-xl, samme kant/fokus overalt.
+const CONTROL = 'h-9 rounded-xl border border-line bg-paper text-ink focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/30';
 const inputBase = `w-full ${CONTROL} px-3 text-sm placeholder:text-muted/70`;
 
 export const Input = forwardRef(function Input({ className = '', ...props }, ref) {
@@ -180,7 +181,7 @@ export const Textarea = forwardRef(function Textarea({ className = '', ...props 
     <textarea
       ref={ref}
       {...props}
-      className={`w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/30 ${className}`}
+      className={`w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/30 ${className}`}
     />
   );
 });
@@ -194,7 +195,7 @@ export function ColorInput({ className = '', ...props }) {
     <input
       type="color"
       {...props}
-      className={`h-9 w-full cursor-pointer rounded-lg border border-line bg-paper p-1 ${className}`}
+      className={`h-9 w-full cursor-pointer rounded-xl border border-line bg-paper p-1 ${className}`}
     />
   );
 }
@@ -242,7 +243,7 @@ export function Card({ id, title, actions, children }) {
   return (
     <section
       id={id}
-      className="scroll-mt-24 overflow-hidden rounded-xl border border-hair bg-card shadow-card"
+      className="scroll-mt-24 overflow-hidden rounded-2xl border border-hair bg-card shadow-card"
     >
       {(title || actions) && (
         <header className="flex items-center justify-between gap-3 border-b border-hair px-5 py-3">
@@ -257,7 +258,7 @@ export function Card({ id, title, actions, children }) {
 
 export function GroupCard({ label, icon, right, children }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-hair bg-card shadow-card">
+    <section className="overflow-hidden rounded-2xl border border-hair bg-card shadow-card">
       <header className="flex items-center justify-between gap-3 bg-zone px-5 py-2.5">
         <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-zoneink">
           {icon && <Icon name={icon} className="h-3.5 w-3.5" />}
@@ -296,7 +297,7 @@ export function MediaTile({ src, alt, tone = 'brand', children }) {
       <img
         src={src}
         alt={alt}
-        className="h-11 w-16 shrink-0 rounded-md border border-hair bg-white object-contain p-1"
+        className="h-11 w-16 shrink-0 rounded-xl border border-hair bg-white object-contain p-1"
       />
     );
   }
@@ -307,7 +308,7 @@ export function MediaTile({ src, alt, tone = 'brand', children }) {
     muted: 'bg-hair text-muted'
   };
   return (
-    <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-md ${tones[tone]}`}>
+    <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${tones[tone]}`}>
       {children}
     </div>
   );
@@ -329,22 +330,21 @@ export function MetaValue({ children }) {
   );
 }
 
-const cell = 'flex flex-1 items-center justify-center gap-1 px-2 text-xs font-semibold transition-colors';
+const cell = 'flex flex-1 items-center justify-center gap-1 rounded-full px-2.5 text-xs font-semibold transition-all';
+const track = 'flex h-9 gap-0.5 rounded-full border border-line bg-paper p-1';
 
 /** Segmentert valg (eksklusivt). options: [{ value, label?, icon? }] */
 export function Segmented({ value, onChange, options, className = '' }) {
   return (
-    <div className={`flex h-9 overflow-hidden rounded-lg border border-line ${className}`}>
-      {options.map((o, i) => {
+    <div className={`${track} ${className}`}>
+      {options.map((o) => {
         const active = value === o.value;
         return (
           <button
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
-            className={`${cell} ${i > 0 ? 'border-l border-line' : ''} ${
-              active ? 'bg-brand text-white' : 'bg-paper text-muted hover:bg-hair'
-            }`}
+            className={`${cell} ${active ? 'bg-brand text-white shadow-card' : 'text-muted hover:text-ink'}`}
           >
             {o.icon ? <Icon name={o.icon} className="h-4 w-4" /> : o.label}
           </button>
@@ -360,16 +360,14 @@ export function Segmented({ value, onChange, options, className = '' }) {
  */
 export function ButtonGroup({ items, className = '' }) {
   return (
-    <div className={`flex h-9 overflow-hidden rounded-lg border border-line ${className}`}>
-      {items.map((it, i) => (
+    <div className={`${track} ${className}`}>
+      {items.map((it) => (
         <button
           key={it.key}
           type="button"
           title={it.title}
           onClick={it.onClick}
-          className={`${cell} ${i > 0 ? 'border-l border-line' : ''} ${
-            it.active ? 'bg-brand text-white' : 'bg-paper text-muted hover:bg-hair'
-          }`}
+          className={`${cell} ${it.active ? 'bg-brand text-white shadow-card' : 'text-muted hover:text-ink'}`}
         >
           {it.icon ? <Icon name={it.icon} className="h-4 w-4" /> : it.label}
         </button>

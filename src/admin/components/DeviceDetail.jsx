@@ -15,14 +15,14 @@ const HEADING = 'text-[11px] font-bold uppercase tracking-[0.14em] text-muted';
 function Stat({ label, value, sub, pct }) {
   if (value === null || value === undefined || value === '') return null;
   return (
-    <div className="rounded-lg border border-hair bg-card p-3">
+    <div className="rounded-xl border border-hair bg-card p-3">
       <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{label}</div>
       <div className="mt-0.5 text-lg font-bold text-ink">{value}</div>
       {sub && <div className="text-xs text-muted">{sub}</div>}
       {typeof pct === 'number' && (
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-hair">
           <div
-            className="h-full rounded-full bg-brand"
+            className="h-full rounded-full bg-gradient-to-r from-[rgb(var(--c-brand))] to-[rgb(var(--c-focus))]"
             style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
           />
         </div>
@@ -92,7 +92,7 @@ export default function DeviceDetail({
     <aside className="flex h-full flex-col bg-paper" style={{ animation: 'drawerIn 0.18s ease' }}>
       {/* topp */}
       <div className="flex shrink-0 items-start gap-3 border-b border-hair bg-card px-5 py-4">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-tint text-brand">
           <Icon name="monitor" className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -251,7 +251,7 @@ export default function DeviceDetail({
         {/* detaljer – nederst */}
         <section className="space-y-2">
           <h3 className={HEADING}>Detaljer</h3>
-          <div className="rounded-lg border border-hair bg-card px-4 py-1">
+          <div className="rounded-xl border border-hair bg-card px-4 py-1">
             <InfoRow label="IP-adresse" value={ci.ip} />
             <InfoRow label="Hostname" value={ci.hostname} />
             <InfoRow label="Paret" value={p.paired_at ? timeAgo(p.paired_at) : null} />

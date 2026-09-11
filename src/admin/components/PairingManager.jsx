@@ -38,7 +38,7 @@ function BulkBtn({ children, onClick, danger }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
         danger ? 'text-red-300 hover:bg-red-500/20' : 'text-white hover:bg-white/10'
       }`}
     >
@@ -298,12 +298,12 @@ export default function PairingManager({ onChange }) {
         </Card>
 
         {flash && (
-          <p className="rounded-lg border border-ok/30 bg-ok-tint px-3 py-2 text-sm font-medium text-ok">
+          <p className="rounded-xl border border-ok/30 bg-ok-tint px-3 py-2 text-sm font-medium text-ok">
             {flash}
           </p>
         )}
 
-        <section className="overflow-hidden rounded-xl border border-hair bg-card shadow-card">
+        <section className="overflow-hidden rounded-2xl border border-hair bg-card shadow-card">
           <header className="flex items-center gap-3 border-b border-hair bg-zone px-4 py-2.5">
             <label className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-zoneink">
               <input
@@ -417,7 +417,7 @@ export default function PairingManager({ onChange }) {
       </div>
 
       {selected.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-[#1a0730] px-2 py-2 text-white shadow-pop">
+        <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-full border border-white/10 bg-[#1a0730] px-2 py-2 text-white shadow-pop">
           <span className="px-2 text-sm font-semibold">{selected.size} valgt</span>
           <span className="mx-1 h-5 w-px bg-white/20" />
           <BulkBtn onClick={() => runCommand(selectedPairedIds, 'reload', 'Last inn')}>Last inn</BulkBtn>
@@ -431,7 +431,7 @@ export default function PairingManager({ onChange }) {
               bulkReassign(selectedPairedIds, e.target.value);
               e.target.value = '';
             }}
-            className="rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold text-white focus:outline-none"
+            className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white focus:outline-none"
           >
             <option value="" className="text-ink">
               Bytt kanal …
@@ -449,7 +449,7 @@ export default function PairingManager({ onChange }) {
           <button
             type="button"
             onClick={() => setSelected(new Set())}
-            className="grid h-7 w-7 place-items-center rounded-lg hover:bg-white/10"
+            className="grid h-7 w-7 place-items-center rounded-full hover:bg-white/10"
             aria-label="Fjern utvalg"
           >
             <Icon name="x" className="h-4 w-4" />

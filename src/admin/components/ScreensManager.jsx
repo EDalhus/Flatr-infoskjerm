@@ -223,7 +223,7 @@ function ScreenList({ onEdit, onChange }) {
                       href={`${origin}/display/${s.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
                     >
                       <Icon name="external" className="h-3.5 w-3.5" />
                       Åpne

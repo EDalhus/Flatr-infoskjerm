@@ -10,7 +10,7 @@ export default function LiveScreenView({ screenId, orientation = 'landscape' }) 
   return (
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden rounded-lg border border-hair bg-black"
+      className="relative w-full overflow-hidden rounded-xl border border-hair bg-black"
       style={{ aspectRatio: `${base.w} / ${base.h}` }}
     >
       <iframe
