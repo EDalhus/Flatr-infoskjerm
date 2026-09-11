@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api.js';
 import { Icon } from './components/ui.jsx';
+import Dashboard from './components/Dashboard.jsx';
 import ScheduleManager from './components/ScheduleManager.jsx';
 import CategoriesManager from './components/CategoriesManager.jsx';
 import SponsorsManager from './components/SponsorsManager.jsx';
@@ -16,6 +17,7 @@ import { LogoMarkSquare, LogoLockup } from './components/Logo.jsx';
 import { useCollab } from '../hooks/useCollab.js';
 
 const NAV = [
+  { id: 'dashboard', label: 'Hjem', icon: 'home', section: 'Visning', Component: Dashboard },
   { id: 'screens', label: 'Kanaler', icon: 'monitor', section: 'Visning', Component: ScreensManager },
   { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager },
   { id: 'pairing', label: 'Parring', icon: 'external', section: 'Visning', Component: PairingManager },
@@ -32,7 +34,7 @@ const SECTIONS = ['Visning', 'Innhold'];
 const initialTab = () => {
   if (typeof window === 'undefined') return 'screens';
   const v = new URLSearchParams(window.location.search).get('view');
-  return NAV.some((n) => n.id === v) ? v : 'screens';
+  return NAV.some((n) => n.id === v) ? v : 'dashboard';
 };
 
 export default function Admin() {
@@ -54,7 +56,7 @@ export default function Admin() {
   }, [tab, refreshKey]);
 
   const bump = () => setRefreshKey((k) => k + 1);
-  const Active = useMemo(() => NAV.find((n) => n.id === tab)?.Component ?? ScheduleManager, [tab]);
+  const Active = useMemo(() => NAV.find((n) => n.id === tab)?.Component ?? Dashboard, [tab]);
 
   // Global tilstedeværelse – alle som er pålogget Flatr.
   const lobby = useCollab('lobby', { where: NAV.find((n) => n.id === tab)?.label });
@@ -145,7 +147,7 @@ export default function Admin() {
           <OnlineBar peers={lobby.peers} selfId={lobby.selfId} connected={lobby.connected} />
         </header>
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-          <Active onChange={bump} />
+          <Active onChange={bump} onNavigate={go} />
         </main>
       </div>
     </div>
