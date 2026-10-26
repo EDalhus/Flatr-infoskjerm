@@ -137,10 +137,9 @@ export default function DeviceDetail({ pairing: p, screens, onClose, onCommand, 
               <StatusPill p={p} />
             </div>
           )}
-          <p className="m-0 mt-1 truncate text-sm text-muted">
-            {p.screen_name ? `Viser «${p.screen_name}»` : 'Ingen skjerm'}
-            {paired && p.last_seen && !p.online ? ` · sist sett ${timeAgo(p.last_seen)}` : ''}
-          </p>
+          {paired && !p.online && p.last_seen && (
+            <p className="m-0 mt-1 truncate text-sm text-muted">Sist sett {timeAgo(p.last_seen)}</p>
+          )}
         </div>
         <IconButton name="x" label="Lukk" onClick={onClose} />
       </header>
@@ -207,15 +206,15 @@ export default function DeviceDetail({ pairing: p, screens, onClose, onCommand, 
           <Row label="Operativsystem" value={ci.os_version || (ci.tvos_version ? `tvOS ${ci.tvos_version}` : null)} />
           <Row label="Flatr-app" value={ci.app_version || ci.player_version} />
           <Row label="Oppløsning" value={ci.resolution ? ci.resolution.replace('x', '×') : null} sub={aspectOf(ci.resolution)} />
-          <Row label="Tilkoblet i" value={fmtUptime(ci.uptime_seconds)} />
-          <Row label="Sist sett" value={p.last_seen ? timeAgo(p.last_seen) : null} />
+          <Row label="Oppetid" value={fmtUptime(ci.uptime_seconds)} />
           <Row label="Lagring" value={ci.storage_pct != null ? `${ci.storage_pct} %` : null} pct={ci.storage_pct} />
           <Row label="Minne" value={ci.memory_pct != null ? `${ci.memory_pct} %` : null} pct={ci.memory_pct} />
           <Row label="CPU-temperatur" value={ci.cpu_temp != null ? `${ci.cpu_temp} °C` : null} />
           <Row label="GPU-temperatur" value={ci.gpu_temp != null ? `${ci.gpu_temp} °C` : null} />
           <Row label="IP-adresse" value={ci.ip} mono />
-          <Row label="Koblet til" value={p.paired_at ? timeAgo(p.paired_at) : null} />
-          <Row label="Kode" value={codeDisplay(p.code)} mono />
+          <Row label="Paret" value={p.paired_at ? timeAgo(p.paired_at) : null} />
+          {/* Uten eget navn er navnet i toppen selve koden. */}
+          {displayName(p) !== codeDisplay(p.code) && <Row label="Kode" value={codeDisplay(p.code)} mono />}
           <Row label="Enhets-ID" value={p.device_id} mono />
         </Card>
 
