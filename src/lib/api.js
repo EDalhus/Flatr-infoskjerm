@@ -36,7 +36,10 @@ async function req(path, { method = 'GET', body } = {}) {
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(data?.error || `${res.status} ${res.statusText}`);
+    throw Object.assign(new Error(data?.error || `${res.status} ${res.statusText}`), {
+      status: res.status,
+      data
+    });
   }
   return data;
 }
@@ -129,6 +132,24 @@ export const api = {
     const as =
       typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('as');
     return req(`/me${as ? `?as=${encodeURIComponent(as)}` : ''}`);
+  },
+  // Plattform (Node-serveren): hvilken del av Flatr vi er på + innlogging.
+  context: () => req('/context'),
+  auth: {
+    request: (email) => req('/auth/request', { method: 'POST', body: { email } }),
+    logout: () => req('/auth/logout', { method: 'POST' })
+  },
+  team: {
+    list: () => req('/team'),
+    invite: (email, role) => req('/team', { method: 'POST', body: { email, role } }),
+    setRole: (userId, role) =>
+      req(`/team?user_id=${encodeURIComponent(userId)}`, { method: 'PUT', body: { role } }),
+    remove: (userId) => req(`/team?user_id=${encodeURIComponent(userId)}`, { method: 'DELETE' })
+  },
+  platform: {
+    slug: (slug) => req(`/platform/slug?slug=${encodeURIComponent(slug)}`),
+    signup: (body) => req('/platform/signup', { method: 'POST', body }),
+    login: (email) => req('/platform/login', { method: 'POST', body: { email } })
   },
   heartbeat: (screenId) =>
     req(`/heartbeat?screen=${encodeURIComponent(screenId)}`, { method: 'POST' }),

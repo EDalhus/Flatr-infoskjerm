@@ -9,6 +9,7 @@
 //   ACCESS_AUD         = "<application audience tag>"
 // Er de ikke satt (lokal utvikling) faller vi tilbake til DEV_USER_EMAIL,
 // eventuelt overstyrt pr. forespørsel med ?as=<navn> (kun i denne modusen).
+// På Node-serveren brukes i stedet e-postinnlogging (env.SESSION_USER).
 
 // Faste, godt adskilte farger – én pr. bruker, deterministisk fra e-post.
 const PALETTE = [
@@ -109,6 +110,15 @@ function makeUser(email, sub) {
  * @returns {Promise<{email:string,name:string,color:string,sub:string}|null>}
  */
 export async function getUser(request, env) {
+  // Node-serveren (server/) har allerede slått opp sesjonen: env.SESSION_USER
+  // er da brukeren (eller null), og Cloudflare Access er ikke i bruk.
+  if ('SESSION_USER' in env) {
+    const s = env.SESSION_USER;
+    if (!s) return null;
+    const u = await makeUser(s.email, `user:${s.user_id}`);
+    return { ...u, name: s.name || u.name, role: s.role };
+  }
+
   const teamDomain = env.ACCESS_TEAM_DOMAIN;
   const aud = env.ACCESS_AUD;
 

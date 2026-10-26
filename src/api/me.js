@@ -5,7 +5,13 @@ import { getUser } from './_access.js';
 export async function onRequestGet({ request, env }) {
   const user = await getUser(request, env);
   if (!user) return json({ error: 'Ikke innlogget' }, { status: 401 });
-  return json({ email: user.email, name: user.name, color: user.color });
+  return json({
+    email: user.email,
+    name: user.name,
+    color: user.color,
+    role: user.role ?? null,
+    tenant: env.TENANT ?? null
+  });
 }
 
 export const onRequestOptions = handleOptions;

@@ -1,0 +1,30 @@
+services:
+  flatr:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    # Bare nginx på verten skal nå appen.
+    ports:
+      - "127.0.0.1:8787:8787"
+    depends_on:
+      - mail
+
+  # Send-only e-postserver (Postfix + DKIM). Tar bare imot fra det interne
+  # Docker-nettet og leverer direkte til mottakernes servere.
+  # DKIM-nøkkelen lages første gang i ./mail/dkim/ – den offentlige delen
+  # (flatr.no.txt) legges inn som DNS-oppføring.
+  mail:
+    image: boky/postfix:v5.1.0-alpine
+    restart: unless-stopped
+    environment:
+      ALLOWED_SENDER_DOMAINS: flatr.no
+      # Må matche serverens reverse-DNS (PTR).
+      POSTFIX_myhostname: svs1.dalhus.net
+      DKIM_AUTOGENERATE: "true"
+      DKIM_SELECTOR: flatr
+    volumes:
+      - ./mail/dkim:/etc/opendkim/keys

@@ -11,6 +11,8 @@ import ScreensManager from './components/ScreensManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
 import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
+import TeamManager from './components/TeamManager.jsx';
+import Login from './Login.jsx';
 import ThemePicker from './components/ThemePicker.jsx';
 import OnlineBar from './components/OnlineBar.jsx';
 import { LogoMarkSquare, LogoLockup } from './components/Logo.jsx';
@@ -26,10 +28,12 @@ const NAV = [
   { id: 'sponsors', label: 'Sponsorer', icon: 'image', section: 'Innhold', Component: SponsorsManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', section: 'Innhold', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'layers', section: 'Innhold', Component: TemplatesManager },
-  { id: 'trash', label: 'Nylig slettet', icon: 'x', section: 'Visning', Component: RecentlyDeletedManager }
+  { id: 'trash', label: 'Nylig slettet', icon: 'x', section: 'Visning', Component: RecentlyDeletedManager },
+  // Bare på Node-serveren (kontoer med e-postinnlogging).
+  { id: 'team', label: 'Team', icon: 'home', section: 'Konto', Component: TeamManager, tenantOnly: true }
 ];
 
-const SECTIONS = ['Visning', 'Innhold'];
+const SECTIONS = ['Visning', 'Innhold', 'Konto'];
 
 const initialTab = () => {
   if (typeof window === 'undefined') return 'screens';
@@ -37,16 +41,38 @@ const initialTab = () => {
   return NAV.some((n) => n.id === v) ? v : 'dashboard';
 };
 
-export default function Admin() {
+// `context` kommer fra /api/context (Node-serveren). Mangler den, kjører vi
+// som Worker uten e-postinnlogging, og admin vises som før.
+export default function Admin({ context }) {
+  if (context?.mode === 'tenant' && !context.signed_in) return <Login tenant={context.tenant} />;
+  return <AdminShell context={context} />;
+}
+
+function AdminShell({ context }) {
   const [tab, setTab] = useState(initialTab);
   const [screenCount, setScreenCount] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [me, setMe] = useState(null);
 
+  const tenant = context?.tenant ?? null;
+  const nav = useMemo(() => NAV.filter((n) => !n.tenantOnly || tenant), [tenant]);
+
   useEffect(() => {
-    document.title = 'Flatr';
+    document.title = tenant ? `${tenant.name} – Flatr` : 'Flatr';
+    if (tenant) {
+      try {
+        localStorage.setItem('flatr.lastSlug', tenant.slug);
+      } catch {
+        /* ignore */
+      }
+    }
     api.me().then(setMe).catch(() => setMe(null));
-  }, []);
+  }, [tenant]);
+
+  const logout = async () => {
+    await api.auth.logout().catch(() => {});
+    window.location.href = '/admin';
+  };
 
   useEffect(() => {
     api.screens
@@ -87,16 +113,21 @@ export default function Admin() {
       <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-card sm:w-64">
         <div className="px-5 py-5">
           <LogoLockup className="h-6 w-auto text-ink" />
+          {tenant && (
+            <div className="mt-3 truncate text-xs font-semibold text-muted" title={tenant.name}>
+              {tenant.name}
+            </div>
+          )}
         </div>
 
         <div className="px-3">
-          {SECTIONS.map((section) => (
+          {SECTIONS.filter((section) => nav.some((n) => n.section === section)).map((section) => (
             <div key={section} className="mb-2">
               <div className="px-2 pb-1.5 pt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
                 {section}
               </div>
               <nav className="space-y-0.5">
-                {NAV.filter((n) => n.section === section).map((n) => {
+                {nav.filter((n) => n.section === section).map((n) => {
                   const active = n.id === tab;
                   return (
                     <button
@@ -134,9 +165,20 @@ export default function Admin() {
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: me.color }}
               />
-              <span className="truncate">
+              <span className="min-w-0 flex-1 truncate">
                 Innlogget som <span className="font-semibold text-ink">{me.name}</span>
               </span>
+              {tenant && (
+                <button
+                  type="button"
+                  onClick={logout}
+                  title="Logg ut"
+                  aria-label="Logg ut"
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted hover:bg-hair hover:text-ink"
+                >
+                  <Icon name="logout" className="h-4 w-4" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -147,7 +189,7 @@ export default function Admin() {
           <OnlineBar peers={lobby.peers} selfId={lobby.selfId} connected={lobby.connected} />
         </header>
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-          <Active onChange={bump} onNavigate={go} />
+          <Active onChange={bump} onNavigate={go} me={me} />
         </main>
       </div>
     </div>

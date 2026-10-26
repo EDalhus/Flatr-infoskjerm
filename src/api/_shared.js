@@ -34,10 +34,15 @@ export async function readJson(request) {
 }
 
 // Autorisasjon for skriveoperasjoner. Returnerer null hvis OK, ellers en 401.
+//   0. Node-serveren: sesjonsbruker (env.SESSION_USER)
 //   1. Cloudflare Access-bruker på whitelistet domene  -> full tilgang
 //   2. Ellers: Authorization: Bearer <ADMIN_TOKEN>      (skript / uten Access)
 //   3. Er ingen av delene konfigurert                   -> åpent (lokalt)
 export async function requireAdmin({ request, env }) {
+  // Node-serveren: innlogget medlem av kunden (e-postinnlogging).
+  if ('SESSION_USER' in env) {
+    return env.SESSION_USER ? null : json({ error: 'Ikke innlogget' }, { status: 401 });
+  }
   if (env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD) {
     const user = await getUser(request, env);
     return user ? null : json({ error: 'Ikke innlogget' }, { status: 401 });
