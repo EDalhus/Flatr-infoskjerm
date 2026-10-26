@@ -116,16 +116,11 @@ export default function Landing() {
           className="pointer-events-none absolute inset-x-0 -top-40 mx-auto h-[480px] max-w-4xl rounded-full bg-brand/10 blur-3xl"
         />
         <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-16 text-center sm:px-6 sm:pt-24">
-          <p className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-            Gratis for opptil 3 skjermer
-          </p>
           <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
             Infoskjermer som <span className="text-brand">bare virker</span>.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted">
-            Vis program, beskjeder og sponsorer på alle skjermene dine – styrt fra én nettside og oppdatert i
-            sanntid.
+            Lag innholdet én gang og vis det på alle skjermene dine. Endringer vises med en gang.
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Link
@@ -393,40 +388,56 @@ function DashboardMock() {
   );
 }
 
-/** Stilisert infoskjerm (ren markup, ingen bilder). */
+/** Stilisert infoskjerm med program og et aktivt live-varsel (ren markup, ingen bilder). */
 function ScreenMock() {
+  const next = [
+    ['15:00', 'Panel: Fremtidens kultur', 'Sal A'],
+    ['16:30', 'Workshop', 'Sal B'],
+    ['18:00', 'Middag', 'Foajeen']
+  ];
   return (
-    <div className="relative mx-auto w-full max-w-xl">
-      <div className="rounded-2xl border border-line bg-black p-3 shadow-pop">
-        <div className="aspect-video overflow-hidden rounded-lg bg-gradient-to-br from-[#0f2733] via-[#123d3a] to-[#027353] p-5 text-white sm:p-7">
-          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
-            <span>Hovedscene</span>
-            <span className="tabular-nums">14:32</span>
+    <div className="mx-auto w-full max-w-xl">
+      <div className="rounded-xl border border-line bg-black p-2 shadow-pop">
+        <div className="flex aspect-video flex-col overflow-hidden rounded-md bg-[#0b0d0c] text-white">
+          <div className="flex items-center justify-between px-[5%] pt-[3.5%] text-[9px] font-medium uppercase tracking-[0.18em] text-white/50 sm:text-[11px]">
+            <span className="flex items-center gap-2">
+              <LogoMarkSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Hovedscene
+            </span>
+            <span className="font-mono tracking-normal text-white/80">14:32</span>
           </div>
-          <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300 sm:mt-6">
-            ● Pågår nå
+
+          <div className="grid min-h-0 flex-1 grid-cols-5 gap-[4%] overflow-hidden px-[5%] py-[3.5%]">
+            <div className="col-span-3 flex flex-col justify-center rounded-md border-l-2 border-[#4ade9f] bg-white/[0.04] px-[6%]">
+              <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#4ade9f] sm:text-[10px]">
+                Pågår nå
+              </span>
+              <span className="mt-1 text-base font-bold leading-tight sm:text-xl">Åpning og velkommen</span>
+              <span className="mt-1 text-[9px] text-white/50 sm:text-xs">14:00 – 15:00 · Sal A</span>
+            </div>
+            <div className="col-span-2 flex min-h-0 flex-col justify-between gap-1">
+              <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/40 sm:text-[10px]">
+                Senere i dag
+              </span>
+              {next.map(([t, title, room], i) => (
+                <div key={t} className={`border-t border-white/10 pt-1.5 ${i === 2 ? 'hidden sm:block' : ''}`}>
+                  <div className="truncate text-[10px] font-semibold sm:text-[13px]">{title}</div>
+                  <div className="font-mono text-[8px] text-white/45 sm:text-[10px]">
+                    {t} · {room}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-1 text-xl font-extrabold leading-tight sm:text-3xl">Åpning og velkommen</div>
-          <div className="mt-4 space-y-2 sm:mt-6">
-            {[
-              ['15:00', 'Panel: Fremtidens kultur'],
-              ['16:30', 'Workshop i sal B'],
-              ['18:00', 'Middag i foajeen']
-            ].map(([t, title]) => (
-              <div key={t} className="flex items-center gap-3 rounded-lg bg-white/10 px-3 py-2 text-xs sm:text-sm">
-                <span className="font-bold tabular-nums text-white/70">{t}</span>
-                <span className="truncate font-semibold">{title}</span>
-              </div>
-            ))}
+
+          <div className="flex items-center gap-2 bg-[#4ade9f] px-[5%] py-[2.5%] text-[9px] font-semibold text-[#052e1f] sm:text-xs">
+            <Icon name="megaphone" className="h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
+            <span className="truncate">Middagen flyttes til 18:30 – velkommen til foajeen!</span>
           </div>
         </div>
       </div>
-      <div className="absolute -bottom-5 -left-3 flex items-center gap-2 rounded-lg border border-line bg-card px-4 py-3 text-sm font-semibold text-ink shadow-pop sm:-left-6">
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-tint text-brand">
-          <Icon name="megaphone" className="h-4 w-4" />
-        </span>
-        Live-varsel sendt til 3 skjermer
-      </div>
+      <div className="mx-auto h-5 w-16 bg-gradient-to-b from-line to-transparent" />
+      <p className="text-center text-xs text-muted">Live-varselet dukker opp på alle skjermene med en gang du sender det.</p>
     </div>
   );
 }
