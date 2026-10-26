@@ -231,7 +231,7 @@ export default function DeviceDetail({
               title="Enheten kobles fra og viser en ny parringskode"
             >
               <Icon name="x" className="h-4 w-4" />
-              Opphev parring
+              Koble fra
             </Button>
           </div>
         )}

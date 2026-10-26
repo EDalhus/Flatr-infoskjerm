@@ -10,7 +10,7 @@ export const displayName = (p) =>
 export function deviceStatus(p) {
   if (p.status === 'pending') return { key: 'pending', label: 'Venter', cls: 'bg-badge text-badge-ink' };
   if (p.status === 'expired') return { key: 'expired', label: 'Utløpt', cls: 'bg-danger-tint text-danger' };
-  if (p.online) return { key: 'live', label: 'Live', cls: 'bg-ok-tint text-ok' };
+  if (p.online) return { key: 'live', label: 'Online', cls: 'bg-ok-tint text-ok' };
   return { key: 'offline', label: 'Frakoblet', cls: 'bg-hair text-muted' };
 }
 

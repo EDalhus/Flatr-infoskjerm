@@ -1,88 +1,304 @@
-// Enhets-panel for TV-klienter – parring, oversikt og fjernkontroll.
+// Enheter – TV-ene (Apple TV og andre spillere) som viser skjermene.
 //
-// Slik henger det sammen:
 //   1. Apple TV-en viser en kode (+ QR) ved oppstart.
-//   2. Tast/skann koden her, velg kanal, «Koble til» → POST /api/pairing/link.
+//   2. Tast/skann koden her, velg skjerm, «Koble til» -> POST /api/pairing/link.
 //   3. TV-en oppdager parringen ved neste status-poll og begynner å spille.
 //
-// Lista pollers hvert 5. sek. Velg flere for bulk-handlinger, eller åpne en
-// enhet for detaljer, telemetri og innstillinger.
+// Lista oppdateres hvert 5. sek. Velg flere for masseendringer, eller åpne en
+// enhet for detaljer, skjermbilde, telemetri og innstillinger.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
-import DeckPreviewStrip from './DeckPreviewStrip.jsx';
 import DeviceDetail from './DeviceDetail.jsx';
-import {
-  codeDisplay,
-  displayName,
-  deviceStatus,
-  clientSummary,
-  timeAgo,
-  timeUntil
-} from './pairingHelpers.js';
-import { Icon, Field, Input, Select, Button, Card, PageHeader, ErrorText } from './ui.jsx';
+import LiveScreenView from './LiveScreenView.jsx';
+import { codeDisplay, displayName, timeAgo, timeUntil } from './pairingHelpers.js';
+import { Icon, Input, Select, Button, PageHeader, ErrorText } from './ui.jsx';
 
+const LAST_KEY = 'flatr.pairing.lastDevice';
 const normalize = (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-const pretty = (s) => {
-  const n = normalize(s);
-  return n.length > 3 ? `${n.slice(0, 3)}-${n.slice(3)}` : n;
-};
+const codeFromUrl = () => (typeof window === 'undefined' ? '' : normalize(new URLSearchParams(window.location.search).get('code') || ''));
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-const codeFromUrl = () => {
-  if (typeof window === 'undefined') return '';
-  return normalize(new URLSearchParams(window.location.search).get('code') || '');
-};
+/* ----------------------------- koble til en TV ----------------------------- */
+
+function CodeInput({ value, onChange, inputRef }) {
+  const chars = value.padEnd(6, ' ').split('');
+  return (
+    <label className="relative block cursor-text">
+      <span className="sr-only">Koden som vises på TV-en</span>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => onChange(normalize(e.target.value))}
+        autoCapitalize="characters"
+        autoComplete="off"
+        spellCheck={false}
+        className="absolute inset-0 h-full w-full cursor-text opacity-0"
+        aria-label="Kode fra TV-en"
+      />
+      <span className="pointer-events-none flex items-center gap-1.5" aria-hidden="true">
+        {chars.map((c, i) => (
+          <span key={i} className="flex items-center gap-1.5">
+            {i === 3 && <span className="mx-1 text-2xl font-bold text-muted">–</span>}
+            <span
+              className={`grid h-14 w-11 place-items-center rounded-xl border-2 bg-paper font-mono text-2xl font-bold text-ink sm:h-16 sm:w-12 ${
+                i === value.length ? 'border-brand' : c.trim() ? 'border-line' : 'border-hair'
+              }`}
+            >
+              {c.trim()}
+            </span>
+          </span>
+        ))}
+      </span>
+    </label>
+  );
+}
+
+function PairPanel({ screens, onPaired, onClose, initialCode }) {
+  const [code, setCode] = useState(initialCode);
+  const [screenId, setScreenId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    if (!screenId && screens.length === 1) setScreenId(String(screens[0].id));
+  }, [screens, screenId]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (code.length < 6) return setError('Koden har 6 tegn – den står på TV-en.');
+    if (!screenId) return setError('Velg hvilken skjerm TV-en skal vise.');
+    setBusy(true);
+    try {
+      const res = await api.pairing.link(code, Number(screenId));
+      setDone(res);
+      setCode('');
+      onPaired?.(res);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <section className="flex flex-col items-center gap-3 rounded-3xl border border-line bg-card px-6 py-10 text-center shadow-card">
+        <span className="grid h-14 w-14 place-items-center rounded-full bg-ok-tint text-ok">
+          <Icon name="check" className="h-7 w-7" />
+        </span>
+        <h2 className="m-0 text-xl font-bold text-ink">TV-en er koblet til</h2>
+        <p className="m-0 max-w-md text-sm text-muted">
+          Den viser «{done.screen_name}» om noen sekunder. Gi den gjerne et navn og tagger når den dukker opp i lista.
+        </p>
+        <div className="mt-2 flex gap-2">
+          <Button onClick={() => setDone(null)}>Koble til en til</Button>
+          {onClose && (
+            <Button variant="outline" onClick={onClose}>
+              Ferdig
+            </Button>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-line bg-card shadow-card">
+      <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_300px]">
+        <form onSubmit={submit} className="flex flex-col gap-6">
+          <div>
+            <h2 className="m-0 text-xl font-bold text-ink">Koble til en TV</h2>
+            <p className="m-0 mt-1 text-sm text-muted">Tast inn koden som står på TV-en, og velg hva den skal vise.</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold text-muted">Kode fra TV-en</span>
+            <CodeInput value={code} onChange={setCode} inputRef={inputRef} />
+          </div>
+
+          <label className="flex max-w-sm flex-col gap-2">
+            <span className="text-xs font-semibold text-muted">Skal vise skjermen</span>
+            {screens.length ? (
+              <Select value={screenId} onChange={(e) => setScreenId(e.target.value)}>
+                <option value="">Velg skjerm …</option>
+                {screens.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                    {s.location ? ` – ${s.location}` : ''}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <span className="text-sm text-muted">
+                Du har ingen skjermer ennå.{' '}
+                <a href="/admin?view=screens" className="font-semibold text-brand hover:underline">
+                  Lag en skjerm først
+                </a>
+                .
+              </span>
+            )}
+          </label>
+
+          <ErrorText>{error}</ErrorText>
+
+          <div className="flex gap-2">
+            <Button type="submit" disabled={busy || code.length < 6 || !screenId}>
+              {busy ? 'Kobler til …' : 'Koble til'}
+            </Button>
+            {onClose && (
+              <Button type="button" variant="outline" onClick={onClose}>
+                Avbryt
+              </Button>
+            )}
+          </div>
+        </form>
+
+        <ol className="m-0 flex list-none flex-col gap-4 rounded-2xl bg-zone p-5 text-sm">
+          {[
+            ['Åpne Flatr-appen', 'på Apple TV-en. Første gang viser den en kode og en QR-kode.'],
+            ['Tast inn koden', 'her – eller skann QR-koden med mobilen, så fylles den ut av seg selv.'],
+            ['Velg skjerm', 'og trykk «Koble til». TV-en bytter innhold med en gang.']
+          ].map(([title, text], i) => (
+            <li key={title} className="flex gap-3">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-onbrand">{i + 1}</span>
+              <span className="text-muted">
+                <span className="font-semibold text-ink">{title}</span> {text}
+              </span>
+            </li>
+          ))}
+          <li className="border-t border-line pt-4 text-xs text-muted">
+            Smart-TV eller PC? Åpne skjermens lenke i nettleseren i stedet – finn den under{' '}
+            <a href="/admin?view=screens" className="font-semibold text-brand hover:underline">
+              Skjermer
+            </a>
+            .
+          </li>
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------------------------- kort ---------------------------------- */
+
+function StatusPill({ p }) {
+  if (p.status === 'pending')
+    return <span className="shrink-0 rounded-full bg-badge px-2.5 py-0.5 text-xs font-bold text-badge-ink">Venter · {timeUntil(p.expires_at)}</span>;
+  if (p.status === 'expired') return <span className="shrink-0 rounded-full bg-danger-tint px-2.5 py-0.5 text-xs font-bold text-danger">Utløpt</span>;
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+        p.online ? 'bg-ok-tint text-ok' : 'bg-warn-tint text-warn'
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${p.online ? 'bg-ok' : 'bg-warn'}`} aria-hidden="true" />
+      {p.online ? 'Online' : 'Frakoblet'}
+    </span>
+  );
+}
+
+function DeviceCard({ p, screens, selected, selecting, onToggle, onOpen }) {
+  const screen = screens.find((s) => s.id === p.screen_id);
+  const orientation = screen?.orientation === 'portrait' ? 'portrait' : 'landscape';
+  const model = [p.client_info?.model, p.client_info?.tvos_version || p.client_info?.os_version ? `tvOS ${p.client_info?.tvos_version || p.client_info?.os_version}` : null]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <article
+      className={`group relative flex flex-col gap-3 rounded-2xl border bg-card p-2.5 shadow-card transition-shadow hover:shadow-pop ${
+        selected ? 'border-brand ring-2 ring-brand/30' : 'border-hair'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => (selecting ? onToggle(p.device_id) : onOpen(p.device_id))}
+        className="block text-left"
+        aria-label={`Åpne ${displayName(p)}`}
+      >
+        <div className={`relative overflow-hidden rounded-xl bg-zone ${p.status === 'paired' && !p.online ? 'opacity-60 grayscale' : ''}`}>
+          {p.screenshot_at ? (
+            <>
+              <img
+                src={api.pairing.screenshotUrl(p.device_id, p.screenshot_at)}
+                alt=""
+                loading="lazy"
+                className="aspect-video w-full bg-black object-contain"
+              />
+              <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
+                Fra TV-en · {timeAgo(p.screenshot_at)}
+              </span>
+            </>
+          ) : p.screen_id ? (
+            <LiveScreenView screenId={p.screen_id} orientation={orientation} />
+          ) : (
+            <div className="grid aspect-video place-items-center text-sm text-muted">Ingen skjerm valgt</div>
+          )}
+        </div>
+      </button>
+      <label
+        className={`absolute left-4 top-4 grid h-7 w-7 cursor-pointer place-items-center rounded-lg border bg-card/90 shadow-card transition-opacity ${
+          selected || selecting ? 'opacity-100' : 'opacity-0 focus-within:opacity-100 group-hover:opacity-100'
+        } ${selected ? 'border-brand' : 'border-line'}`}
+      >
+        <input type="checkbox" checked={selected} onChange={() => onToggle(p.device_id)} className="h-4 w-4" aria-label={`Velg ${displayName(p)}`} />
+      </label>
+
+      <div className="flex flex-col gap-1.5 px-1.5 pb-1.5">
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate font-bold text-ink">{displayName(p)}</span>
+          <StatusPill p={p} />
+        </div>
+        <span className="truncate text-sm text-muted">
+          {p.status === 'pending' ? `Kode ${codeDisplay(p.code)}` : p.screen_name ? `Viser «${p.screen_name}»` : 'Ingen skjerm'}
+          {p.status === 'paired' && !p.online && p.last_seen ? ` · sist sett ${timeAgo(p.last_seen)}` : ''}
+        </span>
+        {(model || p.tags?.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(p.tags || []).map((t) => (
+              <span key={t} className="rounded-full bg-zone px-2 py-0.5 text-[11px] font-medium text-ink/80">
+                {t}
+              </span>
+            ))}
+            {model && <span className="text-[11px] text-muted">{model}</span>}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
 
 function BulkBtn({ children, onClick, danger }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-        danger ? 'text-danger hover:bg-danger/20' : 'hover:bg-paper/10'
-      }`}
+      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${danger ? 'text-danger hover:bg-danger/20' : 'hover:bg-paper/10'}`}
     >
       {children}
     </button>
   );
 }
 
+/* ----------------------------------- side ---------------------------------- */
+
 export default function PairingManager({ onChange }) {
   const [screens, setScreens] = useState([]);
-  const [pairings, setPairings] = useState([]);
-  const [code, setCode] = useState(codeFromUrl);
-  const [screenId, setScreenId] = useState('');
-  const [error, setError] = useState('');
-  const [ok, setOk] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [flash, setFlash] = useState('');
+  const [pairings, setPairings] = useState(null);
+  const [pairOpen, setPairOpen] = useState(() => !!codeFromUrl());
+  const [filter, setFilter] = useState('all'); // all | online | offline | pending | tag:<navn>
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(() => new Set());
-  const [tagFilter, setTagFilter] = useState(null);
-  const [alerts, setAlerts] = useState(null); // { offline_alerts, offline_minutes }
   const [detailId, setDetailId] = useState(null);
-  const codeRef = useRef(null);
-  const autoOpened = useRef(false);
-
-  const LAST_KEY = 'flatr.pairing.lastDevice';
-
-  // Husk hvilken enhet som ble sett på sist.
-  useEffect(() => {
-    if (!detailId) return;
-    try {
-      localStorage.setItem(LAST_KEY, detailId);
-    } catch {
-      /* ignore */
-    }
-  }, [detailId]);
-
-  useEffect(() => {
-    api.screens
-      .list()
-      .then((rows) => setScreens(rows || []))
-      .catch((e) => setError(e.message));
-    if (codeFromUrl()) codeRef.current?.focus();
-  }, []);
+  const [alerts, setAlerts] = useState(null);
+  const [flash, setFlash] = useState('');
+  const [error, setError] = useState('');
 
   const loadPairings = () =>
     api.pairing
@@ -91,65 +307,112 @@ export default function PairingManager({ onChange }) {
       .catch(() => {});
 
   useEffect(() => {
+    api.screens
+      .list()
+      .then((rows) => setScreens(rows || []))
+      .catch((e) => setError(e.message));
+    api.settings
+      .get()
+      .then(setAlerts)
+      .catch(() => {});
     loadPairings();
     const t = setInterval(loadPairings, 5000);
     return () => clearInterval(t);
   }, []);
 
-  // Åpne automatisk den sist sette enheten – ellers den nyest parede.
+  // Fra Hjem: åpne enheten som ble klikket der.
+  const loaded = pairings !== null;
   useEffect(() => {
-    if (autoOpened.current || detailId || !pairings.length) return;
-    autoOpened.current = true;
-    const paired = pairings.filter((p) => p.status === 'paired');
-    if (!paired.length) return;
-    let remembered = null;
+    if (!loaded) return;
     try {
-      remembered = localStorage.getItem(LAST_KEY);
+      const want = localStorage.getItem(LAST_KEY);
+      if (want && pairings.some((p) => p.device_id === want)) setDetailId(want);
+      localStorage.removeItem(LAST_KEY);
     } catch {
       /* ignore */
     }
-    const byRemembered = remembered && paired.find((p) => p.device_id === remembered);
-    const newest = [...paired].sort(
-      (a, b) =>
-        Date.parse(b.paired_at || b.created_at) - Date.parse(a.paired_at || a.created_at)
-    )[0];
-    const open = byRemembered || newest;
-    if (open) setDetailId(open.device_id);
-  }, [pairings, detailId]);
+  }, [loaded]);
 
   const say = (msg) => {
     setFlash(msg);
-    setTimeout(() => setFlash(''), 2600);
+    setTimeout(() => setFlash(''), 2800);
   };
 
-  const pendingCount = useMemo(
-    () => pairings.filter((p) => p.status === 'pending').length,
-    [pairings]
-  );
-
-  const allTags = useMemo(
-    () => [...new Set(pairings.flatMap((p) => p.tags || []))].sort((a, b) => a.localeCompare(b, 'nb')),
-    [pairings]
-  );
+  const list = pairings || [];
+  const counts = {
+    all: list.length,
+    online: list.filter((p) => p.status === 'paired' && p.online).length,
+    offline: list.filter((p) => p.status === 'paired' && !p.online).length,
+    pending: list.filter((p) => p.status === 'pending').length
+  };
+  const allTags = useMemo(() => [...new Set(list.flatMap((p) => p.tags || []))].sort((a, b) => a.localeCompare(b, 'nb')), [pairings]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return pairings.filter(
-      (p) =>
-        (!tagFilter || (p.tags || []).includes(tagFilter)) &&
-        (!q ||
-          [displayName(p), p.code, codeDisplay(p.code), p.screen_name, p.client_info?.model, p.client_info?.ip, ...(p.tags || [])]
+    return list
+      .filter((p) => {
+        if (filter === 'online') return p.status === 'paired' && p.online;
+        if (filter === 'offline') return p.status === 'paired' && !p.online;
+        if (filter === 'pending') return p.status === 'pending';
+        if (filter.startsWith('tag:')) return (p.tags || []).includes(filter.slice(4));
+        return true;
+      })
+      .filter(
+        (p) =>
+          !q ||
+          [displayName(p), p.code, codeDisplay(p.code), p.screen_name, p.client_info?.model, ...(p.tags || [])]
             .filter(Boolean)
-            .some((v) => String(v).toLowerCase().includes(q)))
-    );
-  }, [pairings, query, tagFilter]);
+            .some((v) => String(v).toLowerCase().includes(q))
+      )
+      .sort(
+        (a, b) =>
+          (a.status === 'pending') - (b.status === 'pending') ||
+          Number(b.online) - Number(a.online) ||
+          displayName(a).localeCompare(displayName(b), 'nb')
+      );
+  }, [pairings, filter, query]);
 
-  useEffect(() => {
-    api.settings
-      .get()
-      .then(setAlerts)
-      .catch(() => {});
-  }, []);
+  const detail = list.find((p) => p.device_id === detailId) || null;
+  const selectedPaired = list.filter((p) => selected.has(p.device_id) && p.status === 'paired').map((p) => p.device_id);
+
+  /* ------------------------------- handlinger ------------------------------- */
+
+  const runCommand = async (ids, command, label) => {
+    if (!ids.length) return say('Ingen tilkoblede enheter valgt.');
+    await Promise.allSettled(ids.map((device_id) => api.pairing.command({ device_id, command })));
+    say(`${label} sendt til ${plural(ids.length, 'enhet', 'enheter')}.`);
+  };
+
+  const act = async (fn, msg) => {
+    try {
+      await fn();
+      if (msg) say(msg);
+      await loadPairings();
+      onChange?.();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const unpair = (ids) => {
+    if (!ids.length || !confirm(`Koble fra ${plural(ids.length, 'enhet', 'enheter')}? De viser en ny kode og må kobles til på nytt.`)) return;
+    act(async () => {
+      await Promise.allSettled(ids.map((device_id) => api.pairing.unpair({ device_id })));
+      setSelected(new Set());
+      if (ids.includes(detailId)) setDetailId(null);
+    }, 'Koblet fra.');
+  };
+
+  const bulkReassign = (sid) =>
+    sid &&
+    act(async () => {
+      await Promise.allSettled(selectedPaired.map((id) => api.pairing.reassign(id, Number(sid))));
+    }, `Flyttet ${plural(selectedPaired.length, 'enhet', 'enheter')}.`);
+
+  const addTag = () => {
+    const tag = window.prompt('Tagg å legge til (f.eks. «2. etasje»):');
+    if (tag?.trim()) act(() => api.pairing.tags([...selected], [tag.trim()], 'add'), `Tagget med «${tag.trim()}».`);
+  };
 
   const saveAlerts = async (patch) => {
     setAlerts((a) => ({ ...a, ...patch }));
@@ -160,376 +423,185 @@ export default function PairingManager({ onChange }) {
     }
   };
 
-  const addTag = async (ids) => {
-    const tag = window.prompt('Tagg å legge til (f.eks. «2. etasje»):');
-    if (!tag?.trim() || !ids.length) return;
-    try {
-      await api.pairing.tags(ids, [tag.trim()], 'add');
-      say(`Tagget ${ids.length} ${ids.length === 1 ? 'enhet' : 'enheter'} med «${tag.trim()}».`);
-      await loadPairings();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const setTags = async (deviceId, tags) => {
-    try {
-      await api.pairing.tags([deviceId], tags, 'set');
-      await loadPairings();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const detailPairing = pairings.find((p) => p.device_id === detailId) || null;
-  const selectedList = pairings.filter((p) => selected.has(p.device_id));
-  const selectedPairedIds = selectedList.filter((p) => p.status === 'paired').map((p) => p.device_id);
-
-  // ---- handlinger ----
-  const submit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setOk('');
-    const clean = normalize(code);
-    if (clean.length < 4) return setError('Skriv inn koden som vises på TV-en.');
-    if (!screenId) return setError('Velg hvilken skjerm enheten skal vise.');
-    setBusy(true);
-    try {
-      const res = await api.pairing.link(clean, Number(screenId));
-      setOk(
-        res?.already
-          ? `Allerede paret med «${res.screen_name}».`
-          : `Paret med «${res.screen_name}». TV-en bytter innhold om noen sekunder.`
-      );
-      setCode('');
-      await loadPairings();
-      onChange?.();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const runCommand = async (ids, command, label) => {
-    if (!ids.length) return say('Ingen parede enheter valgt.');
-    try {
-      await Promise.allSettled(ids.map((device_id) => api.pairing.command({ device_id, command })));
-      say(`${label} sendt til ${ids.length} ${ids.length === 1 ? 'enhet' : 'enheter'}.`);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const setLabel = async (deviceId, label) => {
-    try {
-      await api.pairing.rename(deviceId, label);
-      say(label ? 'Navn lagret.' : 'Navn fjernet.');
-      await loadPairings();
-      onChange?.();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const reassignDevice = async (deviceId, newScreenId, silent) => {
-    if (!newScreenId) return;
-    try {
-      const res = await api.pairing.reassign(deviceId, Number(newScreenId));
-      if (!silent) say(`Flyttet til «${res.screen_name}».`);
-      await loadPairings();
-      onChange?.();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const bulkReassign = async (ids, newScreenId) => {
-    if (!newScreenId || !ids.length) return;
-    await Promise.allSettled(ids.map((id) => api.pairing.reassign(id, Number(newScreenId))));
-    const name = screens.find((s) => s.id === Number(newScreenId))?.name;
-    say(`Flyttet ${ids.length} ${ids.length === 1 ? 'enhet' : 'enheter'}${name ? ` til «${name}»` : ''}.`);
-    await loadPairings();
-    onChange?.();
-  };
-
-  const unpairDevices = async (ids) => {
-    if (!ids.length) return;
-    if (!confirm(`Opphev ${ids.length} ${ids.length === 1 ? 'paring' : 'paringer'}?`)) return;
-    try {
-      await Promise.allSettled(ids.map((device_id) => api.pairing.unpair({ device_id })));
-      setSelected(new Set());
-      if (ids.includes(detailId)) setDetailId(null);
-      await loadPairings();
-      onChange?.();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // ---- utvalg ----
-  const toggle = (deviceId) =>
+  const toggle = (id) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(deviceId) ? next.delete(deviceId) : next.add(deviceId);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  const allShownSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.device_id));
-  const toggleAll = () =>
-    setSelected(allShownSelected ? new Set() : new Set(filtered.map((p) => p.device_id)));
+
+  const chip = (id, label, count) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => setFilter(id)}
+      aria-pressed={filter === id}
+      className={`flex h-9 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors ${
+        filter === id ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'
+      }`}
+    >
+      {label}
+      {count != null && <span className="tabular-nums opacity-70">{count}</span>}
+    </button>
+  );
+
+  const showPair = pairOpen || (loaded && !list.length);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <>
       <PageHeader
         title="Enheter"
-        subtitle="Apple TV-er og andre spillere. Tast inn koden som vises på TV-en for å koble den til en skjerm."
+        subtitle="Apple TV-ene og andre spillere som viser skjermene dine."
         action={
-          pendingCount > 0 ? (
-            <span className="rounded-full bg-badge px-2.5 py-1 text-xs font-bold text-badge-ink">
-              {pendingCount} venter
-            </span>
-          ) : null
+          !showPair && (
+            <Button onClick={() => setPairOpen(true)}>
+              <Icon name="plus" className="h-4 w-4" />
+              Koble til TV
+            </Button>
+          )
         }
       />
 
-      <div className="flex min-h-0 flex-1">
-        <div className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-24 pt-4 sm:px-8">
-            <Card title="Koble til en ny enhet">
-          <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-            <Field label="Parringskode" hint="Vises på TV-en ved oppstart (eller skann QR-en).">
-              <Input
-                ref={codeRef}
-                value={pretty(code)}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="ABC-DEF"
-                autoCapitalize="characters"
-                autoComplete="off"
-                spellCheck={false}
-                className="font-mono text-lg"
-              />
-            </Field>
-            <Field label="Skjerm" hint="Hva enheten skal vise etter parring.">
-              <Select value={screenId} onChange={(e) => setScreenId(e.target.value)}>
-                <option value="">Velg skjerm …</option>
-                {screens.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                    {s.location ? ` – ${s.location}` : ''}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-              <Button type="submit" disabled={busy}>
-                {busy ? 'Kobler til …' : 'Koble til'}
-              </Button>
-              {ok && (
-                <span className="flex items-center gap-1.5 text-sm font-medium text-ok">
-                  <Icon name="check" className="h-4 w-4" />
-                  {ok}
-                </span>
-              )}
-            </div>
-            <div className="sm:col-span-2">
-              <ErrorText>{error}</ErrorText>
-            </div>
-          </form>
-        </Card>
-
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-28 pt-4 sm:px-8">
+        <ErrorText>{error}</ErrorText>
         {flash && (
-          <p className="rounded-xl border border-ok/30 bg-ok-tint px-3 py-2 text-sm font-medium text-ok">
+          <p role="status" className="m-0 rounded-xl bg-ok-tint px-4 py-2.5 text-sm font-semibold text-ok">
             {flash}
           </p>
         )}
 
-        {alerts && (
-          <section className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-line bg-card px-4 py-3 text-sm">
-            <label className="flex items-center gap-2 font-semibold text-ink">
-              <input
-                type="checkbox"
-                checked={alerts.offline_alerts}
-                onChange={(e) => saveAlerts({ offline_alerts: e.target.checked })}
-              />
-              Send e-post til eierne når en TV går offline
-            </label>
-            {alerts.offline_alerts && (
-              <label className="flex items-center gap-2 text-muted">
-                etter
-                <Select
-                  value={alerts.offline_minutes}
-                  onChange={(e) => saveAlerts({ offline_minutes: Number(e.target.value) })}
-                  className="!h-8 !w-28"
+        {showPair && (
+          <PairPanel
+            screens={screens}
+            initialCode={codeFromUrl()}
+            onPaired={() => loadPairings().then(() => onChange?.())}
+            onClose={list.length ? () => setPairOpen(false) : null}
+          />
+        )}
+
+        {list.length > 0 && (
+          <>
+            <section className="grid gap-4 sm:grid-cols-3">
+              {[
+                ['online', 'Online', counts.online, 'bg-ok-tint text-ok'],
+                ['offline', 'Frakoblet', counts.offline, counts.offline ? 'bg-warn-tint text-warn' : 'bg-card text-ink'],
+                ['pending', 'Venter på kobling', counts.pending, 'bg-card text-ink']
+              ].map(([id, label, n, tone]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setFilter(filter === id ? 'all' : id)}
+                  aria-pressed={filter === id}
+                  className={`flex flex-col gap-1 rounded-2xl border p-5 text-left transition-shadow hover:shadow-card ${tone} ${
+                    filter === id ? 'border-ink' : 'border-line'
+                  }`}
                 >
-                  {[...new Set([2, 5, 10, 15, 30, 60, alerts.offline_minutes])].sort((a, b) => a - b).map((m) => (
+                  <span className="text-sm font-semibold opacity-90">{label}</span>
+                  <span className="text-[2rem] font-extrabold leading-tight tabular-nums">{n}</span>
+                </button>
+              ))}
+            </section>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {chip('all', 'Alle', counts.all)}
+              {allTags.map((t) => chip(`tag:${t}`, t))}
+              <label className="ml-auto flex w-64 max-w-full items-center gap-2">
+                <Icon name="search" className="h-4 w-4 shrink-0 text-muted" />
+                <span className="sr-only">Søk</span>
+                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Søk navn, kode, skjerm …" />
+              </label>
+            </div>
+
+            {filtered.length === 0 ? (
+              <p className="m-0 rounded-2xl border border-dashed border-line px-6 py-10 text-center text-muted">Ingen enheter her.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((p) => (
+                  <DeviceCard
+                    key={p.id}
+                    p={p}
+                    screens={screens}
+                    selected={selected.has(p.device_id)}
+                    selecting={selected.size > 0}
+                    onToggle={toggle}
+                    onOpen={setDetailId}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {alerts && list.length > 0 && (
+          <section className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-line bg-card px-5 py-4 text-sm">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zone text-muted">
+              <Icon name="megaphone" className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-ink">Varsling når en TV faller ut</div>
+              <div className="text-muted">Eierne av kontoen får e-post når en TV har vært borte en stund, og når den er tilbake.</div>
+            </div>
+            <label className="flex items-center gap-2 text-muted">
+              <input type="checkbox" checked={alerts.offline_alerts} onChange={(e) => saveAlerts({ offline_alerts: e.target.checked })} />
+              På, etter
+              <Select
+                value={alerts.offline_minutes}
+                disabled={!alerts.offline_alerts}
+                onChange={(e) => saveAlerts({ offline_minutes: Number(e.target.value) })}
+                className="!h-8 !w-24"
+              >
+                {[...new Set([2, 5, 10, 15, 30, 60, alerts.offline_minutes])]
+                  .sort((a, b) => a - b)
+                  .map((m) => (
                     <option key={m} value={m}>
                       {m} min
                     </option>
                   ))}
-                </Select>
-              </label>
-            )}
-          </section>
-        )}
-
-        <section className="overflow-hidden rounded-2xl border border-hair bg-card shadow-card">
-          <header className="flex flex-wrap items-center gap-3 border-b border-hair bg-zone px-4 py-2.5">
-            <label className="flex items-center gap-2 text-xs font-semibold text-zoneink">
-              <input
-                type="checkbox"
-                checked={allShownSelected}
-                onChange={toggleAll}
-                className="h-4 w-4 rounded border-line accent-focus"
-                disabled={filtered.length === 0}
-              />
-              Enheter · {pairings.length}
+              </Select>
             </label>
-            {allTags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {[null, ...allTags].map((t) => (
-                  <button
-                    key={t ?? '__all'}
-                    type="button"
-                    onClick={() => setTagFilter(t)}
-                    aria-pressed={tagFilter === t}
-                    className={`h-7 rounded-full px-3 text-xs font-semibold ${
-                      tagFilter === t ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'
-                    }`}
-                  >
-                    {t ?? 'Alle'}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="relative ml-auto w-56">
-              <Icon
-                name="search"
-                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-              />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Søk enhet, kode, skjerm …"
-                className="h-8 pl-8 text-xs"
-              />
-            </div>
-          </header>
-
-          {filtered.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-muted">
-              {pairings.length === 0
-                ? 'Ingen enheter ennå. Start infoskjerm-appen på en Apple TV for å få en kode.'
-                : 'Ingen enheter matcher søket.'}
-            </p>
-          ) : (
-            <ul className="divide-y divide-hair">
-              {filtered.map((p) => {
-                const status = deviceStatus(p);
-                const paired = p.status === 'paired';
-                const summary = clientSummary(p.client_info);
-                return (
-                  <li key={p.id}>
-                    <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(p.device_id)}
-                        onChange={() => toggle(p.device_id)}
-                        className="h-4 w-4 shrink-0 rounded border-line accent-focus"
-                        aria-label="Velg enhet"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setDetailId(p.device_id)}
-                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                      >
-                        <span
-                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                            p.online ? 'bg-ok' : 'bg-muted/40'
-                          }`}
-                        />
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-1.5 truncate font-semibold text-ink">
-                            <span className="truncate">{displayName(p)}</span>
-                            {(p.tags || []).map((t) => (
-                              <span key={t} className="shrink-0 rounded-full bg-zone px-2 py-0.5 text-[11px] font-medium text-muted">
-                                {t}
-                              </span>
-                            ))}
-                          </span>
-                          <span className="mt-0.5 block truncate text-xs text-muted">
-                            <span className="font-mono">{codeDisplay(p.code)}</span>
-                            {summary ? ` · ${summary}` : ''}
-                          </span>
-                        </span>
-                      </button>
-
-                      <span
-                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${status.cls}`}
-                      >
-                        {status.label}
-                      </span>
-                      <span className="hidden w-32 shrink-0 truncate text-sm text-muted sm:block">
-                        {p.screen_name || '–'}
-                      </span>
-                      <span className="hidden w-28 shrink-0 text-xs text-muted sm:block">
-                        {paired
-                          ? p.last_seen
-                            ? timeAgo(p.last_seen)
-                            : '–'
-                          : p.status === 'pending'
-                            ? `utløper om ${timeUntil(p.expires_at)}`
-                            : ''}
-                      </span>
-                      <Icon name="chevron" className="h-4 w-4 shrink-0 text-muted" />
-                    </div>
-                    {paired && p.screen_id && <DeckPreviewStrip screenId={p.screen_id} />}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-            </section>
-          </div>
-        </div>
-
-        {detailPairing && (
-          <div className="w-[380px] shrink-0 overflow-hidden border-l border-line sm:w-[400px] xl:w-[440px]">
-            <DeviceDetail
-              key={detailPairing.device_id}
-              pairing={detailPairing}
-              screens={screens}
-              onClose={() => setDetailId(null)}
-              onCommand={(cmd, label) => runCommand([detailPairing.device_id], cmd, label)}
-              onSetLabel={(label) => setLabel(detailPairing.device_id, label)}
-              onReassign={(sid) => reassignDevice(detailPairing.device_id, sid)}
-              onUnpair={() => unpairDevices([detailPairing.device_id])}
-              onSetTags={(tags) => setTags(detailPairing.device_id, tags)}
-            />
-          </div>
+          </section>
         )}
       </div>
 
+      {/* detaljer som skuff fra høyre */}
+      {detail && (
+        <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={() => setDetailId(null)}>
+          <div
+            role="dialog"
+            aria-label={`Detaljer for ${displayName(detail)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="h-full w-full max-w-md overflow-hidden border-l border-line bg-card shadow-pop"
+            style={{ animation: 'drawerIn 0.2s ease-out' }}
+          >
+            <DeviceDetail
+              key={detail.device_id}
+              pairing={detail}
+              screens={screens}
+              onClose={() => setDetailId(null)}
+              onCommand={(cmd, label) => runCommand([detail.device_id], cmd, label)}
+              onSetLabel={(label) => act(() => api.pairing.rename(detail.device_id, label), label ? 'Navn lagret.' : 'Navn fjernet.')}
+              onReassign={(sid) => act(() => api.pairing.reassign(detail.device_id, Number(sid)), 'Skjerm byttet.')}
+              onUnpair={() => unpair([detail.device_id])}
+              onSetTags={(tags) => act(() => api.pairing.tags([detail.device_id], tags, 'set'))}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* masseendringer */}
       {selected.size > 0 && (
         <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-full border border-line bg-ink px-2 py-2 text-paper shadow-pop">
           <span className="px-2 text-sm font-semibold">{selected.size} valgt</span>
           <span className="mx-1 h-5 w-px bg-paper/20" />
-          <BulkBtn onClick={() => runCommand(selectedPairedIds, 'identify', 'Identifiser')}>Identifiser</BulkBtn>
-          <BulkBtn onClick={() => runCommand(selectedPairedIds, 'screenshot', 'Skjermbilde-forespørsel')}>
-            Skjermbilde
-          </BulkBtn>
-          <BulkBtn onClick={() => addTag([...selected])}>+ Tagg</BulkBtn>
-          <BulkBtn onClick={() => runCommand(selectedPairedIds, 'reload', 'Last inn')}>Last inn</BulkBtn>
-          <BulkBtn onClick={() => runCommand(selectedPairedIds, 'clear_cache', 'Tøm cache')}>
-            Tøm cache
-          </BulkBtn>
-          <BulkBtn onClick={() => runCommand(selectedPairedIds, 'reboot', 'Restart')}>Restart</BulkBtn>
+          <BulkBtn onClick={() => runCommand(selectedPaired, 'identify', 'Identifiser')}>Identifiser</BulkBtn>
+          <BulkBtn onClick={() => runCommand(selectedPaired, 'screenshot', 'Skjermbilde-forespørsel')}>Skjermbilde</BulkBtn>
+          <BulkBtn onClick={() => runCommand(selectedPaired, 'reload', 'Last inn')}>Last inn</BulkBtn>
+          <BulkBtn onClick={addTag}>+ Tagg</BulkBtn>
           <select
             value=""
-            onChange={(e) => {
-              bulkReassign(selectedPairedIds, e.target.value);
-              e.target.value = '';
-            }}
+            onChange={(e) => bulkReassign(e.target.value)}
             className="rounded-full bg-paper/10 px-3 py-1.5 text-xs font-semibold text-paper focus:outline-none"
+            aria-label="Bytt skjerm"
           >
             <option value="" className="text-ink">
               Bytt skjerm …
@@ -540,20 +612,15 @@ export default function PairingManager({ onChange }) {
               </option>
             ))}
           </select>
-          <BulkBtn danger onClick={() => unpairDevices([...selected])}>
-            Opphev
+          <BulkBtn danger onClick={() => unpair([...selected])}>
+            Koble fra
           </BulkBtn>
           <span className="mx-1 h-5 w-px bg-paper/20" />
-          <button
-            type="button"
-            onClick={() => setSelected(new Set())}
-            className="grid h-7 w-7 place-items-center rounded-full hover:bg-paper/10"
-            aria-label="Fjern utvalg"
-          >
+          <button type="button" onClick={() => setSelected(new Set())} className="grid h-7 w-7 place-items-center rounded-full hover:bg-paper/10" aria-label="Fjern utvalg">
             <Icon name="x" className="h-4 w-4" />
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 }
