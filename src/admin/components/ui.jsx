@@ -113,6 +113,8 @@ const ICONS = {
     </>
   ),
   chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  refresh: <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" />,
+  power: <path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0" />,
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />
