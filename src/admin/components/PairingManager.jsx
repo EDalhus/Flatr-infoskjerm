@@ -222,24 +222,8 @@ function DeviceCard({ p, screens, selected, selecting, onToggle, onOpen }) {
         className="block text-left"
         aria-label={`Åpne ${displayName(p)}`}
       >
-        <div className={`relative overflow-hidden rounded-xl bg-zone ${p.status === 'paired' && !p.online ? 'opacity-60 grayscale' : ''}`}>
-          {p.screenshot_at ? (
-            <>
-              <img
-                src={api.pairing.screenshotUrl(p.device_id, p.screenshot_at)}
-                alt=""
-                loading="lazy"
-                className="aspect-video w-full bg-black object-contain"
-              />
-              <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
-                Fra TV-en · {timeAgo(p.screenshot_at)}
-              </span>
-            </>
-          ) : p.screen_id ? (
-            <LiveScreenView screenId={p.screen_id} orientation={orientation} />
-          ) : (
-            <div className="grid aspect-video place-items-center text-sm text-muted">Ingen skjerm valgt</div>
-          )}
+        <div className={`relative aspect-video overflow-hidden rounded-xl bg-zone ${p.status === 'paired' && !p.online ? 'opacity-60 grayscale' : ''}`}>
+          {p.screen_id && <LiveScreenView screenId={p.screen_id} orientation={orientation} />}
         </div>
       </button>
       <label
@@ -594,7 +578,6 @@ export default function PairingManager({ onChange }) {
           <span className="px-2 text-sm font-semibold">{selected.size} valgt</span>
           <span className="mx-1 h-5 w-px bg-paper/20" />
           <BulkBtn onClick={() => runCommand(selectedPaired, 'identify', 'Identifiser')}>Identifiser</BulkBtn>
-          <BulkBtn onClick={() => runCommand(selectedPaired, 'screenshot', 'Skjermbilde-forespørsel')}>Skjermbilde</BulkBtn>
           <BulkBtn onClick={() => runCommand(selectedPaired, 'reload', 'Last inn')}>Last inn</BulkBtn>
           <BulkBtn onClick={addTag}>+ Tagg</BulkBtn>
           <select
