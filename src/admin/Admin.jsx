@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import { Icon } from './components/ui.jsx';
 import Dashboard from './components/Dashboard.jsx';
-import ScheduleManager from './components/ScheduleManager.jsx';
-import CategoriesManager from './components/CategoriesManager.jsx';
+import ProgramManager from './components/ProgramManager.jsx';
 import SponsorsManager from './components/SponsorsManager.jsx';
 import MediaLibraryManager from './components/MediaLibraryManager.jsx';
 import TemplatesManager from './components/TemplatesManager.jsx';
@@ -30,8 +29,7 @@ const NAV = [
   { id: 'timetable', label: 'Tidsplan', icon: 'clock', group: 'main', Component: TimetableManager },
   { id: 'alerts', label: 'Varsler', icon: 'megaphone', group: 'main', Component: AlertsManager },
   { id: 'pairing', label: 'Enheter', icon: 'link', group: 'main', Component: PairingManager },
-  { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ScheduleManager },
-  { id: 'categories', label: 'Kategorier', icon: 'tag', group: 'content', Component: CategoriesManager },
+  { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager },
   { id: 'sponsors', label: 'Sponsorer', icon: 'image', group: 'content', Component: SponsorsManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'copy', group: 'content', Component: TemplatesManager },
@@ -41,9 +39,13 @@ const NAV = [
   { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager }
 ];
 
+// Gamle adresser som er slått sammen med andre sider.
+const VIEW_ALIAS = { categories: 'schedule' };
+
 const initialTab = () => {
   if (typeof window === 'undefined') return 'dashboard';
-  const v = new URLSearchParams(window.location.search).get('view');
+  const raw = new URLSearchParams(window.location.search).get('view');
+  const v = VIEW_ALIAS[raw] || raw;
   return NAV.some((n) => n.id === v) ? v : 'dashboard';
 };
 
