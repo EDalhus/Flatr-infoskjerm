@@ -1,4 +1,4 @@
-// Rapporter – visningslogg: hvor lenge hver spilleliste, kanal og enhet har
+// Rapporter – visningslogg: hvor lenge hver presentasjon, kanal og enhet har
 // vært på skjerm. Fylles hvert minutt av serveren for skjermer som er online.
 
 import { useEffect, useMemo, useState } from 'react';
@@ -52,9 +52,8 @@ function BarList({ title, rows, total }) {
 
 function downloadCsv(report) {
   const rows = [['Type', 'Navn', 'Minutter']];
-  for (const p of report.playlists) rows.push(['Spilleliste', p.name, p.minutes]);
+  for (const p of report.playlists) rows.push(['Presentasjon', p.name, p.minutes]);
   for (const s of report.screens) rows.push(['Skjerm', s.name, s.minutes]);
-  for (const d of report.devices) rows.push(['Enhet', d.name, d.minutes]);
   for (const d of report.days) rows.push(['Dag', d.day, d.minutes]);
   const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
   const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' });
@@ -149,11 +148,11 @@ export default function ReportsManager() {
               <div className="flex flex-col gap-1 rounded-2xl bg-brand p-5 text-onbrand">
                 <span className="text-sm font-semibold opacity-90">Total skjermtid</span>
                 <span className="text-[2rem] font-extrabold leading-tight tabular-nums">{fmtMinutes(total)}</span>
-                <span className="text-sm opacity-90">på tvers av alle enheter</span>
+                <span className="text-sm opacity-90">på tvers av alle skjermer</span>
               </div>
               <div className="flex flex-col gap-1 rounded-2xl border border-line bg-card p-5">
-                <span className="text-sm font-semibold text-muted">Aktive enheter</span>
-                <span className="text-[2rem] font-extrabold leading-tight tabular-nums text-ink">{report.devices.length}</span>
+                <span className="text-sm font-semibold text-muted">Aktive skjermer</span>
+                <span className="text-[2rem] font-extrabold leading-tight tabular-nums text-ink">{report.screens.length}</span>
                 <span className="text-sm text-muted">var online i perioden</span>
               </div>
               <div className="flex flex-col gap-1 rounded-2xl border border-line bg-card p-5">
@@ -180,19 +179,18 @@ export default function ReportsManager() {
               </div>
             </section>
 
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-2">
               <BarList
-                title="Spillelister"
+                title="Presentasjoner"
                 total={total}
                 rows={report.playlists.map((p) => ({ key: `${p.playlist_id}-${p.name}`, name: p.name, minutes: p.minutes }))}
               />
               <BarList title="Skjermer" total={total} rows={report.screens.map((s) => ({ key: s.screen_id, name: s.name, minutes: s.minutes }))} />
-              <BarList title="Enheter" total={total} rows={report.devices.map((d) => ({ key: d.device_id, name: d.name, minutes: d.minutes }))} />
             </div>
 
             <p className="m-0 text-xs text-muted">
-              Tidssone: {report.timezone}. Loggen telles av serveren hvert minutt for Apple TV-er som er online. Nettleser-skjermer
-              uten paring telles ikke.
+              Tidssone: {report.timezone}. Loggen telles av serveren hvert minutt for Apple TV-er som er online. Skjermer
+              som bare vises i nettleser telles ikke.
             </p>
           </>
         )}

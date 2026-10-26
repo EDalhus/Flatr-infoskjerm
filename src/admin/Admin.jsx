@@ -9,7 +9,6 @@ import ScreensManager from './components/ScreensManager.jsx';
 import PlaylistsManager from './components/PlaylistsManager.jsx';
 import TimetableManager from './components/TimetableManager.jsx';
 import ReportsManager from './components/ReportsManager.jsx';
-import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 import TeamManager from './components/TeamManager.jsx';
 import Login from './Login.jsx';
@@ -23,9 +22,8 @@ import { useCollab } from '../hooks/useCollab.js';
 const NAV = [
   { id: 'dashboard', label: 'Hjem', icon: 'home', group: 'main', Component: Dashboard },
   { id: 'screens', label: 'Skjermer', icon: 'monitor', group: 'main', Component: ScreensManager },
-  { id: 'playlists', label: 'Spillelister', icon: 'layers', group: 'main', Component: PlaylistsManager },
+  { id: 'playlists', label: 'Presentasjoner', icon: 'layers', group: 'main', Component: PlaylistsManager },
   { id: 'timetable', label: 'Tidsplan', icon: 'clock', group: 'main', Component: TimetableManager },
-  { id: 'pairing', label: 'Enheter', icon: 'link', group: 'main', Component: PairingManager },
   { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'copy', group: 'content', Component: TemplatesManager },
@@ -36,7 +34,7 @@ const NAV = [
 ];
 
 // Gamle adresser som er slått sammen med andre sider.
-const VIEW_ALIAS = { categories: 'schedule', sponsors: 'media', alerts: 'dashboard' };
+const VIEW_ALIAS = { categories: 'schedule', sponsors: 'media', alerts: 'dashboard', pairing: 'screens' };
 
 const initialTab = () => {
   if (typeof window === 'undefined') return 'dashboard';
@@ -117,7 +115,7 @@ function AdminShell({ context }) {
   // Global tilstedeværelse – alle som er pålogget Flatr.
   const lobby = useCollab('lobby', { where: current.label });
 
-  // `params` legges i adressen (f.eks. { edit: 3 } åpner spilleliste 3 i editoren).
+  // `params` legges i adressen (f.eks. { edit: 3 } åpner presentasjon 3 i editoren).
   const go = (id, params = {}) => {
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);

@@ -108,7 +108,7 @@ export async function monitorTenant(t) {
   const to = ownerEmails(t.id);
   if (!to.length) return;
   const describe = (d) => `${deviceName(d)}${d.screen_name ? ` (${d.screen_name})` : ''}`;
-  const url = `${ORIGIN()}${t.slug}.${BASE()}/admin?view=pairing`;
+  const url = `${ORIGIN()}${t.slug}.${BASE()}/admin?view=screens`;
   const subject = wentOffline.length
     ? `${wentOffline.length === 1 ? describe(wentOffline[0]) : `${wentOffline.length} TV-er`} er frakoblet – ${t.name}`
     : `${cameBack.length === 1 ? describe(cameBack[0]) : `${cameBack.length} TV-er`} er tilbake – ${t.name}`;

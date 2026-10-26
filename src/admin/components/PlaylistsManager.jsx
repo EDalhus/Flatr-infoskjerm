@@ -1,5 +1,5 @@
-// Spillelister – gjenbrukbare rekker av lysbilder. Kanaler velger hvilken
-// spilleliste de viser. ?edit=<id> åpner en spilleliste i editoren.
+// Presentasjoner – gjenbrukbare rekker av lysbilder. Kanaler velger hvilken
+// presentasjon de viser. ?edit=<id> åpner en presentasjon i editoren.
 
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
@@ -133,7 +133,7 @@ function PlaylistList({ onEdit, onChange }) {
 
   const remove = async (p) => {
     const warn = p.used_by.length
-      ? `«${p.name}» vises på ${p.used_by.map((u) => u.name).join(', ')}. Skjermene blir tomme til du velger en annen spilleliste.\n\nSlette likevel? Den havner i papirkurven.`
+      ? `«${p.name}» vises på ${p.used_by.map((u) => u.name).join(', ')}. Skjermene blir tomme til du velger en annen presentasjon.\n\nSlette likevel? Den havner i papirkurven.`
       : `Slette «${p.name}»? Den havner i papirkurven.`;
     if (!confirm(warn)) return;
     try {
@@ -148,13 +148,13 @@ function PlaylistList({ onEdit, onChange }) {
   return (
     <>
       <PageHeader
-        title="Spillelister"
-        subtitle="Lysbilder i rekkefølge. Velg på hver skjerm hvilken spilleliste den skal vise."
+        title="Presentasjoner"
+        subtitle="Det skjermene viser: lysbilder med tekst, bilder, program og mer. Velg på hver skjerm hvilken presentasjon den viser."
         action={
           !creating && (
             <Button onClick={() => setCreating(true)}>
               <Icon name="plus" className="h-4 w-4" />
-              Ny spilleliste
+              Ny presentasjon
             </Button>
           )
         }
@@ -168,11 +168,11 @@ function PlaylistList({ onEdit, onChange }) {
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-tint text-brand">
               <Icon name="layers" className="h-7 w-7" />
             </div>
-            <h2 className="m-0 text-xl font-bold text-ink">Ingen spillelister ennå</h2>
+            <h2 className="m-0 text-xl font-bold text-ink">Ingen presentasjoner ennå</h2>
             <p className="m-0 max-w-md text-sm text-muted">
-              En spilleliste er innholdet en skjerm viser – lysbilder med tekst, bilder, program og mer.
+              En presentasjon er innholdet en skjerm viser – lysbilder med tekst, bilder, program og mer.
             </p>
-            <Button onClick={() => setCreating(true)}>Lag din første spilleliste</Button>
+            <Button onClick={() => setCreating(true)}>Lag din første presentasjon</Button>
           </div>
         )}
 

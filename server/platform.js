@@ -198,6 +198,14 @@ export function createTenant({ slug, name, ownerEmail, ownerName }) {
   const db = new D1Database(path.join(dir, 'db.sqlite'));
   db.db.exec(TENANT_SCHEMA);
   migrateTenant(db.db);
+  // Eksempelinnholdet blir presentasjoner; skjermer er fysiske TV-er som kunden
+  // legger til selv (oppstartsveiviseren på Hjem hjelper med den første).
+  db.db.exec(`
+    DELETE FROM timeslots;
+    DELETE FROM screens;
+    UPDATE playlists SET name = 'Program med klokke' WHERE id = 1;
+    UPDATE playlists SET name = 'Dagens program' WHERE id = 2;
+  `);
   db.close();
 
   const d = platformDb.db;

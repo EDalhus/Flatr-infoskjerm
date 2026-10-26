@@ -140,6 +140,14 @@ const ICONS = {
       <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" />
     </>
   ),
+  share: (
+    <>
+      <path d="M12 3v12" />
+      <path d="m7 8 5-5 5 5" />
+      <path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+    </>
+  ),
+  sparkle: <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />,
   home: (
     <>
       <path d="m3.5 10.5 8.5-7 8.5 7" />
@@ -365,7 +373,7 @@ export function MetaValue({ children }) {
   );
 }
 
-const cell = 'flex flex-1 items-center justify-center gap-1 rounded-full px-2.5 text-xs font-semibold transition-all';
+const cell = 'flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition-all';
 const track = 'flex h-9 gap-0.5 rounded-full border border-line bg-paper p-1';
 
 /** Segmentert valg (eksklusivt). options: [{ value, label?, icon? }] */

@@ -9,6 +9,7 @@
 //   GET  /api/superadmin/tenants
 //   PUT  /api/superadmin/tenants?id=1   { max_storage_mb?, max_devices?, max_screens? }  (null = standard)
 
+import { marketAdminList, marketAdminSetHidden } from './market.js';
 import {
   platformDb,
   tenantResources,
@@ -171,6 +172,14 @@ export async function handleSuperadminRoute(request, ctx) {
       .runSync();
     const fresh = platformDb.prepare('SELECT * FROM tenants WHERE id = ?').bind(id).firstSync();
     return json(await tenantStats(fresh));
+  }
+
+  // Malmarkedet: se alt som er delt, og skjul det som ikke hører hjemme der.
+  if (p === '/api/superadmin/market' && request.method === 'GET') return json(marketAdminList());
+  if (p === '/api/superadmin/market' && request.method === 'PUT') {
+    const b = await request.json().catch(() => ({}));
+    marketAdminSetHidden(url.searchParams.get('id'), !!b.hidden);
+    return json({ ok: true });
   }
 
   return json({ error: 'Ukjent endepunkt' }, 404);

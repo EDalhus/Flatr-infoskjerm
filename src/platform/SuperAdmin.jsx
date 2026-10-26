@@ -283,9 +283,68 @@ export default function SuperAdmin() {
           </table>
           {tenants && shown.length === 0 && <p className="m-0 p-6 text-center text-muted">Ingen kontoer.</p>}
         </div>
+
+        <MarketAdmin />
       </main>
     </div>
   );
 }
 
 const FragmentRow = ({ children }) => <>{children}</>;
+
+const KIND = { kit: 'Kit', slide: 'Lysbilde', theme: 'Tema' };
+
+/** Malmarkedet: alt som er delt, med mulighet til å skjule det som ikke hører hjemme. */
+function MarketAdmin() {
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState('');
+  const load = () => call('/market').then(setItems).catch((e) => setError(e.message));
+  useEffect(() => {
+    load();
+  }, []);
+  const toggle = async (m) => {
+    try {
+      await call(`/market?id=${m.id}`, { method: 'PUT', body: { hidden: !m.hidden } });
+      load();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  return (
+    <section className="space-y-3">
+      <h2 className="m-0 text-xl font-bold">Malmarkedet</h2>
+      <ErrorText>{error}</ErrorText>
+      <div className="overflow-x-auto rounded-2xl border border-line bg-card">
+        <table className="w-full min-w-[720px] border-collapse text-sm">
+          <thead>
+            <tr className="bg-zone text-left text-xs text-muted">
+              <th className="px-4 py-2.5 font-medium">Mal</th>
+              <th className="px-4 py-2.5 font-medium">Type</th>
+              <th className="px-4 py-2.5 font-medium">Delt av</th>
+              <th className="px-4 py-2.5 font-medium">Brukt</th>
+              <th className="px-4 py-2.5 font-medium">Delt</th>
+              <th className="px-4 py-2.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {(items || []).map((m) => (
+              <tr key={m.id} className={`border-t border-hair ${m.hidden ? 'opacity-50' : ''}`}>
+                <td className="px-4 py-2.5 font-semibold">{m.title}</td>
+                <td className="px-4 py-2.5 text-muted">{KIND[m.kind] || m.kind}</td>
+                <td className="px-4 py-2.5 text-muted">{m.author || '–'}</td>
+                <td className="px-4 py-2.5 tabular-nums">{m.installs}</td>
+                <td className="px-4 py-2.5 text-muted">{date(m.created_at)}</td>
+                <td className="px-4 py-2.5 text-right">
+                  <Button variant="outline" size="sm" onClick={() => toggle(m)}>
+                    {m.hidden ? 'Vis igjen' : 'Skjul'}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {items && items.length === 0 && <p className="m-0 p-6 text-center text-muted">Ingen maler er delt ennå.</p>}
+      </div>
+    </section>
+  );
+}

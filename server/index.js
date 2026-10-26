@@ -22,6 +22,7 @@ import { handlePlatformRoute, handleTenantAuthRoute, readCookie, SESSION_COOKIE 
 import { handleApexDevice, claimFromHub, syncRoutes } from './devices.js';
 import { handleImportRoute } from './imports.js';
 import { handleSuperadminRoute } from './superadmin.js';
+import { handleMarketRoute, serveMarketFile } from './market.js';
 import { startSnapshots } from './snapshots.js';
 import { startMonitor } from './monitor.js';
 
@@ -131,6 +132,8 @@ async function handleTenant(request, tenant) {
 
   const key = apiKey(url.pathname);
   if (key.startsWith('/api/collab/')) return jsonError(426, 'forventet websocket');
+  const marketFile = await serveMarketFile(request);
+  if (marketFile) return marketFile;
 
   if (key === '/api/context') {
     return json({
@@ -145,6 +148,7 @@ async function handleTenant(request, tenant) {
 
   const env = tenantEnv(tenant, user);
   if (key === '/api/import') return handleImportRoute(request, ctx, env);
+  if (key === '/api/market' || key === '/api/market/install') return handleMarketRoute(request, ctx, env);
 
   const isPairingWrite =
     request.method === 'POST' &&
@@ -154,6 +158,11 @@ async function handleTenant(request, tenant) {
     // Kvoten sjekkes før koden flyttes fra hubben, så TV-en ikke blir hengende.
     const atLimit = await checkLimit(env, 'devices');
     if (atLimit) return atLimit;
+    const body = await request.clone().json().catch(() => null);
+    if (body?.new_screen) {
+      const full = await checkLimit(env, 'screens');
+      if (full) return full;
+    }
     await claimFromHub(request, tenant, env);
   }
   const res = await routeApi(request, env);
@@ -176,6 +185,9 @@ async function handlePlatform(request) {
     origin: ctxBase.origin
   });
   if (device) return device;
+
+  const marketFile = await serveMarketFile(request);
+  if (marketFile) return marketFile;
 
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
     const key = apiKey(url.pathname);

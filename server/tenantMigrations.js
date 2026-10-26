@@ -128,7 +128,47 @@ const MIGRATIONS = [
      SET kind = 'carousel',
          config = '{"folder":"Sponsorer","seconds":8,"fit":"contain","transition":"fade","shuffle":false}'
    WHERE kind = 'sponsors';
-  `
+  `,
+
+  // 6: «Skjerm» betyr nå den fysiske TV-en: hver skjerm har høyst én TV.
+  //    Skjermer som ble vist på flere TV-er deles opp, så hver TV får sin egen
+  //    kopi (med samme presentasjon og tidsplan). Tagger flyttes fra TV-en til skjermen.
+  (db) => {
+    db.exec('ALTER TABLE screens ADD COLUMN tags TEXT');
+    const shared = db
+      .prepare(
+        `SELECT screen_id FROM pairings WHERE status = 'paired' AND screen_id IS NOT NULL
+          GROUP BY screen_id HAVING COUNT(*) > 1`
+      )
+      .all();
+    for (const { screen_id } of shared) {
+      const src = db.prepare('SELECT * FROM screens WHERE id = ?').get(screen_id);
+      if (!src) continue;
+      const devices = db
+        .prepare(`SELECT id, label, code FROM pairings WHERE status = 'paired' AND screen_id = ? ORDER BY id`)
+        .all(screen_id);
+      const slots = db.prepare('SELECT * FROM timeslots WHERE screen_id = ?').all(screen_id);
+      devices.slice(1).forEach((d, i) => {
+        const { lastInsertRowid: id } = db
+          .prepare(
+            `INSERT INTO screens (name, location, orientation, rotation, rotation_seconds, playlist_id)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          )
+          .run(d.label || `${src.name} ${i + 2}`, src.location, src.orientation, src.rotation ?? 0, src.rotation_seconds, src.playlist_id);
+        for (const t of slots) {
+          db.prepare(
+            `INSERT INTO timeslots (screen_id, playlist_id, kind, title, days, start_time, end_time, start_date, end_date, priority, enabled)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).run(id, t.playlist_id, t.kind, t.title, t.days, t.start_time, t.end_time, t.start_date, t.end_date, t.priority, t.enabled);
+        }
+        db.prepare('UPDATE pairings SET screen_id = ? WHERE id = ?').run(id, d.id);
+      });
+    }
+    db.exec(`
+      UPDATE screens SET tags = (SELECT p.tags FROM pairings p WHERE p.screen_id = screens.id AND p.status = 'paired' AND p.tags IS NOT NULL LIMIT 1);
+      DELETE FROM pairings WHERE status = 'paired' AND (screen_id IS NULL OR screen_id NOT IN (SELECT id FROM screens));
+    `);
+  }
 ];
 
 export const TENANT_SCHEMA_VERSION = MIGRATIONS.length;
@@ -145,7 +185,8 @@ export function migrateTenant(db) {
     for (let v = current; v < MIGRATIONS.length; v++) {
       db.exec('BEGIN');
       try {
-        db.exec(MIGRATIONS[v]);
+        if (typeof MIGRATIONS[v] === 'function') MIGRATIONS[v](db);
+        else db.exec(MIGRATIONS[v]);
         db.exec(`PRAGMA user_version = ${v + 1}`);
         db.exec('COMMIT');
       } catch (err) {

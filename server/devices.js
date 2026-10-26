@@ -115,11 +115,13 @@ export async function claimFromHub(request, tenant, env) {
   const body = await request.clone().json().catch(() => null);
   const code = normCode(body?.pairing_code ?? body?.code);
   const screenId = Number.parseInt(body?.screen_id, 10);
-  if (!code || !screenId) return;
+  if (!code || (!screenId && !body?.new_screen)) return;
 
   // Ikke ta koden fra hubben hvis koblingen uansett vil feile.
-  const screen = await env.DB.prepare('SELECT id FROM screens WHERE id = ?').bind(screenId).first();
-  if (!screen) return;
+  if (screenId) {
+    const screen = await env.DB.prepare('SELECT id FROM screens WHERE id = ?').bind(screenId).first();
+    if (!screen) return;
+  }
 
   const row = platformDb
     .prepare(`SELECT * FROM pairings WHERE code = ? AND status = 'pending' AND expires_at > ?`)

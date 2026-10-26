@@ -7,8 +7,9 @@
 //        + en `pair_url` TV-en kan vise som QR-kode.
 //   2. TV-en poller  ->  GET /api/pairing/status/<device_id>  hvert ~4. sekund,
 //        og legger gjerne ved klient-info som query: ?app_version=&tvos_version=&resolution=&uptime=
-//   3. Admin taster inn koden i webpanelet (eller skanner QR-en) og velger skjerm
-//        ->  POST /api/pairing/link { pairing_code, screen_id }   (krever ADMIN_TOKEN)
+//   3. Admin taster inn koden i webpanelet (eller skanner QR-en)
+//        ->  POST /api/pairing/link { pairing_code, new_screen: { name, playlist_id? } }
+//            (ny skjerm for TV-en) eller { pairing_code, screen_id } (bytt TV på en skjerm)
 //        Raden settes til `paired`, får `screen_id` og en `auth_token`.
 //   4. Neste status-poll fra TV-en svarer { status:"paired", screen_id, auth_token, commands, … }.
 //        TV-en henter innhold fra /api/state?screen=<id> (med ETag) og lytter på
@@ -34,6 +35,7 @@ import {
   safeJson,
   checkLimit
 } from './_shared.js';
+import { createPlaylist } from './playlists.js';
 
 // Kode-alfabet uten forvekslbare tegn (ingen I, O, 0, 1).
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -218,7 +220,10 @@ async function handleRequest({ request, env }) {
   );
 }
 
-// POST /api/pairing/link  { pairing_code, screen_id }  – fra web-admin. Krever ADMIN_TOKEN når satt.
+// POST /api/pairing/link  – fra web-admin.
+//   { pairing_code, new_screen: { name, playlist_id?, orientation? } } -> lager skjermen for TV-en
+//   { pairing_code, screen_id }                                       -> TV-en tar over en skjerm
+// En skjerm har høyst én TV; en eventuell gammel TV på skjermen kobles fra.
 async function handleLink(context) {
   const denied = await requireAdmin(context);
   if (denied) return denied;
@@ -229,16 +234,17 @@ async function handleLink(context) {
   const code = String(b?.pairing_code ?? b?.code ?? '')
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, ''); // godta både "ABC-DEF" og "abcdef"
-  const screenId = toIntOrNull(b?.screen_id);
+  let screenId = toIntOrNull(b?.screen_id);
+  const fresh = !screenId && b?.new_screen && typeof b.new_screen === 'object' ? b.new_screen : null;
 
   if (!code) return badRequest('pairing_code er påkrevd');
-  if (!screenId) return badRequest('screen_id er påkrevd');
+  if (!screenId && !fresh) return badRequest('screen_id eller new_screen er påkrevd');
 
-  const screen = await context.env.DB
-    .prepare('SELECT id, name FROM screens WHERE id = ?')
-    .bind(screenId)
-    .first();
-  if (!screen) return notFound('Skjermen finnes ikke');
+  let screen = null;
+  if (screenId) {
+    screen = await context.env.DB.prepare('SELECT id, name FROM screens WHERE id = ?').bind(screenId).first();
+    if (!screen) return notFound('Skjermen finnes ikke');
+  }
 
   const row = await context.env.DB.prepare('SELECT * FROM pairings WHERE code = ?').bind(code).first();
   if (!row) {
@@ -264,7 +270,7 @@ async function handleLink(context) {
 
   if (eff === 'paired') {
     // Idempotent: samme skjerm -> ok. Annen skjerm -> konflikt (bruk /reassign i stedet).
-    if (row.screen_id === screenId) {
+    if (screenId && row.screen_id === screenId) {
       return json({ ok: true, already: true, screen_id: screenId, screen_name: screen.name });
     }
     return json(
@@ -275,6 +281,25 @@ async function handleLink(context) {
       { status: 409 }
     );
   }
+
+  if (fresh) {
+    const full = await checkLimit(context.env, 'screens');
+    if (full) return full;
+    const name = String(fresh.name || '').trim().slice(0, 80) || safeJson(row.client_info, {})?.device_name || 'Ny skjerm';
+    let playlistId = toIntOrNull(fresh.playlist_id);
+    if (playlistId && !(await context.env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(playlistId).first())) {
+      return notFound('Presentasjonen finnes ikke');
+    }
+    if (!playlistId) playlistId = (await createPlaylist(context.env, { name, orientation: fresh.orientation })).id;
+    screen = await context.env.DB
+      .prepare('INSERT INTO screens (name, location, playlist_id) VALUES (?, ?, ?) RETURNING id, name')
+      .bind(name, fresh.location ? String(fresh.location).trim() : null, playlistId)
+      .first();
+    screenId = screen.id;
+  }
+
+  // Én TV per skjerm: en TV som allerede viste skjermen kobles fra.
+  await context.env.DB.prepare(`DELETE FROM pairings WHERE screen_id = ? AND status = 'paired'`).bind(screenId).run();
 
   // pending -> paired
   const authToken = randomToken(32);

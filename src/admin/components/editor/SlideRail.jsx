@@ -1,4 +1,4 @@
-// Venstre: lysbildene i spillelisten. Dra for å endre rekkefølge. Avatarene
+// Venstre: lysbildene i presentasjonen. Dra for å endre rekkefølge. Avatarene
 // viser hvem som jobber på hvilket lysbilde.
 
 import { useListDnd } from '../../../hooks/useListDnd.js';

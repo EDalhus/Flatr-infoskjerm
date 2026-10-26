@@ -1,5 +1,5 @@
 // Tidsplan – hva hver kanal viser når. Ukekalender pr. kanal med regler
-// (spilleliste eller «skjerm av»), overstyring og kontoens tidssone.
+// (presentasjon eller «skjerm av»), overstyring og kontoens tidssone.
 // Samme beregning som serveren (src/lib/timeslots.js).
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -417,7 +417,9 @@ export default function TimetableManager() {
       .then(([s, p]) => {
         setScreens(s || []);
         setPlaylists(p || []);
-        setScreenId((cur) => cur ?? s?.[0]?.id ?? null);
+        // ?screen=<id> (fra skjermens detaljer) velger den skjermen.
+        const wanted = Number(new URLSearchParams(window.location.search).get('screen'));
+        setScreenId((cur) => cur ?? (s?.some((x) => x.id === wanted) ? wanted : s?.[0]?.id ?? null));
       })
       .catch((e) => setError(e.message));
     const id = setInterval(() => setTick((t) => t + 1), 30_000);
@@ -448,7 +450,7 @@ export default function TimetableManager() {
     ? current.kind === 'off'
       ? 'Skjerm av'
       : current.playlist_name
-    : defaultName || 'Ingenting (ingen standard-spilleliste)';
+    : defaultName || 'Ingenting (ingen standardpresentasjon)';
 
   const save = async (body) => {
     if (editing?.id) await api.timeslots.update(editing.id, body);
@@ -500,7 +502,7 @@ export default function TimetableManager() {
     <>
       <PageHeader
         title="Tidsplan"
-        subtitle="Bestem hva hver skjerm viser når. Utenom reglene vises skjermens standard-spilleliste."
+        subtitle="Bestem hva hver skjerm viser når. Utenom reglene vises skjermens standardpresentasjon."
         action={
           <>
             <Button variant="outline" onClick={() => setOverriding(true)} disabled={!screen}>
@@ -603,7 +605,7 @@ export default function TimetableManager() {
           <h2 className="m-0 text-base font-bold text-ink">Regler for {screen?.name}</h2>
           {slots.length === 0 ? (
             <p className="m-0 text-sm text-muted">
-              Ingen regler – skjermen viser alltid standard-spillelisten. Klikk i kalenderen for å lage en.
+              Ingen regler – skjermen viser alltid standardpresentasjonen. Klikk i kalenderen for å lage en.
             </p>
           ) : (
             <ul className="m-0 flex list-none flex-col gap-2 p-0">

@@ -122,6 +122,12 @@ export const api = {
       remove: (id) => req(`/deck-elements?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     }
   },
+  market: {
+    list: (params = {}) => req(`/market?${new URLSearchParams(Object.entries(params).filter(([, v]) => v))}`),
+    publish: (body) => req('/market', { method: 'POST', body }),
+    install: (id, body = {}) => req('/market/install', { method: 'POST', body: { id, ...body } }),
+    remove: (id) => req(`/market?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
   templates: {
     list: (kind) => req(`/templates${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`),
     get: (id) => req(`/templates?id=${encodeURIComponent(id)}`),
@@ -164,9 +170,13 @@ export const api = {
     dismissAll: () => req('/alerts?all=1', { method: 'DELETE' })
   },
   pairing: {
-    // Admin: koble en kode (vist på TV-en) til en skjerm.
-    link: (pairing_code, screen_id) =>
-      req('/pairing/link', { method: 'POST', body: { pairing_code, screen_id } }),
+    // Admin: koble en kode (vist på TV-en) til en skjerm. `target` er en
+    // skjerm-id (TV-en tar over skjermen) eller { name, playlist_id } for en ny skjerm.
+    link: (pairing_code, target) =>
+      req('/pairing/link', {
+        method: 'POST',
+        body: typeof target === 'object' ? { pairing_code, new_screen: target } : { pairing_code, screen_id: target }
+      }),
     // Admin: liste over parringer (pending + paired + client_info).
     list: () => req('/pairing'),
     // Admin: flytt en paret enhet til en annen skjerm (TV-en trenger ikke røres).

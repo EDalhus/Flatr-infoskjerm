@@ -1,14 +1,18 @@
-// Hjem – «Skjermene dine»: status for alle parede skjermer, hva de viser,
-// og snarveier for å sende et varsel eller koble til en ny skjerm.
+// Hjem – «Skjermene dine»: status for alle skjermer, hva de viser, og
+// snarveier for å sende et varsel eller legge til en skjerm. Er ingen skjerm
+// i gang ennå, vises oppstartsveiviseren i stedet.
 // Visningen er kort (standard i Varm) eller tabell (standard i Presis).
 
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Button, Input, Select, PageHeader, ErrorText } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
-import { displayName, timeAgo } from './pairingHelpers.js';
+import Onboarding from './Onboarding.jsx';
+import { screenState, StatusPill, showing } from './screenStatus.jsx';
+import { timeAgo } from './pairingHelpers.js';
 
-const LAST_DEVICE_KEY = 'flatr.pairing.lastDevice';
+const OPEN_SCREEN_KEY = 'flatr.screens.open';
+const WIZARD_SKIP_KEY = 'flatr.onboarding.skipped';
 const VIEW_KEY = 'flatr.dashboard.view';
 
 function greeting(name) {
@@ -35,51 +39,36 @@ function SummaryCard({ tone, label, value, sub }) {
   );
 }
 
-function StatusBadge({ online }) {
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-        online ? 'bg-ok-tint text-ok' : 'bg-warn-tint text-warn'
-      }`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-ok' : 'bg-warn'}`} aria-hidden="true" />
-      {online ? 'På' : 'Av'}
-    </span>
-  );
+function Preview({ s }) {
+  return <LiveScreenView screenId={s.id} orientation={s.orientation} />;
 }
 
-function Preview({ p, orientation }) {
-  if (!p.screen_id) {
-    return <div className="grid aspect-video place-items-center rounded-xl bg-zone text-sm text-muted">Ingen skjerm</div>;
-  }
-  return <LiveScreenView screenId={p.screen_id} orientation={orientation} />;
-}
-
-function DeviceCard({ p, orientation, onOpen }) {
+function ScreenCard({ s, onOpen }) {
+  const st = screenState(s);
   return (
     <button
       type="button"
-      onClick={() => onOpen(p.device_id)}
+      onClick={() => onOpen(s.id)}
       className="group flex flex-col gap-3 rounded-2xl border border-hair bg-card p-2.5 text-left shadow-card transition-shadow hover:shadow-pop"
     >
-      <div className={p.online ? '' : 'opacity-60 grayscale'}>
-        <Preview p={p} orientation={orientation} />
+      <div className={st === 'offline' ? 'opacity-60 grayscale' : ''}>
+        <Preview s={s} />
       </div>
       <div className="flex flex-col gap-1 px-1.5 pb-1.5">
         <div className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate font-bold text-ink">{displayName(p)}</span>
-          <StatusBadge online={p.online} />
+          <span className="min-w-0 flex-1 truncate font-bold text-ink">{s.name}</span>
+          <StatusPill s={s} />
         </div>
         <span className="truncate text-sm text-muted">
-          {p.screen_name ? `Viser «${p.screen_name}»` : 'Ingen skjerm valgt'}
-          {!p.online && p.last_seen && ` · sist sett ${timeAgo(p.last_seen)}`}
+          {showing(s)}
+          {st === 'offline' && s.device.last_seen && ` · sist sett ${timeAgo(s.device.last_seen)}`}
         </span>
       </div>
     </button>
   );
 }
 
-function DeviceTable({ rows, orientationOf, onOpen }) {
+function ScreenTable({ rows, onOpen }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-line">
       <table className="w-full min-w-[720px] border-collapse text-sm">
@@ -93,41 +82,30 @@ function DeviceTable({ rows, orientationOf, onOpen }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((p) => (
-            <tr
-              key={p.id}
-              onClick={() => onOpen(p.device_id)}
-              className="cursor-pointer border-t border-hair bg-card transition-colors hover:bg-zone"
-            >
-              <td className="px-4 py-2.5">
-                <div className="flex items-center gap-3">
-                  <div className={`w-16 shrink-0 ${p.online ? '' : 'opacity-60 grayscale'}`}>
-                    <Preview p={p} orientation={orientationOf(p)} />
+          {rows.map((s) => {
+            const st = screenState(s);
+            const seen = s.device?.last_seen || s.last_seen;
+            return (
+              <tr key={s.id} onClick={() => onOpen(s.id)} className="cursor-pointer border-t border-hair bg-card transition-colors hover:bg-zone">
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-16 shrink-0 ${st === 'offline' ? 'opacity-60 grayscale' : ''}`}>
+                      <Preview s={s} />
+                    </div>
+                    <span className="truncate font-medium text-ink">{s.name}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpen(p.device_id);
-                    }}
-                    className="truncate text-left font-medium text-ink hover:underline"
-                  >
-                    {displayName(p)}
-                  </button>
-                </div>
-              </td>
-              <td className="px-4 py-2.5">
-                <StatusBadge online={p.online} />
-              </td>
-              <td className="px-4 py-2.5 text-ink/80">{p.screen_name || '–'}</td>
-              <td className="px-4 py-2.5 font-mono text-xs text-muted">
-                {p.client_info?.model || p.client_info?.device_name || 'Nettleser'}
-              </td>
-              <td className="px-4 py-2.5 text-right font-mono text-xs text-muted">
-                {p.online ? 'nå' : timeAgo(p.last_seen)}
-              </td>
-            </tr>
-          ))}
+                </td>
+                <td className="px-4 py-2.5">
+                  <StatusPill s={s} />
+                </td>
+                <td className="px-4 py-2.5 text-ink/80">{showing(s)}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-muted">{s.device ? s.device.client_info?.model || 'Apple TV' : 'Nettleser'}</td>
+                <td className="px-4 py-2.5 text-right font-mono text-xs text-muted">
+                  {st === 'online' || st === 'browser' ? 'nå' : seen ? timeAgo(seen) : '–'}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -155,32 +133,10 @@ function ViewToggle({ view, setView }) {
   );
 }
 
-function EmptyState({ onPair, onChannels }) {
-  return (
-    <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed border-line bg-card px-6 py-14 text-center">
-      <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-tint text-brand">
-        <Icon name="monitor" className="h-7 w-7" />
-      </div>
-      <div className="max-w-md">
-        <h2 className="m-0 text-xl font-bold text-ink">Koble til din første TV</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Åpne Flatr-appen på en Apple TV og tast inn koden som vises, eller åpne lenken til en skjerm i nettleseren på
-          skjermen.
-        </p>
-      </div>
-      <div className="flex flex-wrap justify-center gap-2">
-        <Button onClick={onPair}>Koble til TV</Button>
-        <Button variant="outline" onClick={onChannels}>
-          Se skjermene
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export default function Dashboard({ onChange, onNavigate, me, theme }) {
-  const [pairings, setPairings] = useState([]);
-  const [screens, setScreens] = useState([]);
+  const [screens, setScreens] = useState(null);
+  const [playlists, setPlaylists] = useState([]);
+  const [wizard, setWizard] = useState(null); // null = avgjøres når data er lastet
   const [activeAlerts, setActiveAlerts] = useState([]);
   const [filter, setFilter] = useState('all');
   const [composer, setComposer] = useState(false);
@@ -207,10 +163,10 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
   };
 
   const load = () =>
-    Promise.all([api.pairing.list(), api.screens.list(), api.alerts.list(false)])
-      .then(([p, s, a]) => {
-        setPairings(p || []);
+    Promise.all([api.screens.list(), api.playlists.list(), api.alerts.list(false)])
+      .then(([s, p, a]) => {
         setScreens(s || []);
+        setPlaylists(p || []);
         setActiveAlerts(a || []);
       })
       .catch((e) => setError(e.message));
@@ -221,35 +177,41 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
     return () => clearInterval(id);
   }, []);
 
-  const go = (id) => (onNavigate ? onNavigate(id) : (window.location.href = `/admin?view=${id}`));
+  const go = (id, params) => (onNavigate ? onNavigate(id, params) : (window.location.href = `/admin?view=${id}`));
 
-  const paired = useMemo(
-    () =>
-      pairings
-        .filter((p) => p.status === 'paired')
-        .sort((a, b) => Number(a.online) - Number(b.online) || displayName(a).localeCompare(displayName(b))),
-    [pairings]
+  const all = screens || [];
+  const rank = { online: 0, browser: 0, offline: 1, idle: 2 };
+  const sorted = useMemo(
+    () => [...all].sort((a, b) => rank[screenState(a)] - rank[screenState(b)] || a.name.localeCompare(b.name, 'nb')),
+    [screens]
   );
-  const pending = pairings.filter((p) => p.status === 'pending');
-  const online = paired.filter((p) => p.online);
-  const offline = paired.filter((p) => !p.online);
+  const live = all.filter((s) => ['online', 'browser'].includes(screenState(s)));
+  const offline = all.filter((s) => screenState(s) === 'offline');
+  const inUse = all.filter((s) => screenState(s) !== 'idle');
 
-  const channelFilters = useMemo(() => {
-    const names = [...new Set(paired.map((p) => p.screen_name).filter(Boolean))];
-    return names.length > 1 ? names : [];
-  }, [paired]);
-  const visible = filter === 'all' ? paired : paired.filter((p) => p.screen_name === filter);
-
-  const orientationOf = (p) =>
-    screens.find((s) => s.id === p.screen_id)?.orientation === 'portrait' ? 'portrait' : 'landscape';
-
-  const openDevice = (deviceId) => {
+  // Veiviseren vises til minst én skjerm er koblet til og viser noe.
+  const running = all.some((s) => (s.device || s.online) && s.playlist_id && s.slide_count > 0);
+  useEffect(() => {
+    if (!screens || wizard !== null) return;
+    let skipped = false;
     try {
-      localStorage.setItem(LAST_DEVICE_KEY, deviceId);
+      skipped = localStorage.getItem(WIZARD_SKIP_KEY) === '1';
     } catch {
       /* ignore */
     }
-    go('pairing');
+    setWizard(!running && !skipped);
+  }, [screens]);
+
+  const tagFilters = useMemo(() => [...new Set(all.flatMap((s) => s.tags || []))].sort((a, b) => a.localeCompare(b, 'nb')), [screens]);
+  const visible = filter === 'all' ? sorted : sorted.filter((s) => (s.tags || []).includes(filter));
+
+  const openScreen = (id) => {
+    try {
+      localStorage.setItem(OPEN_SCREEN_KEY, String(id));
+    } catch {
+      /* ignore */
+    }
+    go('screens');
   };
 
   const dismissAlert = async (id) => {
@@ -285,6 +247,26 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
     }
   };
 
+  if (screens && wizard) {
+    return (
+      <Onboarding
+        greeting={greeting(me?.name)}
+        playlists={playlists}
+        onNavigate={go}
+        onDone={() => {
+          try {
+            localStorage.setItem(WIZARD_SKIP_KEY, '1');
+          } catch {
+            /* ignore */
+          }
+          setWizard(false);
+          load();
+          onChange?.();
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -296,9 +278,9 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
               <Icon name="megaphone" className="h-4 w-4" />
               Send et varsel
             </Button>
-            <Button onClick={() => go('pairing')}>
+            <Button onClick={() => go('screens')}>
               <Icon name="plus" className="h-4 w-4" />
-              Koble til TV
+              Legg til skjerm
             </Button>
           </>
         }
@@ -324,7 +306,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
               <span className="sr-only">Hvilke skjermer</span>
               <Select value={target} onChange={(e) => setTarget(e.target.value)} className="!w-48">
                 <option value="">Alle skjermer</option>
-                {screens.map((s) => (
+                {all.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -355,7 +337,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold text-ink">{a.message}</span>
                     <span className="block text-xs text-muted">
-                      {a.target_screen_id ? screens.find((s) => s.id === a.target_screen_id)?.name || 'Én skjerm' : 'Alle skjermer'}
+                      {a.target_screen_id ? all.find((s) => s.id === a.target_screen_id)?.name || 'Én skjerm' : 'Alle skjermer'}
                       {a.created_at ? ` · sendt ${timeAgo(a.created_at)}` : ''}
                     </span>
                   </span>
@@ -372,81 +354,59 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
           <SummaryCard
             tone="brand"
             label="Online akkurat nå"
-            value={paired.length ? `${online.length} av ${paired.length}` : '0'}
-            sub={
-              !paired.length ? 'Ingen TV-er koblet til' : offline.length ? 'Noen trenger tilsyn' : 'Alt ser bra ut'
-            }
+            value={inUse.length ? `${live.length} av ${inUse.length}` : '0'}
+            sub={!inUse.length ? 'Ingen skjermer i bruk' : offline.length ? 'Noen trenger tilsyn' : 'Alt ser bra ut'}
           />
           {offline.length > 0 ? (
-            <SummaryCard
-              tone="warn"
-              label="Trenger tilsyn"
-              value={plural(offline.length, 'TV', 'TV-er')}
-              sub={offline.map(displayName).join(', ')}
-            />
+            <SummaryCard tone="warn" label="Trenger tilsyn" value={plural(offline.length, 'skjerm', 'skjermer')} sub={offline.map((s) => s.name).join(', ')} />
           ) : (
-            <SummaryCard
-              tone="plain"
-              label="Skjermer"
-              value={screens.length}
-              sub={pending.length ? plural(pending.length, 'enhet venter', 'enheter venter') : 'Klare til visning'}
-            />
+            <SummaryCard tone="plain" label="Presentasjoner" value={playlists.length} sub={playlists.map((p) => p.name).slice(0, 3).join(', ') || 'Ingen ennå'} />
           )}
-          <SummaryCard
-            tone="plain"
-            label="Aktive varsler"
-            value={activeAlerts.length}
-            sub={activeAlerts[0]?.message || 'Ingen varsler vises nå'}
-          />
+          <SummaryCard tone="plain" label="Aktive varsler" value={activeAlerts.length} sub={activeAlerts[0]?.message || 'Ingen varsler vises nå'} />
         </section>
 
-        {paired.length === 0 ? (
-          <EmptyState onPair={() => go('pairing')} onChannels={() => go('screens')} />
-        ) : (
+        {all.length > 0 && (
           <section className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="m-0 mr-2 text-lg font-bold text-ink">Etter skjerm</h2>
-              {['all', ...channelFilters].map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setFilter(f)}
-                  aria-pressed={filter === f}
-                  className={`h-9 rounded-full px-4 text-sm font-semibold transition-colors ${
-                    filter === f ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'
-                  }`}
-                >
-                  {f === 'all' ? 'Alle' : f}
-                </button>
-              ))}
+              <h2 className="m-0 mr-2 text-lg font-bold text-ink">Skjermene dine</h2>
+              {tagFilters.length > 0 &&
+                ['all', ...tagFilters].map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFilter(f)}
+                    aria-pressed={filter === f}
+                    className={`h-9 rounded-full px-4 text-sm font-semibold transition-colors ${
+                      filter === f ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'
+                    }`}
+                  >
+                    {f === 'all' ? 'Alle' : f}
+                  </button>
+                ))}
               <div className="ml-auto">
                 <ViewToggle view={effectiveView} setView={setView} />
               </div>
             </div>
 
             {effectiveView === 'table' ? (
-              <DeviceTable rows={visible} orientationOf={orientationOf} onOpen={openDevice} />
+              <ScreenTable rows={visible} onOpen={openScreen} />
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {visible.map((p) => (
-                  <DeviceCard key={p.id} p={p} orientation={orientationOf(p)} onOpen={openDevice} />
+                {visible.map((s) => (
+                  <ScreenCard key={s.id} s={s} onOpen={openScreen} />
                 ))}
               </div>
             )}
-
-            {pending.length > 0 && (
-              <p className="text-center text-sm text-muted">
-                {plural(pending.length, 'enhet venter', 'enheter venter')} på å bli koblet til ·{' '}
-                <button
-                  type="button"
-                  onClick={() => go('pairing')}
-                  className="font-semibold text-brand hover:underline"
-                >
-                  Gå til Enheter
-                </button>
-              </p>
-            )}
           </section>
+        )}
+
+        {!running && (
+          <p className="text-center text-sm text-muted">
+            Ingen skjerm viser noe ennå ·{' '}
+            <button type="button" onClick={() => setWizard(true)} className="font-semibold text-brand hover:underline">
+              Start veiviseren
+            </button>
+          </p>
         )}
       </div>
     </>

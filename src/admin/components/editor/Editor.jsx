@@ -1,4 +1,4 @@
-// Editoren for én spilleliste – lerret, lysbilder og egenskaper, med
+// Editoren for én presentasjon – lerret, lysbilder og egenskaper, med
 // samarbeid i sanntid (markører, hvem jobber hvor, låser elementer andre
 // holder på med), angre/gjør om, kopier/lim inn og hurtigtaster.
 
@@ -469,7 +469,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
     }
   };
   const deleteSlide = async (sid) => {
-    if (slides.length <= 1) return setErr('En spilleliste må ha minst ett lysbilde.');
+    if (slides.length <= 1) return setErr('En presentasjon må ha minst ett lysbilde.');
     if (!confirm('Slette lysbildet? Det havner i «Nylig slettet».')) return;
     try {
       await api.deck.slide.remove(sid);
@@ -624,10 +624,10 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
     <div className="flex h-full flex-col overflow-hidden bg-paper">
       {/* ------------------------------- toppfelt ------------------------------- */}
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-card px-3 py-2">
-        <ToolButton icon="back" label="Tilbake til spillelister" onClick={() => (flush(), onBack())} />
+        <ToolButton icon="back" label="Tilbake til presentasjoner" onClick={() => (flush(), onBack())} />
         <div className="flex min-w-0 flex-col pr-2">
           <label className="sr-only" htmlFor="playlist-name">
-            Navn på spillelisten
+            Navn på presentasjonen
           </label>
           <input
             id="playlist-name"
@@ -684,7 +684,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
 
         <div className="ml-auto flex items-center gap-2">
           {/* hvem er her */}
-          <div className="flex items-center -space-x-1.5" aria-label="Hvem jobber i spillelisten">
+          <div className="flex items-center -space-x-1.5" aria-label="Hvem jobber i presentasjonen">
             {me && (
               <span
                 title={`${me.name} (deg)`}

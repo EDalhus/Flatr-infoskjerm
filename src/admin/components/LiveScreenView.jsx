@@ -2,7 +2,7 @@ import { BASE_SIZE } from '../../lib/deck.js';
 import { useFitScale } from '../../hooks/useFitScale.js';
 
 // Live-visning av hva som faktisk spilles på skjermen – embedder Viewer-en
-// (/display/:id?preview=1, eller /preview/:playlistId for en spilleliste)
+// (/display/:id?preview=1, eller /preview/:playlistId for en presentasjon)
 // og skalerer den ned til panelbredden.
 export default function LiveScreenView({ screenId, playlistId, orientation = 'landscape' }) {
   const base = BASE_SIZE[orientation === 'portrait' ? 'portrait' : 'landscape'];
