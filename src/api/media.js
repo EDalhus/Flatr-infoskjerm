@@ -66,7 +66,9 @@ export async function onRequestGet({ request, env }) {
         headers: { ...headers, 'Content-Range': `bytes ${range.offset}-${end}/${row.size}`, 'Content-Length': String(range.length) }
       });
     }
-    if (row.size != null) headers['Content-Length'] = String(row.size);
+    // Faktisk filstørrelse fra lageret (ikke tallet i databasen).
+    const size = obj.size ?? row.size;
+    if (size != null) headers['Content-Length'] = String(size);
     return new Response(obj.body, { headers });
   }
 

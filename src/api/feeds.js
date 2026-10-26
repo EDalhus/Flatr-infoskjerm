@@ -1,4 +1,4 @@
-import { json, badRequest, notFound, handleOptions, toIntOrNull, safeJson, getTimezone } from './_shared.js';
+import { json, badRequest, notFound, handleOptions, toIntOrNull, safeJson, getTimezone, folderImages } from './_shared.js';
 import { parseIcs, upcomingEvents } from '../lib/icsParse.js';
 
 // Data til widgetene vær, nyheter (RSS) og kalender (iCal).
@@ -190,7 +190,7 @@ export async function onRequestGet({ request, env }) {
   )
     .bind(id)
     .first();
-  if (!el || !WIDGET_KINDS.includes(el.kind)) return notFound('Elementet finnes ikke');
+  if (!el || ![...WIDGET_KINDS, 'carousel'].includes(el.kind)) return notFound('Elementet finnes ikke');
   const c = safeJson(el.config, {});
 
   // ?describe=1: selve elementet, til /widget/<id> (skjermbilde for Apple TV).
@@ -199,6 +199,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   try {
+    if (el.kind === 'carousel') return json({ images: c.folder ? await folderImages(env, c.folder) : [] });
     if (el.kind === 'weather') {
       if (!Number.isFinite(Number(c.lat)) || !Number.isFinite(Number(c.lon))) return badRequest('Velg et sted');
       return json(await weather(c.lat, c.lon));

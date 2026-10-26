@@ -3,7 +3,6 @@ import { api } from '../lib/api.js';
 import { Icon } from './components/ui.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ProgramManager from './components/ProgramManager.jsx';
-import SponsorsManager from './components/SponsorsManager.jsx';
 import MediaLibraryManager from './components/MediaLibraryManager.jsx';
 import TemplatesManager from './components/TemplatesManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
@@ -30,7 +29,6 @@ const NAV = [
   { id: 'alerts', label: 'Varsler', icon: 'megaphone', group: 'main', Component: AlertsManager },
   { id: 'pairing', label: 'Enheter', icon: 'link', group: 'main', Component: PairingManager },
   { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager },
-  { id: 'sponsors', label: 'Sponsorer', icon: 'image', group: 'content', Component: SponsorsManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'copy', group: 'content', Component: TemplatesManager },
   { id: 'reports', label: 'Rapporter', icon: 'chart', group: 'content', Component: ReportsManager },
@@ -40,7 +38,7 @@ const NAV = [
 ];
 
 // Gamle adresser som er slått sammen med andre sider.
-const VIEW_ALIAS = { categories: 'schedule' };
+const VIEW_ALIAS = { categories: 'schedule', sponsors: 'media' };
 
 const initialTab = () => {
   if (typeof window === 'undefined') return 'dashboard';

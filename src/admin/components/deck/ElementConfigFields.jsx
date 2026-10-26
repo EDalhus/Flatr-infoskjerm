@@ -4,6 +4,7 @@ import { isoToLocalInput, localInputToIso } from '../../../lib/time.js';
 import { Field, Input, Select, Textarea, Segmented, ButtonGroup, ColorInput } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
 import { useEffect, useState } from 'react';
+import { api } from '../../../lib/api.js';
 
 const RSS_PRESETS = [
   { label: 'NRK – Toppsaker', url: 'https://www.nrk.no/toppsaker.rss' },
@@ -13,6 +14,61 @@ const RSS_PRESETS = [
   { label: 'E24', url: 'https://e24.no/rss2/' },
   { label: 'Teknisk Ukeblad', url: 'https://www.tu.no/rss' }
 ];
+
+/** Innstillinger for bildekarusellen: mappe fra mediebiblioteket. */
+function CarouselFields({ c, set }) {
+  const [folders, setFolders] = useState(null);
+  useEffect(() => {
+    api.media
+      .list()
+      .then((rows) => {
+        const count = {};
+        for (const m of rows || []) if (m.folder && (m.content_type || '').startsWith('image/')) count[m.folder] = (count[m.folder] || 0) + 1;
+        setFolders(Object.entries(count).sort((a, b) => a[0].localeCompare(b[0], 'nb')));
+      })
+      .catch(() => setFolders([]));
+  }, []);
+  return (
+    <div className="grid gap-3">
+      <Field label="Mappe" hint="Karusellen viser alle bildene i mappen. Legg til eller fjern bilder i mediebiblioteket.">
+        <Select value={c.folder || ''} onChange={(e) => set({ folder: e.target.value })}>
+          <option value="">Velg mappe …</option>
+          {(folders || []).map(([name, n]) => (
+            <option key={name} value={name}>
+              {name} ({n} {n === 1 ? 'bilde' : 'bilder'})
+            </option>
+          ))}
+          {c.folder && folders && !folders.some(([n]) => n === c.folder) && <option value={c.folder}>{c.folder} (tom)</option>}
+        </Select>
+      </Field>
+      {folders && folders.length === 0 && (
+        <p className="m-0 text-xs text-muted">
+          Du har ingen mapper med bilder ennå. Lag en i{' '}
+          <a href="/admin?view=media" className="font-semibold text-brand hover:underline">
+            mediebiblioteket
+          </a>
+          .
+        </p>
+      )}
+      <Field label="Sekunder pr. bilde">
+        <Input type="number" min={2} max={600} value={c.seconds ?? 8} onChange={(e) => set({ seconds: Number(e.target.value) || 8 })} />
+      </Field>
+      <Field label="Tilpasning">
+        <Select value={c.fit || 'contain'} onChange={(e) => set({ fit: e.target.value })}>
+          <option value="contain">Vis hele bildet</option>
+          <option value="cover">Fyll flaten</option>
+        </Select>
+      </Field>
+      <Field label="Overgang">
+        <Select value={c.transition || 'fade'} onChange={(e) => set({ transition: e.target.value })}>
+          <option value="fade">Ton over</option>
+          <option value="none">Ingen</option>
+        </Select>
+      </Field>
+      <Check label="Tilfeldig rekkefølge" checked={!!c.shuffle} onChange={(v) => set({ shuffle: v })} />
+    </div>
+  );
+}
 
 /** Stedssøk (Kartverket) for vær-widgeten. */
 function PlaceSearch({ value, onPick }) {
@@ -429,6 +485,8 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
       </div>
     );
   }
+
+  if (kind === 'carousel') return <CarouselFields c={c} set={set} />;
 
   if (kind === 'weather') {
     return (

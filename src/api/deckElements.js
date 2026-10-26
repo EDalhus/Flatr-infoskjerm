@@ -24,7 +24,8 @@ const KINDS = [
   'sponsors',
   'weather',
   'rss',
-  'calendar'
+  'calendar',
+  'carousel'
 ];
 const normKind = (v) => (KINDS.includes(v) ? v : 'text');
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);

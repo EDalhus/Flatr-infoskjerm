@@ -113,6 +113,21 @@ const MIGRATIONS = [
     PRIMARY KEY (hour, device_id, playlist_id, off)
   );
   CREATE INDEX IF NOT EXISTS idx_play_log_hour ON play_log (hour);
+  `,
+
+  // 5: Sponsorer blir bildekaruseller basert på mapper i mediebiblioteket.
+  //    Bilder sponsorene bruker fra biblioteket flyttes til mappen «Sponsorer»,
+  //    og sponsor-elementer blir karuseller som viser den mappen.
+  `
+  UPDATE media SET folder = 'Sponsorer'
+   WHERE folder IS NULL
+     AND id IN (SELECT CAST(substr(image_url, instr(image_url, 'id=') + 3,
+                                   instr(substr(image_url, instr(image_url, 'id=') + 3) || '&', '&') - 1) AS INTEGER)
+                  FROM sponsors WHERE image_url LIKE '/api/media?id=%');
+  UPDATE deck_elements
+     SET kind = 'carousel',
+         config = '{"folder":"Sponsorer","seconds":8,"fit":"contain","transition":"fade","shuffle":false}'
+   WHERE kind = 'sponsors';
   `
 ];
 

@@ -8,6 +8,7 @@ import SponsorSlide from './slides/SponsorSlide.jsx';
 import WeatherSlide from './slides/WeatherSlide.jsx';
 import RssSlide from './slides/RssSlide.jsx';
 import CalendarSlide from './slides/CalendarSlide.jsx';
+import CarouselSlide from './slides/CarouselSlide.jsx';
 
 function TextEl({ config }) {
   const c = config || {};
@@ -88,7 +89,8 @@ const WIDGET = {
   sponsors: SponsorSlide,
   weather: WeatherSlide,
   rss: RssSlide,
-  calendar: CalendarSlide
+  calendar: CalendarSlide,
+  carousel: CarouselSlide
 };
 
 export default function ElementView({ element, ctx, onNext }) {

@@ -285,6 +285,7 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
     background: safeJson(s.background, { type: 'color', color: '#0f2733' }),
     elements: elsBySlide[s.id] ?? []
   }));
+  await withCarouselImages(env, deck);
 
   const state = {
     screen: screen || null,
@@ -307,6 +308,32 @@ const youtubeId = (url) =>
  * nettside-elementer og widgetene vær/nyheter/kalender ut med siste
  * skjermbilde (tas av server/snapshots.js), og YouTube med forsidebildet.
  */
+/** Bildene i en mappe i mediebiblioteket (til bildekarusellen), sortert på navn. */
+export async function folderImages(env, folder) {
+  const { results } = await env.DB.prepare(
+    `SELECT id, name FROM media WHERE folder = ? AND content_type LIKE 'image/%' ORDER BY name COLLATE NOCASE, id`
+  )
+    .bind(folder)
+    .all();
+  return (results ?? []).map((m) => ({ url: `/api/media?id=${m.id}&raw=1`, name: m.name }));
+}
+
+/**
+ * Bildekaruseller får bildelista fra mappen sin lagt inn i config.images, så
+ * både nettleseren og Apple TV har alt de trenger i én tilstand – og nye
+ * bilder i mappen dukker opp av seg selv.
+ */
+async function withCarouselImages(env, deck) {
+  const folders = new Set();
+  for (const s of deck) for (const e of s.elements) if (e.kind === 'carousel' && e.config?.folder) folders.add(e.config.folder);
+  if (!folders.size) return;
+  const byFolder = {};
+  for (const f of folders) byFolder[f] = await folderImages(env, f);
+  for (const s of deck)
+    for (const e of s.elements)
+      if (e.kind === 'carousel') e.config = { ...e.config, images: byFolder[e.config?.folder] || [] };
+}
+
 const DEVICE_WIDGETS = ['weather', 'rss', 'calendar'];
 // Nøkkelen skjermbildet er lagret under (se server/snapshots.js).
 const snapshotKey = (e) => (e.kind === 'web' ? e.config?.url : DEVICE_WIDGETS.includes(e.kind) ? `widget:${e.id}` : null);
