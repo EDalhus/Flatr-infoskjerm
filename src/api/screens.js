@@ -7,7 +7,8 @@ import {
   readJson,
   requireAdmin,
   toIntOrNull,
-  moveToTrash
+  moveToTrash,
+  resolveScreenContent
 } from './_shared.js';
 import { createPlaylist } from './playlists.js';
 
@@ -38,6 +39,24 @@ const EXTRA = `(SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = s.playl
 
 const byId = (env, id) => env.DB.prepare(`SELECT s.*, ${EXTRA} FROM screens s WHERE s.id = ?`).bind(id).first();
 
+/** Legger til hva kanalen viser nå ifølge tidsplanen (now_*). */
+async function withNow(env, rows) {
+  const { results: pls } = await env.DB.prepare('SELECT id, name FROM playlists').all();
+  const names = Object.fromEntries((pls ?? []).map((p) => [p.id, p.name]));
+  return Promise.all(
+    rows.map(async (row) => {
+      const now = await resolveScreenContent(env, row);
+      return {
+        ...row,
+        now_playlist_id: now.playlistId,
+        now_playlist_name: now.playlistId ? (names[now.playlistId] ?? null) : null,
+        now_off: now.off,
+        now_slot: now.slot ? { id: now.slot.id, title: now.slot.title || null } : null
+      };
+    })
+  );
+}
+
 // GET /api/screens        -> alle (med slide_count + online)
 // GET /api/screens?id=1   -> én
 export async function onRequestGet({ request, env }) {
@@ -48,12 +67,12 @@ export async function onRequestGet({ request, env }) {
       .prepare(`SELECT s.*, ${EXTRA} FROM screens s WHERE s.id = ?`)
       .bind(id)
       .first();
-    return row ? json(decorate(row)) : notFound('Kanal finnes ikke');
+    return row ? json((await withNow(env, [decorate(row)]))[0]) : notFound('Kanal finnes ikke');
   }
   const { results } = await env.DB
     .prepare(`SELECT s.*, ${EXTRA} FROM screens s ORDER BY s.name ASC`)
     .all();
-  return json((results ?? []).map(decorate));
+  return json(await withNow(env, (results ?? []).map(decorate)));
 }
 
 // POST /api/screens

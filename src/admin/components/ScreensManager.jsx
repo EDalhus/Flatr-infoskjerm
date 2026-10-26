@@ -119,7 +119,11 @@ function ChannelCard({ s, playlists, onPatch, onEditContent, onDuplicate, onDele
             </h3>
             <p className="m-0 truncate text-sm text-muted">
               {s.location ? `${s.location} · ` : ''}
-              {s.slide_count} lysbilde{s.slide_count === 1 ? '' : 'r'}
+              {s.now_off
+                ? 'Skjerm av nå (tidsplan)'
+                : s.now_slot
+                  ? `Nå: ${s.now_playlist_name} (tidsplan)`
+                  : `${s.slide_count} lysbilde${s.slide_count === 1 ? '' : 'r'}`}
             </p>
           </div>
           <IconButton name="copy" label="Dupliser kanal" onClick={() => onDuplicate(s)} />
@@ -128,7 +132,7 @@ function ChannelCard({ s, playlists, onPatch, onEditContent, onDuplicate, onDele
 
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <label className="min-w-0">
-            <span className="sr-only">Spilleliste for {s.name}</span>
+            <span className="sr-only">Standard-spilleliste for {s.name}</span>
             <Select
               value={s.playlist_id ?? ''}
               onChange={(e) => onPatch(s.id, { playlist_id: e.target.value ? Number(e.target.value) : null })}

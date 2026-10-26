@@ -88,6 +88,16 @@ export const api = {
   schedule: crud('schedule'),
   sponsors: crud('sponsors'),
   categories: crud('categories'),
+  timeslots: {
+    list: (screenId) => req(`/timeslots${screenId ? `?screen=${encodeURIComponent(screenId)}` : ''}`),
+    create: (body) => req('/timeslots', { method: 'POST', body }),
+    update: (id, body) => req(`/timeslots?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+    remove: (id) => req(`/timeslots?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+  settings: {
+    get: () => req('/settings'),
+    update: (body) => req('/settings', { method: 'PUT', body })
+  },
   playlists: {
     list: () => req('/playlists'),
     get: (id) => req(`/playlists?id=${encodeURIComponent(id)}`),

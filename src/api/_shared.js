@@ -1,6 +1,7 @@
 // Delte hjelpere for alle API-Functions. Filnavn med _ rutes ikke av Pages.
 
 import { getUser } from './_access.js';
+import { activeSlot, DEFAULT_TZ } from '../lib/timeslots.js';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -121,6 +122,35 @@ export function viewerTarget(request, env) {
   return { screenId: playlistId ? null : params.get('screen'), playlistId };
 }
 
+/** Kontoens tidssone (tidsplanen regner i lokal tid). */
+export async function getTimezone(env) {
+  try {
+    const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = 'timezone'`).first();
+    return row?.value || DEFAULT_TZ;
+  } catch {
+    return DEFAULT_TZ; // tabellen finnes ikke (Worker uten migreringer)
+  }
+}
+
+/**
+ * Hva kanalen skal vise nå: tidsplanens regel om noen gjelder, ellers
+ * kanalens standard-spilleliste. -> { playlistId, off, slot }
+ */
+export async function resolveScreenContent(env, screen, when = new Date()) {
+  let slots = [];
+  try {
+    ({ results: slots } = await env.DB.prepare('SELECT * FROM timeslots WHERE screen_id = ? AND enabled = 1')
+      .bind(screen.id)
+      .all());
+  } catch {
+    slots = []; // ingen tidsplan-tabell (Worker)
+  }
+  const slot = slots?.length ? activeSlot(slots, when, await getTimezone(env)) : null;
+  if (!slot) return { playlistId: screen.playlist_id ?? null, off: false, slot: null };
+  if (slot.kind === 'off') return { playlistId: null, off: true, slot };
+  return { playlistId: slot.playlist_id, off: false, slot };
+}
+
 /** Oppdaterer last_seen for en skjerm (online-status i admin). */
 export async function touchScreen(env, screenId) {
   const id = toIntOrNull(screenId);
@@ -154,7 +184,16 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
     if (!p) playlistId = null;
   } else if (id) {
     screen = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first();
-    playlistId = screen?.playlist_id ?? null;
+    if (screen) {
+      // Tidsplanen bestemmer hva som vises nå (ellers standard-spillelisten).
+      const now = await resolveScreenContent(env, screen);
+      playlistId = now.playlistId;
+      screen = {
+        ...screen,
+        power: now.off ? 'off' : 'on',
+        active_slot: now.slot ? { id: now.slot.id, title: now.slot.title || null } : null
+      };
+    }
     if (screen && playlistId) {
       const p = await env.DB.prepare('SELECT orientation FROM playlists WHERE id = ?').bind(playlistId).first();
       if (p) screen = { ...screen, orientation: p.orientation };

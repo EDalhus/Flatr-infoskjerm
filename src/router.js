@@ -20,6 +20,8 @@ import * as stream from './api/stream.js';
 import * as pairing from './api/pairing.js';
 import * as me from './api/me.js';
 import * as snapshot from './api/snapshot.js';
+import * as timeslots from './api/timeslots.js';
+import * as settings from './api/settings.js';
 
 export { pairing };
 
@@ -41,7 +43,9 @@ const ROUTES = {
   '/api/state': state,
   '/api/stream': stream,
   '/api/me': me,
-  '/api/snapshot': snapshot
+  '/api/snapshot': snapshot,
+  '/api/timeslots': timeslots,
+  '/api/settings': settings
 };
 
 const METHOD_HANDLER = {

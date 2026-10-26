@@ -9,6 +9,7 @@ import MediaLibraryManager from './components/MediaLibraryManager.jsx';
 import TemplatesManager from './components/TemplatesManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
 import PlaylistsManager from './components/PlaylistsManager.jsx';
+import TimetableManager from './components/TimetableManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
 import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
@@ -25,6 +26,7 @@ const NAV = [
   { id: 'dashboard', label: 'Hjem', icon: 'home', group: 'main', Component: Dashboard },
   { id: 'screens', label: 'Kanaler', icon: 'monitor', group: 'main', Component: ScreensManager },
   { id: 'playlists', label: 'Spillelister', icon: 'layers', group: 'main', Component: PlaylistsManager },
+  { id: 'timetable', label: 'Tidsplan', icon: 'clock', group: 'main', Component: TimetableManager },
   { id: 'alerts', label: 'Varsler', icon: 'megaphone', group: 'main', Component: AlertsManager },
   { id: 'pairing', label: 'Enheter', icon: 'link', group: 'main', Component: PairingManager },
   { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ScheduleManager },

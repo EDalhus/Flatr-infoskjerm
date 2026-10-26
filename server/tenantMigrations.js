@@ -69,6 +69,31 @@ const MIGRATIONS = [
     error        TEXT,
     tried_at     TEXT
   );
+  `,
+
+  // 3: Tidsplan pr. kanal (se src/lib/timeslots.js) + kontoinnstillinger (tidssone).
+  `
+  CREATE TABLE IF NOT EXISTS timeslots (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    screen_id   INTEGER NOT NULL REFERENCES screens(id) ON DELETE CASCADE,
+    playlist_id INTEGER REFERENCES playlists(id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL DEFAULT 'playlist',      -- playlist | off
+    title       TEXT,
+    days        TEXT,                                  -- "1,2,3" (ISO), tom = alle
+    start_time  TEXT,                                  -- "HH:MM", tom = hele dagen
+    end_time    TEXT,
+    start_date  TEXT,                                  -- "YYYY-MM-DD", tom = ingen grense
+    end_date    TEXT,
+    priority    INTEGER NOT NULL DEFAULT 0,            -- 0 vanlig, 10 høy (overstyring)
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_timeslots_screen ON timeslots (screen_id);
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+  );
   `
 ];
 

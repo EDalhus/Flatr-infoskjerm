@@ -84,7 +84,10 @@ export default function Viewer() {
           transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${scale})`
         }}
       >
-        {loaded && !state.screen ? (
+        {state.screen?.power === 'off' ? (
+          // Tidsplanen sier «skjerm av»: helt svart (sparer panelet og strøm).
+          <div className="h-full w-full bg-black" />
+        ) : loaded && !state.screen ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-paper p-16 text-center text-ink">
             <div className="text-5xl font-black">{playlistId ? 'Spilleliste' : `Kanal ${screenId}`}</div>
             <p className="max-w-xl text-2xl text-muted">
