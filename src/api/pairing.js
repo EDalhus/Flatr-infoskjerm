@@ -42,7 +42,9 @@ const POLL_SECONDS = 4; // anbefalt polleintervall før paring
 const PAIRED_POLL_SECONDS = 30; // roligere poll etter paring (henter også kommandoer)
 
 // Fjernkommandoer admin kan kø. TV-en henter uleverte i status-pollen.
-const COMMANDS = ['identify', 'reload', 'clear_cache', 'reboot'];
+const COMMANDS = ['identify', 'reload', 'clear_cache', 'reboot', 'screenshot'];
+const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
+const screenshotKey = (deviceId) => `screenshots/${deviceId}.jpg`;
 
 // Hvitliste for klient-info fra TV-en (alt annet forkastes; verdier trimmes).
 const CLIENT_INFO_KEYS = [
@@ -153,6 +155,9 @@ export async function onRequestPost(context) {
   if (path === '/api/pairing/rename') return handleRename(context);
   if (path === '/api/pairing/command') return handleCommand(context);
   if (path === '/api/pairing/unpair') return handleUnpair(context);
+  if (path === '/api/pairing/tags') return handleTags(context);
+  const shot = path.match(/^\/api\/pairing\/screenshot\/([A-Za-z0-9-]{8,})$/);
+  if (shot) return handleScreenshotUpload(context, shot[1]);
   return notFound('Ukjent parrings-endepunkt');
 }
 
@@ -337,6 +342,63 @@ async function handleRename(context) {
   return json({ ok: true, label });
 }
 
+// POST /api/pairing/tags  { device_ids: [...], tags: "a, b" | [..], mode?: "set" | "add" }
+// Tagger grupperer enheter («2. etasje», «Resepsjon») for filtrering og masseendringer.
+async function handleTags(context) {
+  const denied = await requireAdmin(context);
+  if (denied) return denied;
+  const b = await readJson(context.request);
+  const ids = (Array.isArray(b?.device_ids) ? b.device_ids : [b?.device_id]).filter(Boolean).map(String);
+  if (!ids.length) return badRequest('device_ids er påkrevd');
+  const incoming = (Array.isArray(b?.tags) ? b.tags : String(b?.tags ?? '').split(','))
+    .map((t) => String(t).trim().slice(0, 40))
+    .filter(Boolean);
+
+  for (const id of ids) {
+    const row = await context.env.DB.prepare('SELECT tags FROM pairings WHERE device_id = ?').bind(id).first();
+    if (!row) continue;
+    const current = String(row.tags || '').split(',').map((t) => t.trim()).filter(Boolean);
+    const next = b?.mode === 'add' ? [...new Set([...current, ...incoming])] : [...new Set(incoming)];
+    await context.env.DB.prepare('UPDATE pairings SET tags = ? WHERE device_id = ?')
+      .bind(next.length ? next.join(', ') : null, id)
+      .run();
+  }
+  return json({ ok: true });
+}
+
+// POST /api/pairing/screenshot/<device_id>  – fra TV-en (Bearer = enhetens auth_token).
+// Kropp = JPEG. Siste skjermbilde pr. enhet beholdes.
+async function handleScreenshotUpload({ request, env }, deviceId) {
+  const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const row = await env.DB.prepare(
+    `SELECT id FROM pairings WHERE device_id = ? AND auth_token = ? AND status = 'paired'`
+  )
+    .bind(deviceId, token)
+    .first();
+  if (!token || !row) return json({ error: 'Ugyldig enhet' }, { status: 401 });
+  if (!env.MEDIA) return json({ error: 'Lagring mangler' }, { status: 503 });
+
+  const body = new Uint8Array(await request.arrayBuffer());
+  if (!body.length) return badRequest('Tomt bilde');
+  if (body.length > MAX_SCREENSHOT_BYTES) return json({ error: 'Bildet er for stort' }, { status: 413 });
+  await env.MEDIA.put(screenshotKey(deviceId), body, { httpMetadata: { contentType: 'image/jpeg' } });
+  await env.DB.prepare('UPDATE pairings SET screenshot_at = ? WHERE id = ?').bind(nowIso(), row.id).run();
+  return noContent();
+}
+
+// GET /api/pairing/screenshot?device_id=…  – admin: siste skjermbilde fra enheten.
+async function handleScreenshotGet(context) {
+  const denied = await requireAdmin(context);
+  if (denied) return denied;
+  const deviceId = new URL(context.request.url).searchParams.get('device_id');
+  if (!deviceId || !context.env.MEDIA) return notFound('Ingen skjermbilde');
+  const obj = await context.env.MEDIA.get(screenshotKey(deviceId));
+  if (!obj) return notFound('Ingen skjermbilde ennå');
+  return new Response(obj.body, {
+    headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, no-cache' }
+  });
+}
+
 // POST /api/pairing/command  { device_id | screen_id, command, payload? }
 async function handleCommand(context) {
   const denied = await requireAdmin(context);
@@ -418,6 +480,7 @@ export async function onRequestGet(context) {
   if (m) return handleStatus(context, m[1]);
 
   if (path === '/api/pairing') return handleList(context);
+  if (path === '/api/pairing/screenshot') return handleScreenshotGet(context);
 
   return notFound('Ukjent parrings-endepunkt');
 }
@@ -532,7 +595,7 @@ async function handleList(context) {
 
   const { results } = await context.env.DB
     .prepare(
-      `SELECT p.id, p.code, p.device_id, p.status, p.screen_id, p.label,
+      `SELECT p.id, p.code, p.device_id, p.status, p.screen_id, p.label, p.tags, p.screenshot_at,
               p.created_at, p.expires_at, p.paired_at, p.last_seen, p.client_info,
               s.name AS screen_name
          FROM pairings p
@@ -549,6 +612,8 @@ async function handleList(context) {
       device_id: r.device_id,
       status: effectiveStatus(r),
       label: r.label,
+      tags: r.tags ? r.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+      screenshot_at: r.screenshot_at,
       screen_id: r.screen_id,
       screen_name: r.screen_name,
       created_at: r.created_at,

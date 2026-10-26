@@ -22,6 +22,7 @@ import * as me from './api/me.js';
 import * as snapshot from './api/snapshot.js';
 import * as timeslots from './api/timeslots.js';
 import * as settings from './api/settings.js';
+import * as reports from './api/reports.js';
 
 export { pairing };
 
@@ -45,7 +46,8 @@ const ROUTES = {
   '/api/me': me,
   '/api/snapshot': snapshot,
   '/api/timeslots': timeslots,
-  '/api/settings': settings
+  '/api/settings': settings,
+  '/api/reports': reports
 };
 
 const METHOD_HANDLER = {

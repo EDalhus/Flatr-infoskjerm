@@ -94,6 +94,7 @@ export const api = {
     update: (id, body) => req(`/timeslots?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
     remove: (id) => req(`/timeslots?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
+  reports: (from, to) => req(`/reports?${new URLSearchParams({ from, to })}`),
   settings: {
     get: () => req('/settings'),
     update: (body) => req('/settings', { method: 'PUT', body })
@@ -174,7 +175,12 @@ export const api = {
     // Admin: sett/fjern kallenavn på en enhet (tom streng fjerner).
     rename: (device_id, label) =>
       req('/pairing/rename', { method: 'POST', body: { device_id, label } }),
-    // Admin: kø en fjernkommando (identify | reload | clear_cache | reboot).
+    // Admin: tagger på én eller flere enheter. mode 'add' legger til, ellers erstattes.
+    tags: (device_ids, tags, mode = 'set') =>
+      req('/pairing/tags', { method: 'POST', body: { device_ids, tags, mode } }),
+    screenshotUrl: (device_id, v = '') =>
+      `${BASE}/pairing/screenshot?device_id=${encodeURIComponent(device_id)}&v=${encodeURIComponent(v || '')}`,
+    // Admin: kø en fjernkommando (identify | reload | clear_cache | reboot | screenshot).
     command: (body) => req('/pairing/command', { method: 'POST', body }),
     // Admin: opphev en paring (device_id eller screen_id).
     unpair: (body) => req('/pairing/unpair', { method: 'POST', body })

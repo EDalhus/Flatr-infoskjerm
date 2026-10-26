@@ -39,7 +39,7 @@ function BulkBtn({ children, onClick, danger }) {
       type="button"
       onClick={onClick}
       className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-        danger ? 'text-red-300 hover:bg-red-500/20' : 'text-white hover:bg-white/10'
+        danger ? 'text-danger hover:bg-danger/20' : 'hover:bg-paper/10'
       }`}
     >
       {children}
@@ -58,6 +58,8 @@ export default function PairingManager({ onChange }) {
   const [flash, setFlash] = useState('');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(() => new Set());
+  const [tagFilter, setTagFilter] = useState(null);
+  const [alerts, setAlerts] = useState(null); // { offline_alerts, offline_minutes }
   const [detailId, setDetailId] = useState(null);
   const codeRef = useRef(null);
   const autoOpened = useRef(false);
@@ -125,22 +127,59 @@ export default function PairingManager({ onChange }) {
     [pairings]
   );
 
+  const allTags = useMemo(
+    () => [...new Set(pairings.flatMap((p) => p.tags || []))].sort((a, b) => a.localeCompare(b, 'nb')),
+    [pairings]
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return pairings;
-    return pairings.filter((p) =>
-      [
-        displayName(p),
-        p.code,
-        codeDisplay(p.code),
-        p.screen_name,
-        p.client_info?.model,
-        p.client_info?.ip
-      ]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q))
+    return pairings.filter(
+      (p) =>
+        (!tagFilter || (p.tags || []).includes(tagFilter)) &&
+        (!q ||
+          [displayName(p), p.code, codeDisplay(p.code), p.screen_name, p.client_info?.model, p.client_info?.ip, ...(p.tags || [])]
+            .filter(Boolean)
+            .some((v) => String(v).toLowerCase().includes(q)))
     );
-  }, [pairings, query]);
+  }, [pairings, query, tagFilter]);
+
+  useEffect(() => {
+    api.settings
+      .get()
+      .then(setAlerts)
+      .catch(() => {});
+  }, []);
+
+  const saveAlerts = async (patch) => {
+    setAlerts((a) => ({ ...a, ...patch }));
+    try {
+      setAlerts(await api.settings.update(patch));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const addTag = async (ids) => {
+    const tag = window.prompt('Tagg å legge til (f.eks. «2. etasje»):');
+    if (!tag?.trim() || !ids.length) return;
+    try {
+      await api.pairing.tags(ids, [tag.trim()], 'add');
+      say(`Tagget ${ids.length} ${ids.length === 1 ? 'enhet' : 'enheter'} med «${tag.trim()}».`);
+      await loadPairings();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const setTags = async (deviceId, tags) => {
+    try {
+      await api.pairing.tags([deviceId], tags, 'set');
+      await loadPairings();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   const detailPairing = pairings.find((p) => p.device_id === detailId) || null;
   const selectedList = pairings.filter((p) => selected.has(p.device_id));
@@ -304,8 +343,37 @@ export default function PairingManager({ onChange }) {
           </p>
         )}
 
+        {alerts && (
+          <section className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-line bg-card px-4 py-3 text-sm">
+            <label className="flex items-center gap-2 font-semibold text-ink">
+              <input
+                type="checkbox"
+                checked={alerts.offline_alerts}
+                onChange={(e) => saveAlerts({ offline_alerts: e.target.checked })}
+              />
+              Send e-post til eierne når en skjerm går offline
+            </label>
+            {alerts.offline_alerts && (
+              <label className="flex items-center gap-2 text-muted">
+                etter
+                <Select
+                  value={alerts.offline_minutes}
+                  onChange={(e) => saveAlerts({ offline_minutes: Number(e.target.value) })}
+                  className="!h-8 !w-28"
+                >
+                  {[...new Set([2, 5, 10, 15, 30, 60, alerts.offline_minutes])].sort((a, b) => a - b).map((m) => (
+                    <option key={m} value={m}>
+                      {m} min
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            )}
+          </section>
+        )}
+
         <section className="overflow-hidden rounded-2xl border border-hair bg-card shadow-card">
-          <header className="flex items-center gap-3 border-b border-hair bg-zone px-4 py-2.5">
+          <header className="flex flex-wrap items-center gap-3 border-b border-hair bg-zone px-4 py-2.5">
             <label className="flex items-center gap-2 text-xs font-semibold text-zoneink">
               <input
                 type="checkbox"
@@ -316,6 +384,23 @@ export default function PairingManager({ onChange }) {
               />
               Enheter · {pairings.length}
             </label>
+            {allTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {[null, ...allTags].map((t) => (
+                  <button
+                    key={t ?? '__all'}
+                    type="button"
+                    onClick={() => setTagFilter(t)}
+                    aria-pressed={tagFilter === t}
+                    className={`h-7 rounded-full px-3 text-xs font-semibold ${
+                      tagFilter === t ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'
+                    }`}
+                  >
+                    {t ?? 'Alle'}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="relative ml-auto w-56">
               <Icon
                 name="search"
@@ -363,8 +448,13 @@ export default function PairingManager({ onChange }) {
                           }`}
                         />
                         <span className="min-w-0">
-                          <span className="block truncate font-semibold text-ink">
-                            {displayName(p)}
+                          <span className="flex items-center gap-1.5 truncate font-semibold text-ink">
+                            <span className="truncate">{displayName(p)}</span>
+                            {(p.tags || []).map((t) => (
+                              <span key={t} className="shrink-0 rounded-full bg-zone px-2 py-0.5 text-[11px] font-medium text-muted">
+                                {t}
+                              </span>
+                            ))}
                           </span>
                           <span className="mt-0.5 block truncate text-xs text-muted">
                             <span className="font-mono">{codeDisplay(p.code)}</span>
@@ -405,6 +495,7 @@ export default function PairingManager({ onChange }) {
         {detailPairing && (
           <div className="w-[380px] shrink-0 overflow-hidden border-l border-line sm:w-[400px] xl:w-[440px]">
             <DeviceDetail
+              key={detailPairing.device_id}
               pairing={detailPairing}
               screens={screens}
               onClose={() => setDetailId(null)}
@@ -412,15 +503,21 @@ export default function PairingManager({ onChange }) {
               onSetLabel={(label) => setLabel(detailPairing.device_id, label)}
               onReassign={(sid) => reassignDevice(detailPairing.device_id, sid)}
               onUnpair={() => unpairDevices([detailPairing.device_id])}
+              onSetTags={(tags) => setTags(detailPairing.device_id, tags)}
             />
           </div>
         )}
       </div>
 
       {selected.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-full border border-white/10 bg-[#1a0730] px-2 py-2 text-white shadow-pop">
+        <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-full border border-line bg-ink px-2 py-2 text-paper shadow-pop">
           <span className="px-2 text-sm font-semibold">{selected.size} valgt</span>
-          <span className="mx-1 h-5 w-px bg-white/20" />
+          <span className="mx-1 h-5 w-px bg-paper/20" />
+          <BulkBtn onClick={() => runCommand(selectedPairedIds, 'identify', 'Identifiser')}>Identifiser</BulkBtn>
+          <BulkBtn onClick={() => runCommand(selectedPairedIds, 'screenshot', 'Skjermbilde-forespørsel')}>
+            Skjermbilde
+          </BulkBtn>
+          <BulkBtn onClick={() => addTag([...selected])}>+ Tagg</BulkBtn>
           <BulkBtn onClick={() => runCommand(selectedPairedIds, 'reload', 'Last inn')}>Last inn</BulkBtn>
           <BulkBtn onClick={() => runCommand(selectedPairedIds, 'clear_cache', 'Tøm cache')}>
             Tøm cache
@@ -432,7 +529,7 @@ export default function PairingManager({ onChange }) {
               bulkReassign(selectedPairedIds, e.target.value);
               e.target.value = '';
             }}
-            className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white focus:outline-none"
+            className="rounded-full bg-paper/10 px-3 py-1.5 text-xs font-semibold text-paper focus:outline-none"
           >
             <option value="" className="text-ink">
               Bytt kanal …
@@ -446,11 +543,11 @@ export default function PairingManager({ onChange }) {
           <BulkBtn danger onClick={() => unpairDevices([...selected])}>
             Opphev
           </BulkBtn>
-          <span className="mx-1 h-5 w-px bg-white/20" />
+          <span className="mx-1 h-5 w-px bg-paper/20" />
           <button
             type="button"
             onClick={() => setSelected(new Set())}
-            className="grid h-7 w-7 place-items-center rounded-full hover:bg-white/10"
+            className="grid h-7 w-7 place-items-center rounded-full hover:bg-paper/10"
             aria-label="Fjern utvalg"
           >
             <Icon name="x" className="h-4 w-4" />

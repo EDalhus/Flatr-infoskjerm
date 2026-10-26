@@ -81,6 +81,15 @@ export async function handleApexDevice(request, { tenantEnv, origin }) {
     return res;
   }
 
+  // Skjermbilde fra en paret TV -> kundens lagring (token sjekkes i pairing.js).
+  const shot = key.match(/^\/api\/pairing\/screenshot\/([A-Za-z0-9-]{8,})$/);
+  if (shot && request.method === 'POST') {
+    const route = routeForDevice(shot[1]);
+    const tenant = route && getTenantById(route.tenant_id);
+    if (!tenant) return new Response(JSON.stringify({ error: 'Ukjent enhet' }), { status: 401 });
+    return pairing.onRequestPost({ request, env: tenantEnv(tenant) });
+  }
+
   // Innhold for en paret TV. Uten gyldig token finnes ingen kunde å svare for.
   if (['/api/state', '/api/stream', '/api/heartbeat'].includes(key)) {
     const route = routeForToken(bearer(request));

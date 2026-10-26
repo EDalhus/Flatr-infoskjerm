@@ -112,6 +112,7 @@ const ICONS = {
       <path d="m20 20-3.5-3.5" />
     </>
   ),
+  chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
   users: (
     <>
       <circle cx="9" cy="8" r="3.5" />

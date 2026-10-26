@@ -94,6 +94,25 @@ const MIGRATIONS = [
     key   TEXT PRIMARY KEY,
     value TEXT
   );
+  `,
+
+  // 4: Skjermstyring – tagger, skjermbilder fra spillerne, offline-varsling
+  //    og visningslogg (minutter pr. time, enhet og spilleliste).
+  `
+  ALTER TABLE pairings ADD COLUMN tags TEXT;
+  ALTER TABLE pairings ADD COLUMN screenshot_at TEXT;
+  ALTER TABLE pairings ADD COLUMN offline_notified_at TEXT;
+
+  CREATE TABLE IF NOT EXISTS play_log (
+    hour        TEXT NOT NULL,                -- lokal tid "YYYY-MM-DDTHH"
+    device_id   TEXT NOT NULL,
+    screen_id   INTEGER,
+    playlist_id INTEGER,                      -- NULL = ingenting / skjerm av
+    off         INTEGER NOT NULL DEFAULT 0,
+    minutes     INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (hour, device_id, playlist_id, off)
+  );
+  CREATE INDEX IF NOT EXISTS idx_play_log_hour ON play_log (hour);
   `
 ];
 

@@ -38,12 +38,6 @@ const FEATURES = [
   }
 ];
 
-const STEPS = [
-  { n: '01', title: 'Opprett konto', text: 'Velg navn og din egen adresse – f.eks. dittlag.flatr.no.' },
-  { n: '02', title: 'Lag innholdet', text: 'Bygg skjermbildene i editoren, eller start fra eksempelet du får med.' },
-  { n: '03', title: 'Koble skjermene', text: 'Tast inn koden fra TV-en, eller åpne skjermlenken. Innholdet oppdateres live.' }
-];
-
 const FREE_PLAN = [
   'Opptil 3 skjermer',
   '5 GB lagring til bilder',
@@ -131,10 +125,10 @@ export default function Landing() {
               <Icon name="chevron" className="h-4 w-4" />
             </Link>
             <a
-              href="#slik-virker-det"
+              href="#funksjoner"
               className="inline-flex items-center rounded-md border border-line bg-card px-5 py-3 font-semibold hover:bg-hair"
             >
-              Se hvordan det virker
+              Se funksjonene
             </a>
           </div>
 
@@ -162,26 +156,6 @@ export default function Landing() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section id="slik-virker-det" className="scroll-mt-20 border-t border-line">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2">
-          <div>
-            <SectionHead kicker="Slik virker det" title="I gang på fem minutter" />
-            <div className="mt-10 space-y-6">
-              {STEPS.map((s) => (
-                <div key={s.n} className="flex gap-4">
-                  <div className="font-mono text-sm text-brand">{s.n}</div>
-                  <div>
-                    <h3 className="font-semibold">{s.title}</h3>
-                    <p className="mt-1 text-sm leading-relaxed text-muted">{s.text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <ScreenMock />
         </div>
       </section>
 
@@ -384,60 +358,6 @@ function DashboardMock() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Stilisert infoskjerm med program og et aktivt live-varsel (ren markup, ingen bilder). */
-function ScreenMock() {
-  const next = [
-    ['15:00', 'Panel: Fremtidens kultur', 'Sal A'],
-    ['16:30', 'Workshop', 'Sal B'],
-    ['18:00', 'Middag', 'Foajeen']
-  ];
-  return (
-    <div className="mx-auto w-full max-w-xl">
-      <div className="rounded-xl border border-line bg-black p-2 shadow-pop">
-        <div className="flex aspect-video flex-col overflow-hidden rounded-md bg-[#0b0d0c] text-white">
-          <div className="flex items-center justify-between px-[5%] pt-[3.5%] text-[9px] font-medium uppercase tracking-[0.18em] text-white/50 sm:text-[11px]">
-            <span className="flex items-center gap-2">
-              <LogoMarkSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Hovedscene
-            </span>
-            <span className="font-mono tracking-normal text-white/80">14:32</span>
-          </div>
-
-          <div className="grid min-h-0 flex-1 grid-cols-5 gap-[4%] overflow-hidden px-[5%] py-[3.5%]">
-            <div className="col-span-3 flex flex-col justify-center rounded-md border-l-2 border-[#4ade9f] bg-white/[0.04] px-[6%]">
-              <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#4ade9f] sm:text-[10px]">
-                Pågår nå
-              </span>
-              <span className="mt-1 text-base font-bold leading-tight sm:text-xl">Åpning og velkommen</span>
-              <span className="mt-1 text-[9px] text-white/50 sm:text-xs">14:00 – 15:00 · Sal A</span>
-            </div>
-            <div className="col-span-2 flex min-h-0 flex-col justify-between gap-1">
-              <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-white/40 sm:text-[10px]">
-                Senere i dag
-              </span>
-              {next.map(([t, title, room], i) => (
-                <div key={t} className={`border-t border-white/10 pt-1.5 ${i === 2 ? 'hidden sm:block' : ''}`}>
-                  <div className="truncate text-[10px] font-semibold sm:text-[13px]">{title}</div>
-                  <div className="font-mono text-[8px] text-white/45 sm:text-[10px]">
-                    {t} · {room}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 bg-[#4ade9f] px-[5%] py-[2.5%] text-[9px] font-semibold text-[#052e1f] sm:text-xs">
-            <Icon name="megaphone" className="h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
-            <span className="truncate">Middagen flyttes til 18:30 – velkommen til foajeen!</span>
-          </div>
-        </div>
-      </div>
-      <div className="mx-auto h-5 w-16 bg-gradient-to-b from-line to-transparent" />
-      <p className="text-center text-xs text-muted">Live-varselet dukker opp på alle skjermene med en gang du sender det.</p>
     </div>
   );
 }

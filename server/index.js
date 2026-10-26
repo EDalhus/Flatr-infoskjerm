@@ -20,6 +20,7 @@ import { handlePlatformRoute, handleTenantAuthRoute, readCookie, SESSION_COOKIE 
 import { handleApexDevice, claimFromHub, syncRoutes } from './devices.js';
 import { handleImportRoute } from './imports.js';
 import { startSnapshots } from './snapshots.js';
+import { startMonitor } from './monitor.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -71,6 +72,7 @@ function isPublic(method, key, url) {
   if (key === '/api/context' || key === '/api/health') return true;
   if (key.startsWith('/api/pairing/status/')) return method === 'GET';
   if (key === '/api/pairing/request' || key === '/api/heartbeat') return method === 'POST';
+  if (key.startsWith('/api/pairing/screenshot/')) return method === 'POST'; // TV-token sjekkes i pairing.js
   if (method !== 'GET') return false;
   if (['/api/state', '/api/stream', '/api/schedule', '/api/categories', '/api/screens', '/api/snapshot'].includes(key)) {
     return true;
@@ -195,6 +197,8 @@ setInterval(() => {
 
 // Skjermbilder av nettsider til Apple TV krever konverterings-containeren.
 if (process.env.CONVERTER_URL) startSnapshots();
+// Visningslogg og offline-varsel for parede skjermer.
+startMonitor();
 
 server.listen(PORT, () => {
   console.log(`Flatr kjører på :${PORT}  (${PROTOCOL}://${BASE_DOMAIN}, kunder på *.${BASE_DOMAIN})`);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon, Button, IconButton, Input, Select } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
+import { api } from '../../lib/api.js';
 import {
   codeDisplay,
   displayName,
@@ -50,8 +51,21 @@ export default function DeviceDetail({
   onCommand,
   onSetLabel,
   onReassign,
-  onUnpair
+  onUnpair,
+  onSetTags
 }) {
+  const [tagsDraft, setTagsDraft] = useState((p.tags || []).join(', '));
+  const [asked, setAsked] = useState(false);
+  const playlistId = screens.find((s) => s.id === p.screen_id)?.playlist_id;
+  const saveTags = () => {
+    const next = tagsDraft.split(',').map((t) => t.trim()).filter(Boolean);
+    if (next.join(',') !== (p.tags || []).join(',')) onSetTags?.(next);
+  };
+  const askScreenshot = () => {
+    setAsked(true);
+    onCommand('screenshot', 'Skjermbilde-forespørsel');
+    setTimeout(() => setAsked(false), 60_000);
+  };
   const [editingName, setEditingName] = useState(false);
   const [labelDraft, setLabelDraft] = useState(p.label || '');
 
@@ -148,16 +162,42 @@ export default function DeviceDetail({
 
       {/* alt på én side */}
       <div className="flex-1 space-y-6 overflow-y-auto p-5">
+        {/* skjermbilde fra TV-en */}
+        {paired && (
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className={HEADING}>Skjermbilde fra TV-en</h3>
+              <button type="button" onClick={askScreenshot} disabled={asked} className="text-xs font-semibold text-brand hover:underline disabled:opacity-50">
+                {asked ? 'Venter på TV-en …' : 'Ta nytt'}
+              </button>
+            </div>
+            {p.screenshot_at ? (
+              <figure className="m-0 space-y-1">
+                <img
+                  src={api.pairing.screenshotUrl(p.device_id, p.screenshot_at)}
+                  alt={`Skjermbilde fra ${p.label || 'enheten'}`}
+                  className="w-full rounded-xl border border-hair bg-black"
+                />
+                <figcaption className="text-xs text-muted">Tatt {timeAgo(p.screenshot_at)}</figcaption>
+              </figure>
+            ) : (
+              <p className="m-0 text-sm text-muted">
+                Ingen skjermbilde ennå. Krever Flatr-appen versjon med skjermbilde-støtte – trykk «Ta nytt».
+              </p>
+            )}
+          </section>
+        )}
+
         {/* live-visning */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className={HEADING}>Live</h3>
-            {p.screen_id && (
+            <h3 className={HEADING}>Kanalens innhold nå</h3>
+            {playlistId && (
               <a
-                href={`/admin?view=screens&edit=${p.screen_id}`}
-                className="text-[11px] font-semibold text-brand hover:underline"
+                href={`/admin?view=playlists&edit=${playlistId}`}
+                className="text-xs font-semibold text-brand hover:underline"
               >
-                Rediger lysbilder
+                Rediger innhold
               </a>
             )}
           </div>
@@ -213,6 +253,16 @@ export default function DeviceDetail({
                 ))}
               </Select>
             </div>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-muted">Tagger (kommaseparert)</span>
+              <Input
+                value={tagsDraft}
+                onChange={(e) => setTagsDraft(e.target.value)}
+                onBlur={saveTags}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                placeholder="2. etasje, Resepsjon"
+              />
+            </label>
           </section>
         )}
 

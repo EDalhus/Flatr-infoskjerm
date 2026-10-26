@@ -10,6 +10,7 @@ import TemplatesManager from './components/TemplatesManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
 import PlaylistsManager from './components/PlaylistsManager.jsx';
 import TimetableManager from './components/TimetableManager.jsx';
+import ReportsManager from './components/ReportsManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
 import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
@@ -34,6 +35,7 @@ const NAV = [
   { id: 'sponsors', label: 'Sponsorer', icon: 'image', group: 'content', Component: SponsorsManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'copy', group: 'content', Component: TemplatesManager },
+  { id: 'reports', label: 'Rapporter', icon: 'chart', group: 'content', Component: ReportsManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
   { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
   { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager }
