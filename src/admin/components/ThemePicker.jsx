@@ -1,21 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { api } from '../../lib/api.js';
 
-// Temaene tilsvarer variabelsettene i src/index.css. `c` = [bakgrunn, aksent]
-// for miniatyr-brikken.
+// Temaene tilsvarer variabelsettene i src/index.css. Temaet styrer også
+// navigasjonen i admin (Varm: toppmeny, Presis: ikon-sidemeny).
+// `c` = [bakgrunn, flate, aksent] for miniatyren.
 export const THEMES = [
-  { id: 'slate', label: 'Slate', c: ['#f6f6f7', '#f15a29'] },
-  { id: 'aubergine', label: 'Aubergine', c: ['#2b0d40', '#bc17bf'] },
-  { id: 'skog', label: 'Skog', c: ['#f2f2f2', '#027353'] },
-  { id: 'lagune', label: 'Lagune', c: ['#f4f6f7', '#1f98a6'] },
-  { id: 'mist', label: 'Tåke', c: ['#eeedf5', '#6c6ad9'] }
+  { id: 'varm', label: 'Varm', hint: 'Lyst og vennlig', c: ['#f6f3ee', '#ffffff', '#027353'] },
+  { id: 'presis', label: 'Presis', hint: 'Mørkt og kompakt', c: ['#0a0b0b', '#0f1110', '#4ade9f'] }
 ];
+export const DEFAULT_THEME = 'varm';
 
 const KEY = 'flatr.theme';
-const read = () => {
+const valid = (id) => THEMES.some((t) => t.id === id);
+
+const readLocal = () => {
   try {
-    return localStorage.getItem(KEY) || 'skog';
+    const t = localStorage.getItem(KEY);
+    return valid(t) ? t : null;
   } catch {
-    return 'skog';
+    return null;
   }
 };
 
@@ -28,38 +31,70 @@ export function applyTheme(id) {
   }
 }
 
-export default function ThemePicker() {
-  const [theme, setTheme] = useState(read);
+/**
+ * Aktivt tema. Brukerens lagrede valg (fra /api/me) vinner over det som ligger
+ * i nettleseren, så temaet følger brukeren mellom enheter.
+ */
+export function useTheme(me) {
+  const [theme, setThemeState] = useState(() => readLocal() || DEFAULT_THEME);
+
+  useEffect(() => {
+    const saved = me?.prefs?.theme;
+    if (valid(saved)) setThemeState(saved);
+  }, [me?.prefs?.theme]);
 
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
 
-  const active = THEMES.find((t) => t.id === theme) || THEMES[0];
+  const setTheme = useCallback(
+    (id) => {
+      if (!valid(id)) return;
+      setThemeState(id);
+      if (me?.prefs) api.prefs({ theme: id }).catch(() => {});
+    },
+    [me?.prefs]
+  );
 
+  return [theme, setTheme];
+}
+
+/** To klikkbare miniatyrer – brukes i brukermenyen. */
+export default function ThemePicker({ theme, onChange }) {
   return (
     <div>
-      <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
-        Tema · <span className="text-ink">{active.label}</span>
-      </div>
-      <div className="flex gap-1.5">
-        {THEMES.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTheme(t.id)}
-            title={t.label}
-            aria-pressed={t.id === theme}
-            className={`h-7 w-7 shrink-0 overflow-hidden rounded-full border-2 transition-colors ${
-              t.id === theme ? 'border-ink' : 'border-transparent hover:border-line'
-            }`}
-          >
-            <span className="flex h-full w-full">
-              <span className="w-1/2" style={{ background: t.c[0] }} />
-              <span className="w-1/2" style={{ background: t.c[1] }} />
-            </span>
-          </button>
-        ))}
+      <div className="mb-2 text-xs font-semibold text-muted">Utseende</div>
+      <div className="grid grid-cols-2 gap-2">
+        {THEMES.map((t) => {
+          const active = t.id === theme;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onChange(t.id)}
+              aria-pressed={active}
+              className={`flex flex-col gap-2 rounded-xl border p-2 text-left transition-colors ${
+                active ? 'border-brand ring-2 ring-brand/30' : 'border-line hover:border-muted'
+              }`}
+            >
+              <span
+                className="flex h-12 gap-1 overflow-hidden rounded-lg p-1.5"
+                style={{ background: t.c[0] }}
+                aria-hidden="true"
+              >
+                <span className="w-3 rounded-sm" style={{ background: t.c[1] }} />
+                <span className="flex flex-1 flex-col gap-1 rounded-sm p-1" style={{ background: t.c[1] }}>
+                  <span className="h-1.5 w-2/3 rounded-sm" style={{ background: t.c[2] }} />
+                  <span className="h-1.5 w-1/2 rounded-sm opacity-30" style={{ background: t.c[2] }} />
+                </span>
+              </span>
+              <span className="px-0.5">
+                <span className="block text-sm font-semibold text-ink">{t.label}</span>
+                <span className="block text-xs text-muted">{t.hint}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

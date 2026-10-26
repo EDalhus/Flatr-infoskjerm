@@ -95,6 +95,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pairings_device       ON pairings (device_
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pairings_code_pending ON pairings (code) WHERE status = 'pending';
 `);
 
+// Senere tillegg til eksisterende databaser (ALTER feiler hvis kolonnen finnes).
+for (const sql of [`ALTER TABLE users ADD COLUMN prefs TEXT`]) {
+  try {
+    platformDb.db.exec(sql);
+  } catch {
+    /* finnes allerede */
+  }
+}
+
 /* ------------------------------ hjelpere ------------------------------ */
 
 export const nowIso = () => new Date().toISOString();
@@ -273,7 +282,7 @@ export function sessionUser(sessionId, tenantId) {
   if (!sessionId) return null;
   return platformDb
     .prepare(
-      `SELECT u.id AS user_id, u.email, u.name, m.role
+      `SELECT u.id AS user_id, u.email, u.name, u.prefs, m.role
          FROM sessions s
          JOIN users u ON u.id = s.user_id
          JOIN memberships m ON m.user_id = s.user_id AND m.tenant_id = s.tenant_id
@@ -286,6 +295,20 @@ export function sessionUser(sessionId, tenantId) {
 export function deleteSession(sessionId) {
   if (!sessionId) return;
   platformDb.prepare('DELETE FROM sessions WHERE id_hash = ?').bind(hashToken(sessionId)).runSync();
+}
+
+/** Brukerens innstillinger (tema o.l.) – flettes inn i det som er lagret. */
+export function updatePrefs(userId, patch) {
+  const row = platformDb.prepare('SELECT prefs FROM users WHERE id = ?').bind(userId).firstSync();
+  let prefs = {};
+  try {
+    prefs = JSON.parse(row?.prefs || '{}') || {};
+  } catch {
+    prefs = {};
+  }
+  Object.assign(prefs, patch);
+  platformDb.prepare('UPDATE users SET prefs = ? WHERE id = ?').bind(JSON.stringify(prefs), userId).runSync();
+  return prefs;
 }
 
 /** Rydder utløpte sesjoner/lenker. Kalles periodisk. */

@@ -112,6 +112,25 @@ const ICONS = {
       <path d="m20 20-3.5-3.5" />
     </>
   ),
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M4 7h16M10 11v6M14 11v6" />
+      <path d="M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5h6V7" />
+    </>
+  ),
+  link: (
+    <>
+      <path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1" />
+      <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" />
+    </>
+  ),
   home: (
     <>
       <path d="m3.5 10.5 8.5-7 8.5 7" />
@@ -144,12 +163,12 @@ export function Button({ variant = 'primary', size = 'md', className = '', ...pr
   const base =
     'inline-flex items-center justify-center gap-2 font-semibold transition-all disabled:opacity-50 disabled:pointer-events-none';
   const sizes = {
-    sm: 'h-9 rounded-xl px-3 text-xs uppercase tracking-[0.08em]',
-    md: 'rounded-full px-4 py-2 text-sm'
+    sm: 'h-9 rounded-lg px-3 text-xs',
+    md: 'h-10 rounded-xl px-4 text-sm'
   };
   const variants = {
     primary:
-      'bg-gradient-to-br from-[rgb(var(--c-brand))] to-[rgb(var(--c-focus))] text-white shadow-card hover:shadow-pop hover:brightness-105',
+      'bg-brand text-onbrand shadow-card hover:bg-brand-dark hover:shadow-pop',
     outline: 'border border-line bg-card text-ink hover:bg-hair',
     ghost: 'text-brand hover:bg-brand-tint',
     danger: 'bg-danger-tint text-danger hover:bg-danger-hover'
@@ -230,18 +249,21 @@ export function ErrorText({ children }) {
 
 /* ---------- layout / kort ---------- */
 
-export function PageHeader({ crumbs = [], action }) {
+/**
+ * Sideoverskrift. Siste ledd i `crumbs` er tittelen; `eyebrow` (valgfri) er en
+ * liten linje over, `subtitle` en linje under. Størrelsen følger temaet
+ * (.page-title i index.css).
+ */
+export function PageHeader({ crumbs = [], title, eyebrow, subtitle, action }) {
+  const heading = title ?? crumbs[crumbs.length - 1];
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-line bg-paper/85 px-6 py-4 backdrop-blur sm:px-8">
-      <nav className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
-        {crumbs.map((c, i) => (
-          <span key={c} className="flex items-center gap-1.5">
-            {i > 0 && <Icon name="chevron" className="h-3 w-3 text-muted/60" />}
-            <span className={i === crumbs.length - 1 ? 'text-ink' : ''}>{c}</span>
-          </span>
-        ))}
-      </nav>
-      {action}
+    <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end gap-4 px-6 pb-2 pt-8 sm:px-8">
+      <div className="mr-auto flex min-w-0 flex-col gap-1.5">
+        {eyebrow && <span className="text-sm text-muted">{eyebrow}</span>}
+        <h1 className="page-title m-0 text-ink">{heading}</h1>
+        {subtitle && <p className="m-0 text-sm text-muted">{subtitle}</p>}
+      </div>
+      {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
     </div>
   );
 }
@@ -351,7 +373,7 @@ export function Segmented({ value, onChange, options, className = '' }) {
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
-            className={`${cell} ${active ? 'bg-brand text-white shadow-card' : 'text-muted hover:text-ink'}`}
+            className={`${cell} ${active ? 'bg-brand text-onbrand shadow-card' : 'text-muted hover:text-ink'}`}
           >
             {o.icon ? <Icon name={o.icon} className="h-4 w-4" /> : o.label}
           </button>
@@ -374,7 +396,7 @@ export function ButtonGroup({ items, className = '' }) {
           type="button"
           title={it.title}
           onClick={it.onClick}
-          className={`${cell} ${it.active ? 'bg-brand text-white shadow-card' : 'text-muted hover:text-ink'}`}
+          className={`${cell} ${it.active ? 'bg-brand text-onbrand shadow-card' : 'text-muted hover:text-ink'}`}
         >
           {it.icon ? <Icon name={it.icon} className="h-4 w-4" /> : it.label}
         </button>

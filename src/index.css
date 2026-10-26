@@ -12,158 +12,105 @@ body {
   margin: 0;
   background: rgb(var(--c-paper));
   color: rgb(var(--c-ink));
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 /* ============================================================
-   Temaer. Byttes i runtime via <html data-theme="…"> (ThemePicker).
+   Temaer. Byttes i runtime via <html data-theme="…"> (ThemePicker),
+   og lagres pr. bruker på serveren.
    Verdier er "R G B"-tripler for rgb(var(--c-x) / <alpha>).
-   :root = standardtema «skog» (også det offentlige programmet /s/:id ser).
-   Lyse temaer arver --shadow-* fra :root; bare aubergine overstyrer.
+   Temaene styrer mer enn farger: skrift (--font-*), hjørner (--r-*) og
+   skygger. Admin-skallet velger i tillegg navigasjon ut fra temaet
+   (Varm: toppmeny, Presis: ikon-sidemeny).
+   :root = Varm (også det offentlige programmet /s/:id og innlogging).
    ============================================================ */
-:root {
-  /* Skog – lyst, smaragdgrønn aksent (standard) */
-  --c-paper: 242 242 242;
-  --c-card: 255 255 255;
-  --c-ink: 13 13 13;
-  --c-muted: 107 125 117;
-  --c-line: 224 227 225;
-  --c-hair: 236 240 238;
-  --c-brand: 2 115 83;
-  --c-brand-dark: 1 92 66;
-  --c-brand-tint: 224 238 233;
-  --c-focus: 63 140 118;
-  --c-zone: 232 240 237;
-  --c-zoneink: 63 140 118;
-  --c-ok: 2 115 83;
-  --c-ok-tint: 219 238 231;
-  --c-danger: 193 58 52;
-  --c-danger-tint: 250 234 233;
-  --c-danger-hover: 244 216 214;
-  --c-badge: 226 237 232;
-  --c-badge-ink: 2 115 83;
-  --shadow-card: 0 1px 2px rgba(17, 18, 20, 0.04), 0 1px 3px rgba(17, 18, 20, 0.05);
-  --shadow-pop: 0 8px 30px rgba(17, 18, 20, 0.12);
+:root,
+[data-theme='varm'] {
+  /* Varm – lys sandbakgrunn, Flatr-grønn, runde former */
   color-scheme: light;
-}
-
-[data-theme='slate'] {
-  /* Lyst, nøytralt, oransje aksent */
-  --c-paper: 246 246 247;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 12px;
+  --r-xl: 14px;
+  --r-2xl: 20px;
+  --r-3xl: 28px;
+  --c-paper: 246 243 238;
   --c-card: 255 255 255;
-  --c-ink: 28 29 31;
-  --c-muted: 139 141 148;
-  --c-line: 233 233 236;
-  --c-hair: 240 240 242;
-  --c-brand: 241 90 41;
-  --c-brand-dark: 217 77 30;
-  --c-brand-tint: 253 238 231;
-  --c-focus: 37 99 235;
-  --c-zone: 244 244 246;
-  --c-zoneink: 106 108 114;
-  --c-ok: 22 163 74;
-  --c-ok-tint: 228 246 234;
-  --c-danger: 224 57 58;
-  --c-danger-tint: 253 236 235;
-  --c-danger-hover: 249 220 219;
-  --c-badge: 238 238 240;
-  --c-badge-ink: 82 84 90;
-}
-
-[data-theme='aubergine'] {
-  /* Mørk lilla, magenta aksent, gul highlight */
-  --c-paper: 43 13 64;
-  --c-card: 58 31 115;
-  --c-ink: 242 237 255;
-  --c-muted: 169 153 207;
-  --c-line: 78 49 150;
-  --c-hair: 71 44 136;
-  --c-brand: 188 23 191;
-  --c-brand-dark: 157 15 160;
-  --c-brand-tint: 74 21 102;
-  --c-focus: 62 34 242;
-  --c-zone: 51 25 95;
-  --c-zoneink: 188 171 222;
-  --c-ok: 52 211 153;
-  --c-ok-tint: 18 58 48;
-  --c-danger: 251 113 133;
-  --c-danger-tint: 74 22 38;
-  --c-danger-hover: 92 27 47;
-  --c-badge: 242 234 121;
-  --c-badge-ink: 43 13 64;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-pop: 0 10px 40px rgba(0, 0, 0, 0.55);
-  color-scheme: dark;
-}
-
-[data-theme='skog'] {
-  /* Lyst, smaragdgrønn aksent */
-  --c-paper: 242 242 242;
-  --c-card: 255 255 255;
-  --c-ink: 13 13 13;
-  --c-muted: 107 125 117;
-  --c-line: 224 227 225;
-  --c-hair: 236 240 238;
+  --c-ink: 29 27 24;
+  --c-muted: 111 104 94;
+  --c-line: 226 218 205;
+  --c-hair: 236 230 220;
   --c-brand: 2 115 83;
-  --c-brand-dark: 1 92 66;
-  --c-brand-tint: 224 238 233;
-  --c-focus: 63 140 118;
-  --c-zone: 232 240 237;
-  --c-zoneink: 63 140 118;
+  --c-brand-dark: 1 74 55;
+  --c-brand-tint: 227 241 234;
+  --c-focus: 2 115 83;
+  --c-zone: 240 235 226;
+  --c-zoneink: 92 86 77;
   --c-ok: 2 115 83;
-  --c-ok-tint: 219 238 231;
-  --c-danger: 193 58 52;
-  --c-danger-tint: 250 234 233;
-  --c-danger-hover: 244 216 214;
-  --c-badge: 226 237 232;
-  --c-badge-ink: 2 115 83;
+  --c-ok-tint: 227 241 234;
+  --c-warn: 138 75 0;
+  --c-warn-tint: 253 231 200;
+  --c-danger: 185 56 47;
+  --c-danger-tint: 251 233 230;
+  --c-danger-hover: 245 214 209;
+  --c-badge: 227 241 234;
+  --c-badge-ink: 1 74 55;
+  --c-on-brand: 255 255 255;
+  --shadow-card: 0 1px 2px rgba(60, 40, 10, 0.06), 0 8px 24px rgba(60, 40, 10, 0.06);
+  --shadow-pop: 0 16px 40px rgba(60, 40, 10, 0.14);
 }
 
-[data-theme='lagune'] {
-  /* Lyst, turkis aksent, korall for fare */
-  --c-paper: 244 246 247;
-  --c-card: 255 255 255;
-  --c-ink: 13 13 13;
-  --c-muted: 120 132 134;
-  --c-line: 222 227 228;
-  --c-hair: 235 240 241;
-  --c-brand: 31 152 166;
-  --c-brand-dark: 26 130 142;
-  --c-brand-tint: 222 240 242;
-  --c-focus: 38 166 153;
-  --c-zone: 229 240 241;
-  --c-zoneink: 26 130 142;
-  --c-ok: 38 166 153;
-  --c-ok-tint: 220 240 237;
-  --c-danger: 217 105 95;
-  --c-danger-tint: 250 233 231;
-  --c-danger-hover: 244 214 210;
-  --c-badge: 224 238 240;
-  --c-badge-ink: 31 152 166;
+[data-theme='presis'] {
+  /* Presis – mørk, kontrastrik, grønn neon-aksent, små hjørner */
+  color-scheme: dark;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --r-sm: 4px;
+  --r-md: 5px;
+  --r-lg: 6px;
+  --r-xl: 8px;
+  --r-2xl: 10px;
+  --r-3xl: 12px;
+  --c-paper: 10 11 11;
+  --c-card: 15 17 16;
+  --c-ink: 237 237 236;
+  --c-muted: 139 142 140;
+  --c-line: 31 33 32;
+  --c-hair: 26 28 27;
+  --c-brand: 74 222 159;
+  --c-brand-dark: 134 239 192;
+  --c-brand-tint: 22 32 28;
+  --c-focus: 74 222 159;
+  --c-zone: 20 22 21;
+  --c-zoneink: 139 142 140;
+  --c-ok: 74 222 159;
+  --c-ok-tint: 15 42 31;
+  --c-warn: 245 181 68;
+  --c-warn-tint: 42 31 11;
+  --c-danger: 248 113 113;
+  --c-danger-tint: 51 20 20;
+  --c-danger-hover: 69 26 26;
+  --c-badge: 22 32 28;
+  --c-badge-ink: 74 222 159;
+  --c-on-brand: 5 46 31;
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
 
-[data-theme='mist'] {
-  /* Mykt lyst, blålilla aksent */
-  --c-paper: 238 237 245;
-  --c-card: 255 255 255;
-  --c-ink: 40 40 51;
-  --c-muted: 139 138 158;
-  --c-line: 223 220 242;
-  --c-hair: 237 236 247;
-  --c-brand: 108 106 217;
-  --c-brand-dark: 92 90 196;
-  --c-brand-tint: 223 220 242;
-  --c-focus: 108 106 217;
-  --c-zone: 231 230 246;
-  --c-zoneink: 96 94 180;
-  --c-ok: 22 163 74;
-  --c-ok-tint: 226 240 231;
-  --c-danger: 216 92 92;
-  --c-danger-tint: 250 234 234;
-  --c-danger-hover: 244 216 216;
-  --c-badge: 223 220 242;
-  --c-badge-ink: 92 90 196;
+/* Sideoverskrift – størrelsen er en del av temaet. */
+.page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+[data-theme='presis'] .page-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* Skjul markør på infoskjermer i kiosk-modus */

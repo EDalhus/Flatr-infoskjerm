@@ -323,7 +323,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
               key={o}
               onClick={() => setOrientation(o)}
               className={`px-3 py-1.5 text-xs font-bold ${
-                orientation === o ? 'bg-brand text-white' : 'bg-card text-muted hover:bg-hair'
+                orientation === o ? 'bg-brand text-onbrand' : 'bg-card text-muted hover:bg-hair'
               }`}
             >
               {o === 'landscape' ? '16:9' : '9:16'}

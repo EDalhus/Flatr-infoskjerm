@@ -139,6 +139,7 @@ export const api = {
     request: (email) => req('/auth/request', { method: 'POST', body: { email } }),
     logout: () => req('/auth/logout', { method: 'POST' })
   },
+  prefs: (patch) => req('/prefs', { method: 'PUT', body: patch }),
   team: {
     list: () => req('/team'),
     invite: (email, role) => req('/team', { method: 'POST', body: { email, role } }),

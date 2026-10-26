@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import { Icon } from './components/ui.jsx';
 import Dashboard from './components/Dashboard.jsx';
@@ -13,33 +13,61 @@ import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 import TeamManager from './components/TeamManager.jsx';
 import Login from './Login.jsx';
-import ThemePicker from './components/ThemePicker.jsx';
+import ThemePicker, { useTheme } from './components/ThemePicker.jsx';
 import OnlineBar from './components/OnlineBar.jsx';
-import { LogoMarkSquare, LogoLockup } from './components/Logo.jsx';
+import { LogoMark, LogoLockup } from './components/Logo.jsx';
 import { useCollab } from '../hooks/useCollab.js';
 
+// `group` styrer hvor punktet vises: i hovednavigasjonen ('main'), i
+// Innhold-menyen ('content') eller i brukermenyen ('account').
 const NAV = [
-  { id: 'dashboard', label: 'Hjem', icon: 'home', section: 'Visning', Component: Dashboard },
-  { id: 'screens', label: 'Kanaler', icon: 'monitor', section: 'Visning', Component: ScreensManager },
-  { id: 'alerts', label: 'Live Alerts', icon: 'megaphone', section: 'Visning', Component: AlertsManager },
-  { id: 'pairing', label: 'Parring', icon: 'external', section: 'Visning', Component: PairingManager },
-  { id: 'schedule', label: 'Program', icon: 'calendar', section: 'Innhold', Component: ScheduleManager },
-  { id: 'categories', label: 'Kategorier', icon: 'tag', section: 'Innhold', Component: CategoriesManager },
-  { id: 'sponsors', label: 'Sponsorer', icon: 'image', section: 'Innhold', Component: SponsorsManager },
-  { id: 'media', label: 'Bibliotek', icon: 'image', section: 'Innhold', Component: MediaLibraryManager },
-  { id: 'templates', label: 'Maler', icon: 'layers', section: 'Innhold', Component: TemplatesManager },
-  { id: 'trash', label: 'Nylig slettet', icon: 'x', section: 'Visning', Component: RecentlyDeletedManager },
+  { id: 'dashboard', label: 'Hjem', icon: 'home', group: 'main', Component: Dashboard },
+  { id: 'screens', label: 'Kanaler', icon: 'monitor', group: 'main', Component: ScreensManager },
+  { id: 'alerts', label: 'Varsler', icon: 'megaphone', group: 'main', Component: AlertsManager },
+  { id: 'pairing', label: 'Enheter', icon: 'link', group: 'main', Component: PairingManager },
+  { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ScheduleManager },
+  { id: 'categories', label: 'Kategorier', icon: 'tag', group: 'content', Component: CategoriesManager },
+  { id: 'sponsors', label: 'Sponsorer', icon: 'image', group: 'content', Component: SponsorsManager },
+  { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
+  { id: 'templates', label: 'Maler', icon: 'layers', group: 'content', Component: TemplatesManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
-  { id: 'team', label: 'Team', icon: 'home', section: 'Konto', Component: TeamManager, tenantOnly: true }
+  { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
+  { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager }
 ];
 
-const SECTIONS = ['Visning', 'Innhold', 'Konto'];
-
 const initialTab = () => {
-  if (typeof window === 'undefined') return 'screens';
+  if (typeof window === 'undefined') return 'dashboard';
   const v = new URLSearchParams(window.location.search).get('view');
   return NAV.some((n) => n.id === v) ? v : 'dashboard';
 };
+
+const initials = (s = '') =>
+  s
+    .split(/[.\s@_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase() || '?';
+
+/** Lukker en popover ved klikk utenfor eller Escape. */
+function useDismiss(open, setOpen) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => {
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, setOpen]);
+  return ref;
+}
 
 // `context` kommer fra /api/context (Node-serveren). Mangler den, kjører vi
 // som Worker uten e-postinnlogging, og admin vises som før.
@@ -53,9 +81,11 @@ function AdminShell({ context }) {
   const [screenCount, setScreenCount] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [me, setMe] = useState(null);
+  const [theme, setTheme] = useTheme(me);
 
   const tenant = context?.tenant ?? null;
   const nav = useMemo(() => NAV.filter((n) => !n.tenantOnly || tenant), [tenant]);
+  const current = nav.find((n) => n.id === tab) ?? nav[0];
 
   useEffect(() => {
     document.title = tenant ? `${tenant.name} – Flatr` : 'Flatr';
@@ -69,11 +99,6 @@ function AdminShell({ context }) {
     api.me().then(setMe).catch(() => setMe(null));
   }, [tenant]);
 
-  const logout = async () => {
-    await api.auth.logout().catch(() => {});
-    window.location.href = '/admin';
-  };
-
   useEffect(() => {
     api.screens
       .list()
@@ -82,10 +107,10 @@ function AdminShell({ context }) {
   }, [tab, refreshKey]);
 
   const bump = () => setRefreshKey((k) => k + 1);
-  const Active = useMemo(() => NAV.find((n) => n.id === tab)?.Component ?? Dashboard, [tab]);
+  const Active = current.Component;
 
   // Global tilstedeværelse – alle som er pålogget Flatr.
-  const lobby = useCollab('lobby', { where: NAV.find((n) => n.id === tab)?.label });
+  const lobby = useCollab('lobby', { where: current.label });
 
   const go = (id) => {
     setTab(id);
@@ -97,101 +122,266 @@ function AdminShell({ context }) {
     }
   };
 
+  const logout = async () => {
+    await api.auth.logout().catch(() => {});
+    window.location.href = '/admin';
+  };
+
+  const shared = { nav, tab, go, me, tenant, theme, setTheme, logout, lobby, screenCount, current };
+  const content = <Active onChange={bump} onNavigate={go} me={me} theme={theme} />;
+
+  return theme === 'presis' ? <RailShell {...shared}>{content}</RailShell> : <TopShell {...shared}>{content}</TopShell>;
+}
+
+/* ------------------------------ Presis ------------------------------ */
+
+function RailShell({ nav, tab, go, me, tenant, theme, setTheme, logout, lobby, current, children }) {
+  const mainItems = nav.filter((n) => n.group !== 'account');
   return (
-    <div className="flex h-screen overflow-hidden bg-paper text-ink">
-      <div className="hidden w-14 shrink-0 flex-col items-center border-r border-line bg-card py-4 sm:flex">
-        <LogoMarkSquare className="h-9 w-9" />
-        <a
-          href="/display/1"
-          className="mt-auto grid h-9 w-9 place-items-center rounded-xl text-muted transition-colors hover:bg-hair hover:text-ink"
-          title="Åpne en kanalvisning"
-        >
-          <Icon name="external" className="h-5 w-5" />
-        </a>
-      </div>
-
-      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-card sm:w-64">
-        <div className="px-5 py-5">
-          <LogoLockup className="h-6 w-auto text-ink" />
-          {tenant && (
-            <div className="mt-3 truncate text-xs font-semibold text-muted" title={tenant.name}>
-              {tenant.name}
+    <div className="flex h-screen overflow-hidden bg-paper font-sans text-ink">
+      <aside className="flex w-16 shrink-0 flex-col items-center gap-1 border-r border-line py-4">
+        <LogoMark className="mb-4 h-6 w-6" />
+        {mainItems.map((n, i) => {
+          const active = n.id === tab;
+          const divider = i > 0 && mainItems[i - 1].group !== n.group;
+          return (
+            <div key={n.id} className="flex flex-col items-center">
+              {divider && <span className="my-2 h-px w-6 bg-line" aria-hidden="true" />}
+              <button
+                type="button"
+                onClick={() => go(n.id)}
+                title={n.label}
+                aria-label={n.label}
+                aria-current={active ? 'page' : undefined}
+                className={`grid h-10 w-10 place-items-center rounded-lg transition-colors ${
+                  active ? 'bg-brand-tint text-brand' : 'text-muted hover:bg-hair hover:text-ink'
+                }`}
+              >
+                <Icon name={n.icon} className="h-5 w-5" />
+              </button>
             </div>
-          )}
-        </div>
-
-        <div className="px-3">
-          {SECTIONS.filter((section) => nav.some((n) => n.section === section)).map((section) => (
-            <div key={section} className="mb-2">
-              <div className="px-2 pb-1.5 pt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                {section}
-              </div>
-              <nav className="space-y-0.5">
-                {nav.filter((n) => n.section === section).map((n) => {
-                  const active = n.id === tab;
-                  return (
-                    <button
-                      key={n.id}
-                      onClick={() => go(n.id)}
-                      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all ${
-                        active
-                          ? 'bg-brand-tint font-semibold text-ink shadow-card'
-                          : 'font-medium text-ink/70 hover:bg-brand-tint/50 hover:text-ink'
-                      }`}
-                    >
-                      <Icon
-                        name={n.icon}
-                        className={`h-4 w-4 shrink-0 ${active ? 'text-brand' : ''}`}
-                      />
-                      <span className="flex-1 text-left">{n.label}</span>
-                      {n.id === 'screens' && screenCount != null && (
-                        <span className="rounded-full bg-badge px-1.5 text-xs font-bold text-badge-ink">
-                          {screenCount}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-auto space-y-3 border-t border-line p-4">
-          <ThemePicker />
-          {me?.name && (
-            <div className="flex items-center gap-2 border-t border-line pt-3 text-xs text-muted">
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ background: me.color }}
-              />
-              <span className="min-w-0 flex-1 truncate">
-                Innlogget som <span className="font-semibold text-ink">{me.name}</span>
-              </span>
-              {tenant && (
-                <button
-                  type="button"
-                  onClick={logout}
-                  title="Logg ut"
-                  aria-label="Logg ut"
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted hover:bg-hair hover:text-ink"
-                >
-                  <Icon name="logout" className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          )}
+          );
+        })}
+        <div className="mt-auto">
+          <UserMenu
+            me={me}
+            nav={nav}
+            go={go}
+            theme={theme}
+            setTheme={setTheme}
+            logout={logout}
+            tenant={tenant}
+            placement="right"
+          />
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-end border-b border-line bg-card px-5">
-          <OnlineBar peers={lobby.peers} selfId={lobby.selfId} connected={lobby.connected} />
+        <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-line px-6 text-[13px] text-muted">
+          {tenant && (
+            <>
+              <span className="truncate">{tenant.name}</span>
+              <span aria-hidden="true">/</span>
+            </>
+          )}
+          <span className="font-medium text-ink">{current.label}</span>
+          <div className="ml-auto">
+            <OnlineBar peers={lobby.peers} selfId={lobby.selfId} connected={lobby.connected} />
+          </div>
         </header>
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-          <Active onChange={bump} onNavigate={go} me={me} />
-        </main>
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</main>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------- Varm ------------------------------- */
+
+function TopShell({ nav, tab, go, me, tenant, theme, setTheme, logout, lobby, screenCount, children }) {
+  const mainItems = nav.filter((n) => n.group === 'main');
+  const contentItems = nav.filter((n) => n.group === 'content');
+  const contentActive = contentItems.some((n) => n.id === tab);
+
+  const pill = (active) =>
+    `inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition-colors ${
+      active ? 'bg-brand-tint text-brand-dark' : 'text-muted hover:bg-zone hover:text-ink'
+    }`;
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden bg-paper font-sans text-ink">
+      <header className="flex shrink-0 items-center gap-3 border-b border-line bg-card px-4 py-3 sm:px-6">
+        <LogoLockup className="h-6 w-auto shrink-0 text-ink" />
+        <nav className="ml-2 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          {mainItems.map((n) => (
+            <button
+              key={n.id}
+              type="button"
+              onClick={() => go(n.id)}
+              aria-current={n.id === tab ? 'page' : undefined}
+              className={pill(n.id === tab)}
+            >
+              {n.label}
+              {n.id === 'screens' && screenCount != null && (
+                <span className="rounded-full bg-badge px-1.5 text-xs font-bold text-badge-ink">{screenCount}</span>
+              )}
+            </button>
+          ))}
+          <MenuButton label="Innhold" active={contentActive} className={pill(contentActive)}>
+            {(close) =>
+              contentItems.map((n) => (
+                <MenuItem
+                  key={n.id}
+                  icon={n.icon}
+                  active={n.id === tab}
+                  onClick={() => {
+                    go(n.id);
+                    close();
+                  }}
+                >
+                  {n.label}
+                </MenuItem>
+              ))
+            }
+          </MenuButton>
+        </nav>
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="hidden md:block">
+            <OnlineBar peers={lobby.peers} selfId={lobby.selfId} connected={lobby.connected} />
+          </div>
+          <UserMenu
+            me={me}
+            nav={nav}
+            go={go}
+            theme={theme}
+            setTheme={setTheme}
+            logout={logout}
+            tenant={tenant}
+            placement="down"
+            showTenant
+          />
+        </div>
+      </header>
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</main>
+    </div>
+  );
+}
+
+/* ------------------------------- Felles ------------------------------ */
+
+function MenuButton({ label, active, className, children }) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(open, setOpen);
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={className}
+      >
+        {label}
+        <Icon name="down" className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-30 mt-2 w-56 rounded-2xl border border-line bg-card p-1.5 shadow-pop"
+        >
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuItem({ icon, active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+        active ? 'bg-brand-tint text-brand-dark' : 'text-ink hover:bg-zone'
+      }`}
+    >
+      {icon && <Icon name={icon} className="h-4 w-4 shrink-0 text-muted" />}
+      {children}
+    </button>
+  );
+}
+
+const ROLE_LABEL = { owner: 'Eier', editor: 'Redaktør' };
+
+function UserMenu({ me, nav, go, theme, setTheme, logout, tenant, placement, showTenant }) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(open, setOpen);
+  const accountItems = nav.filter((n) => n.group === 'account');
+  const name = me?.name || 'Bruker';
+
+  const popPos =
+    placement === 'right' ? 'bottom-0 left-full ml-3' : 'right-0 top-full mt-2';
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label="Brukermeny"
+        className={`flex items-center gap-2 rounded-full transition-colors ${
+          showTenant ? 'bg-zone py-1 pl-1 pr-3 hover:bg-hair' : ''
+        }`}
+      >
+        <span
+          className="grid h-8 w-8 place-items-center rounded-full bg-warn-tint text-xs font-bold text-warn"
+          aria-hidden="true"
+        >
+          {initials(name)}
+        </span>
+        {showTenant && tenant && (
+          <span className="hidden max-w-[10rem] truncate text-sm font-semibold sm:inline">{tenant.name}</span>
+        )}
+      </button>
+
+      {open && (
+        <div className={`absolute z-40 w-72 rounded-2xl border border-line bg-card p-3 shadow-pop ${popPos}`}>
+          <div className="px-1 pb-3">
+            <div className="truncate font-semibold">{name}</div>
+            {me?.email && <div className="truncate text-xs text-muted">{me.email}</div>}
+            {(tenant || me?.role) && (
+              <div className="mt-1 truncate text-xs text-muted">
+                {tenant?.name}
+                {me?.role && ` · ${ROLE_LABEL[me.role] ?? me.role}`}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-line px-1 py-3">
+            <ThemePicker theme={theme} onChange={setTheme} />
+          </div>
+
+          <div className="border-t border-line pt-2">
+            {accountItems.map((n) => (
+              <MenuItem
+                key={n.id}
+                icon={n.icon}
+                onClick={() => {
+                  go(n.id);
+                  setOpen(false);
+                }}
+              >
+                {n.label}
+              </MenuItem>
+            ))}
+            {tenant && (
+              <MenuItem icon="logout" onClick={logout}>
+                Logg ut
+              </MenuItem>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

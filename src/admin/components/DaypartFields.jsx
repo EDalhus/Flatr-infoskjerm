@@ -46,7 +46,7 @@ export default function DaypartFields({ value, onChange }) {
                   type="button"
                   onClick={() => toggleDay(d.n)}
                   className={`h-8 w-9 rounded-lg border text-xs font-bold ${
-                    days.includes(d.n) ? 'border-brand bg-brand text-white' : 'border-line bg-card text-muted'
+                    days.includes(d.n) ? 'border-brand bg-brand text-onbrand' : 'border-line bg-card text-muted'
                   }`}
                 >
                   {d.label}

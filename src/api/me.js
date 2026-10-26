@@ -10,6 +10,7 @@ export async function onRequestGet({ request, env }) {
     name: user.name,
     color: user.color,
     role: user.role ?? null,
+    prefs: user.prefs ?? {},
     tenant: env.TENANT ?? null
   });
 }

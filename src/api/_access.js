@@ -116,7 +116,13 @@ export async function getUser(request, env) {
     const s = env.SESSION_USER;
     if (!s) return null;
     const u = await makeUser(s.email, `user:${s.user_id}`);
-    return { ...u, name: s.name || u.name, role: s.role };
+    let prefs = {};
+    try {
+      prefs = JSON.parse(s.prefs || '{}') || {};
+    } catch {
+      prefs = {};
+    }
+    return { ...u, name: s.name || u.name, role: s.role, prefs };
   }
 
   const teamDomain = env.ACCESS_TEAM_DOMAIN;

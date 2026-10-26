@@ -45,16 +45,23 @@ const appRouter = (ctx) =>
 const isPublicPath = (p) => p.startsWith('/display/') || p === '/s' || p.startsWith('/s/');
 
 function App() {
-  const [router, setRouter] = useState(() =>
-    isPublicPath(window.location.pathname) ? appRouter(null) : null
-  );
+  const [router, setRouter] = useState(() => {
+    if (!isPublicPath(window.location.pathname)) return null;
+    // Skjermvisning og offentlig program skal ikke arve admin-temaet.
+    delete document.documentElement.dataset.theme;
+    return appRouter(null);
+  });
 
   useEffect(() => {
     if (router) return;
     fetch('/api/context', { headers: { Accept: 'application/json' } })
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
-      .then((ctx) => setRouter(ctx?.mode === 'platform' ? platformRouter(ctx) : appRouter(ctx)));
+      .then((ctx) => {
+        // Brukerens tema gjelder bare admin; flatr.no har alltid standardutseendet.
+        if (ctx?.mode === 'platform') delete document.documentElement.dataset.theme;
+        setRouter(ctx?.mode === 'platform' ? platformRouter(ctx) : appRouter(ctx));
+      });
   }, [router]);
 
   if (!router) return <div className="h-full bg-paper" />;

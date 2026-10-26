@@ -3,8 +3,18 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
+      // Skrift og hjørner følger temaet (se src/index.css).
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
+        sans: ['var(--font-sans)'],
+        mono: ['var(--font-mono)']
+      },
+      borderRadius: {
+        sm: 'var(--r-sm)',
+        md: 'var(--r-md)',
+        lg: 'var(--r-lg)',
+        xl: 'var(--r-xl)',
+        '2xl': 'var(--r-2xl)',
+        '3xl': 'var(--r-3xl)'
       },
       colors: {
         // Tokens peker på CSS-variabler så temaet kan byttes i runtime
@@ -27,6 +37,11 @@ export default {
           DEFAULT: 'rgb(var(--c-ok) / <alpha-value>)',
           tint: 'rgb(var(--c-ok-tint) / <alpha-value>)'
         },
+        warn: {
+          DEFAULT: 'rgb(var(--c-warn) / <alpha-value>)',
+          tint: 'rgb(var(--c-warn-tint) / <alpha-value>)'
+        },
+        onbrand: 'rgb(var(--c-on-brand) / <alpha-value>)',
         danger: {
           DEFAULT: 'rgb(var(--c-danger) / <alpha-value>)',
           tint: 'rgb(var(--c-danger-tint) / <alpha-value>)',

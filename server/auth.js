@@ -23,6 +23,7 @@ import {
   getMembership,
   tenantsForEmail,
   upsertUser,
+  updatePrefs,
   normEmail,
   validEmail,
   SESSION_TTL_MS
@@ -236,12 +237,22 @@ export async function handleTenantAuthRoute(request, ctx) {
 
   if (p === '/api/team') return handleTeam(request, ctx);
 
+  // PUT /api/prefs { theme } – personlige innstillinger, følger brukeren mellom enheter.
+  if (p === '/api/prefs' && request.method === 'PUT') {
+    if (!ctx.user) return json({ error: 'Ikke innlogget' }, 401);
+    const b = (await readJson(request)) || {};
+    const patch = {};
+    if (THEMES.includes(b.theme)) patch.theme = b.theme;
+    return json(updatePrefs(ctx.user.user_id, patch));
+  }
+
   return null;
 }
 
 /* --------------------------------- team --------------------------------- */
 
 const ROLES = ['owner', 'editor'];
+const THEMES = ['varm', 'presis'];
 
 function listMembers(tenantId) {
   return platformDb
