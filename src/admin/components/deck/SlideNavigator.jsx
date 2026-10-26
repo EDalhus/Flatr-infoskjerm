@@ -28,7 +28,7 @@ export default function SlideNavigator({
             >
               <div className="flex items-center justify-between px-0.5 pb-1">
                 <span className="flex items-center gap-1">
-                  <span className="text-[11px] font-bold text-muted">{i + 1}</span>
+                  <span className="text-xs font-semibold text-muted">{i + 1}</span>
                   {peers
                     .filter((p) => p.slide === s.id)
                     .slice(0, 4)
@@ -76,7 +76,7 @@ export default function SlideNavigator({
       </div>
       <button
         onClick={onAdd}
-        className="m-3 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line py-2 text-xs font-bold uppercase tracking-wide text-brand hover:bg-brand-tint"
+        className="m-3 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line py-2 text-xs font-bold text-brand hover:bg-brand-tint"
       >
         <Icon name="plus" className="h-3.5 w-3.5" />
         Nytt lysbilde

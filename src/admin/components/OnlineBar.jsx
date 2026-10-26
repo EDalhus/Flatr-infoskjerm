@@ -12,7 +12,7 @@ const initials = (name = '') =>
 function Avatar({ p, ring = true }) {
   return (
     <span
-      className={`relative grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white ${
+      className={`relative grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold text-white ${
         ring ? 'ring-2 ring-card' : ''
       }`}
       style={{ background: p.color || '#8b8d94' }}
@@ -64,7 +64,7 @@ export default function OnlineBar({ peers = [], selfId }) {
           <Avatar key={p.id} p={p} />
         ))}
         {others.length > shown.length && (
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-hair text-[11px] font-bold text-muted ring-2 ring-card">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-hair text-xs font-semibold text-muted ring-2 ring-card">
             +{others.length - shown.length}
           </span>
         )}

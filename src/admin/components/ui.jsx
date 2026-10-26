@@ -229,9 +229,7 @@ export function ColorInput({ className = '', ...props }) {
 export function Field({ label, children, hint }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-        {label}
-      </span>
+      <span className="mb-1.5 block text-xs font-semibold text-muted">{label}</span>
       {children}
       {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
     </label>
@@ -276,7 +274,7 @@ export function Card({ id, title, actions, children }) {
     >
       {(title || actions) && (
         <header className="flex items-center justify-between gap-3 border-b border-hair px-5 py-3">
-          <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-ink">{title}</h2>
+          <h2 className="m-0 text-base font-bold text-ink">{title}</h2>
           {actions}
         </header>
       )}
@@ -288,8 +286,8 @@ export function Card({ id, title, actions, children }) {
 export function GroupCard({ label, icon, right, children }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-hair bg-card shadow-card">
-      <header className="flex items-center justify-between gap-3 bg-zone px-5 py-2.5">
-        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-zoneink">
+      <header className="flex items-center justify-between gap-3 border-b border-hair px-5 py-3">
+        <div className="flex items-center gap-2 text-sm font-bold text-ink">
           {icon && <Icon name={icon} className="h-3.5 w-3.5" />}
           {label}
         </div>
@@ -307,7 +305,6 @@ export function Row({ media, title, meta, actions, highlight }) {
         highlight ? 'bg-brand-tint/50' : ''
       }`}
     >
-      <Icon name="grip" className="hidden h-4 w-4 shrink-0 cursor-grab text-muted/50 sm:block" />
       {media}
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold text-ink">{title}</div>
@@ -353,7 +350,7 @@ export function NumberBadge({ children }) {
 
 export function MetaValue({ children }) {
   return (
-    <span className="hidden text-xs font-semibold uppercase tracking-wide text-muted sm:inline">
+    <span className="hidden text-xs font-semibold text-muted sm:inline">
       {children}
     </span>
   );

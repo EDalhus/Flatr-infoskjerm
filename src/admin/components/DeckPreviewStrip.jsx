@@ -29,7 +29,7 @@ export default function DeckPreviewStrip({ screenId }) {
 
   return (
     <div className="px-4 pb-3 sm:px-5">
-      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+      <div className="mb-1.5 text-[11px] font-semibold text-muted">
         Spilles av{state?.screen?.name ? ` på ${state.screen.name}` : ''}
         {slides.length ? ` · ${slides.length} lysbilder` : ''}
       </div>

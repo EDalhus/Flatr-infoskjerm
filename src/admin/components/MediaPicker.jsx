@@ -18,8 +18,13 @@ function Modal({ onClose, children }) {
   );
 }
 
-export function MediaPicker({ onPick, onClose }) {
+const isVideo = (m) => (m.content_type || '').startsWith('video/');
+
+// `kind`: 'image' (standard) | 'video' – hvilke filer som kan velges.
+export function MediaPicker({ onPick, onClose, kind = 'image' }) {
   const [items, setItems] = useState([]);
+  const [query, setQuery] = useState('');
+  const [folder, setFolder] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
@@ -42,7 +47,7 @@ export function MediaPicker({ onPick, onClose }) {
     setBusy(true);
     setError('');
     try {
-      for (const f of files) await api.media.upload(f);
+      for (const f of files) await api.media.upload(f, folder || undefined);
       await load();
     } catch (e) {
       setError(e.message);
@@ -51,15 +56,20 @@ export function MediaPicker({ onPick, onClose }) {
     }
   };
 
+  const ofKind = items.filter((m) => (kind === 'video' ? isVideo(m) : !isVideo(m)));
+  const folders = [...new Set(ofKind.map((m) => m.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb'));
+  const q = query.trim().toLowerCase();
+  const shown = ofKind.filter((m) => (!folder || m.folder === folder) && (!q || m.name.toLowerCase().includes(q)));
+
   return (
     <Modal onClose={onClose}>
       <header className="flex items-center justify-between border-b border-hair px-5 py-3">
-        <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-ink">Mediebibliotek</h2>
+        <h2 className="text-base font-bold text-ink">{kind === 'video' ? 'Velg video' : 'Velg bilde'}</h2>
         <div className="flex items-center gap-2">
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept={kind === 'video' ? 'video/*' : 'image/*'}
             multiple
             hidden
             onChange={(e) => upload([...e.target.files])}
@@ -79,11 +89,32 @@ export function MediaPicker({ onPick, onClose }) {
             {error}
           </p>
         )}
-        {items.length === 0 ? (
-          <p className="py-10 text-center text-muted">Ingen filer ennå. Last opp for å komme i gang.</p>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <label className="flex min-w-[180px] flex-1 items-center gap-2">
+            <Icon name="search" className="h-4 w-4 shrink-0 text-muted" />
+            <span className="sr-only">Søk</span>
+            <Input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Søk …" />
+          </label>
+          {[null, ...folders].map((f) => (
+            <button
+              key={f ?? '__all'}
+              type="button"
+              onClick={() => setFolder(f)}
+              className={`h-8 rounded-full px-3 text-xs font-semibold ${
+                folder === f ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'
+              }`}
+            >
+              {f ?? 'Alle'}
+            </button>
+          ))}
+        </div>
+        {shown.length === 0 ? (
+          <p className="py-10 text-center text-muted">
+            {items.length === 0 ? 'Ingen filer ennå. Last opp for å komme i gang.' : 'Ingen treff.'}
+          </p>
         ) : (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-            {items.map((m) => (
+            {shown.map((m) => (
               <button
                 key={m.id}
                 onClick={() => {
@@ -93,8 +124,12 @@ export function MediaPicker({ onPick, onClose }) {
                 className="group overflow-hidden rounded-lg border border-hair bg-paper text-left hover:border-brand"
                 title={m.name}
               >
-                <div className="aspect-square bg-white">
-                  <img src={api.media.url(m.id)} alt={m.name} className="h-full w-full object-contain p-1" />
+                <div className="aspect-square bg-zone">
+                  {isVideo(m) ? (
+                    <video src={`${api.media.url(m.id)}#t=0.5`} preload="metadata" muted className="h-full w-full object-cover" />
+                  ) : (
+                    <img src={api.media.url(m.id)} alt={m.name} loading="lazy" className="h-full w-full object-contain p-1" />
+                  )}
                 </div>
                 <div className="truncate px-2 py-1 text-xs text-muted">{m.name}</div>
               </button>
@@ -106,11 +141,11 @@ export function MediaPicker({ onPick, onClose }) {
   );
 }
 
-export function MediaField({ label = 'Bilde', value, onChange, placeholder = 'https://… eller velg fra bibliotek' }) {
+export function MediaField({ label = 'Bilde', value, onChange, placeholder = 'https://… eller velg fra bibliotek', kind = 'image' }) {
   const [open, setOpen] = useState(false);
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+      <span className="mb-1 block text-xs font-semibold text-muted">
         {label}
       </span>
       <div className="flex gap-2">
@@ -120,12 +155,12 @@ export function MediaField({ label = 'Bilde', value, onChange, placeholder = 'ht
           Bibliotek
         </Button>
       </div>
-      {value && (
-        <div className="mt-2 h-16 w-28 overflow-hidden rounded border border-hair bg-white">
+      {value && kind === 'image' && (
+        <div className="mt-2 h-16 w-28 overflow-hidden rounded-lg border border-hair bg-zone">
           <img src={value} alt="" className="h-full w-full object-contain" />
         </div>
       )}
-      {open && <MediaPicker onPick={(url) => onChange(url)} onClose={() => setOpen(false)} />}
+      {open && <MediaPicker kind={kind} onPick={(url) => onChange(url)} onClose={() => setOpen(false)} />}
     </label>
   );
 }

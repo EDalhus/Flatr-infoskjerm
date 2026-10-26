@@ -155,7 +155,8 @@ export default function ScheduleManager({ onChange }) {
   return (
     <>
       <PageHeader
-        crumbs={['Administrer', 'Program']}
+        title="Program"
+        subtitle="Arrangementets program. Vises med program-widgeten og på den offentlige programsiden."
         action={
           <Button onClick={startNew}>
             <Icon name="plus" className="h-4 w-4" />
@@ -164,7 +165,7 @@ export default function ScheduleManager({ onChange }) {
         }
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <div ref={formRef}>
           <Card title={editingId ? 'Rediger programpost' : 'Ny programpost'}>
             <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">

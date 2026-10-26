@@ -2,6 +2,7 @@ import {
   json,
   noContent,
   badRequest,
+  readJson,
   notFound,
   handleOptions,
   requireAdmin,
@@ -16,8 +17,25 @@ const noBucket = () =>
     { status: 503 }
   );
 
+/** "bytes=0-1023" -> { offset, length }. null = hele fila, 'invalid' = 416. */
+function parseRange(header, size) {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header || '');
+  if (!m || size == null || (!m[1] && !m[2])) return null;
+  let start;
+  let end;
+  if (m[1]) {
+    start = Number(m[1]);
+    end = m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+  } else {
+    start = Math.max(0, size - Number(m[2]));
+    end = size - 1;
+  }
+  if (start > end || start >= size) return 'invalid';
+  return { offset: start, length: end - start + 1 };
+}
+
 // GET /api/media                 -> liste (metadata)
-// GET /api/media?id=1            -> metadata for én
+// GET /api/media?id=1            -> metadata for én (+ hvor den brukes)
 // GET /api/media?id=1&raw=1      -> selve fila (fra R2)
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -27,20 +45,33 @@ export async function onRequestGet({ request, env }) {
     if (!env.MEDIA) return noBucket();
     const row = await env.DB.prepare('SELECT * FROM media WHERE id = ?').bind(id).first();
     if (!row) return notFound('Fil finnes ikke');
-    const obj = await env.MEDIA.get(row.r2_key);
+    // Range-støtte: Safari/iOS spiller ikke av video uten den.
+    const range = parseRange(request.headers.get('Range'), row.size);
+    if (range === 'invalid') {
+      return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${row.size}`, ...corsHeaders } });
+    }
+    const obj = await env.MEDIA.get(row.r2_key, range ? { range } : undefined);
     if (!obj) return notFound('Fil mangler i lager');
-    return new Response(obj.body, {
-      headers: {
-        'Content-Type': row.content_type || 'application/octet-stream',
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        ...corsHeaders
-      }
-    });
+    const headers = {
+      'Content-Type': row.content_type || 'application/octet-stream',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Accept-Ranges': 'bytes',
+      ...corsHeaders
+    };
+    if (range) {
+      const end = range.offset + range.length - 1;
+      return new Response(obj.body, {
+        status: 206,
+        headers: { ...headers, 'Content-Range': `bytes ${range.offset}-${end}/${row.size}`, 'Content-Length': String(range.length) }
+      });
+    }
+    if (row.size != null) headers['Content-Length'] = String(row.size);
+    return new Response(obj.body, { headers });
   }
 
   if (id) {
     const row = await env.DB.prepare('SELECT * FROM media WHERE id = ?').bind(id).first();
-    return row ? json(row) : notFound('Fil finnes ikke');
+    return row ? json({ ...row, usage: await mediaUsage(env, id) }) : notFound('Fil finnes ikke');
   }
 
   const folder = url.searchParams.get('folder');
@@ -49,6 +80,51 @@ export async function onRequestGet({ request, env }) {
     : env.DB.prepare('SELECT * FROM media ORDER BY created_at DESC');
   const { results } = await stmt.all();
   return json(results ?? []);
+}
+
+/**
+ * Hvor en fil brukes: lysbilder (elementer og bakgrunner) og sponsorer.
+ * Filer lagres som "/api/media?id=N&raw=1", så vi søker etter akkurat den.
+ */
+async function mediaUsage(env, id) {
+  const needle = `%/api/media?id=${id}&raw=1%`;
+  const [slides, sponsors] = await Promise.all([
+    env.DB.prepare(
+      `SELECT DISTINCT d.id AS slide_id, d.name AS slide_name, p.id AS playlist_id, p.name AS playlist_name
+         FROM deck_slides d
+         JOIN playlists p ON p.id = d.playlist_id
+        WHERE d.background LIKE ?1
+           OR EXISTS (SELECT 1 FROM deck_elements e WHERE e.slide_id = d.id AND e.config LIKE ?1)
+        ORDER BY p.name, d.position`
+    )
+      .bind(needle)
+      .all()
+      .catch(() => ({ results: [] })),
+    env.DB.prepare('SELECT id, name FROM sponsors WHERE image_url LIKE ?').bind(needle).all()
+  ]);
+  return { slides: slides.results ?? [], sponsors: sponsors.results ?? [] };
+}
+
+// PUT /api/media?id=1  { name?, folder? }   (folder: "" eller null = ingen mappe)
+export async function onRequestPut(context) {
+  const denied = await requireAdmin(context);
+  if (denied) return denied;
+  const id = toIntOrNull(new URL(context.request.url).searchParams.get('id'));
+  if (!id) return badRequest('id er påkrevd');
+  const b = await readJson(context.request);
+  if (!b) return badRequest('ugyldig JSON');
+
+  const cur = await context.env.DB.prepare('SELECT * FROM media WHERE id = ?').bind(id).first();
+  if (!cur) return notFound('Fil finnes ikke');
+  const name = b.name !== undefined && String(b.name).trim() ? String(b.name).trim().slice(0, 200) : cur.name;
+  const folder =
+    b.folder !== undefined ? (b.folder ? String(b.folder).trim().slice(0, 80) || null : null) : cur.folder;
+
+  const row = await context.env.DB
+    .prepare('UPDATE media SET name = ?, folder = ? WHERE id = ? RETURNING *')
+    .bind(name, folder, id)
+    .first();
+  return json(row);
 }
 
 // POST /api/media?name=logo.png&type=image/png&folder=Logoer

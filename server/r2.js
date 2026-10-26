@@ -35,7 +35,8 @@ export class DiskBucket {
     return { key, size, httpMetadata: meta };
   }
 
-  async get(key) {
+  // `opts.range` = { offset, length } (samme form som R2) for delvis henting.
+  async get(key, opts = {}) {
     const file = this.#file(key);
     let info;
     try {
@@ -46,12 +47,17 @@ export class DiskBucket {
     const meta = await readFile(`${file}.meta.json`, 'utf8')
       .then(JSON.parse)
       .catch(() => ({}));
+    const r = opts.range;
+    const stream = r
+      ? { start: r.offset ?? 0, end: r.length != null ? (r.offset ?? 0) + r.length - 1 : undefined }
+      : {};
     return {
       key,
       size: info.size,
       httpMetadata: meta,
+      range: r ? { offset: stream.start, length: (stream.end ?? info.size - 1) - stream.start + 1 } : undefined,
       get body() {
-        return Readable.toWeb(createReadStream(file));
+        return Readable.toWeb(createReadStream(file, stream));
       }
     };
   }

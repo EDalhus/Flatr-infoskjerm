@@ -10,13 +10,13 @@ import {
   aspectOf
 } from './pairingHelpers.js';
 
-const HEADING = 'text-[11px] font-bold uppercase tracking-[0.14em] text-muted';
+const HEADING = 'text-xs font-semibold text-muted';
 
 function Stat({ label, value, sub, pct }) {
   if (value === null || value === undefined || value === '') return null;
   return (
     <div className="rounded-xl border border-hair bg-card p-3">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{label}</div>
+      <div className="text-[11px] font-semibold text-muted">{label}</div>
       <div className="mt-0.5 text-lg font-bold text-ink">{value}</div>
       {sub && <div className="text-xs text-muted">{sub}</div>}
       {typeof pct === 'number' && (
@@ -35,7 +35,7 @@ function InfoRow({ label, value }) {
   if (!value) return null;
   return (
     <div className="flex items-center justify-between gap-3 border-b border-hair py-2 last:border-0">
-      <span className="shrink-0 whitespace-nowrap text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+      <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-muted">
         {label}
       </span>
       <span className="truncate font-mono text-sm text-ink">{value}</span>
@@ -131,7 +131,7 @@ export default function DeviceDetail({
             )}
             {!editingName && (
               <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${status.cls}`}
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.cls}`}
               >
                 {status.label}
               </span>
@@ -155,7 +155,7 @@ export default function DeviceDetail({
             {p.screen_id && (
               <a
                 href={`/admin?view=screens&edit=${p.screen_id}`}
-                className="text-[11px] font-semibold uppercase tracking-[0.08em] text-brand hover:underline"
+                className="text-[11px] font-semibold text-brand hover:underline"
               >
                 Rediger lysbilder
               </a>
@@ -201,7 +201,7 @@ export default function DeviceDetail({
           <section className="space-y-2">
             <h3 className={HEADING}>Innstillinger</h3>
             <div>
-              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+              <div className="mb-1 text-xs font-semibold text-muted">
                 Kanal
               </div>
               <Select value={p.screen_id ?? ''} onChange={(e) => onReassign(Number(e.target.value))}>

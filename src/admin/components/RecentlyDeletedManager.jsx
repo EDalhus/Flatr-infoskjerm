@@ -59,8 +59,8 @@ export default function RecentlyDeletedManager({ onChange }) {
 
   return (
     <>
-      <PageHeader crumbs={['Visning', 'Nylig slettet']} />
-      <div className="mx-auto w-full max-w-4xl space-y-6 p-6 sm:p-8">
+      <PageHeader title="Nylig slettet" subtitle="Slettede ting kan gjenopprettes i 30 dager." />
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <p className="text-sm text-muted">
           Slettede elementer ligger her i 30 dager og kan gjenopprettes. Kanaler og lysbilder
           gjenopprettes med innholdet sitt.
@@ -78,7 +78,7 @@ export default function RecentlyDeletedManager({ onChange }) {
             right={
               <button
                 onClick={empty}
-                className="text-[11px] font-bold uppercase tracking-[0.12em] text-zoneink/80 hover:text-zoneink"
+                className="text-xs font-semibold text-zoneink/80 hover:text-zoneink"
               >
                 Tøm alt
               </button>

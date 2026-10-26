@@ -102,7 +102,33 @@ export const api = {
   health: () => req('/health'),
   media: {
     list: () => req('/media'),
+    get: (id) => req(`/media?id=${encodeURIComponent(id)}`),
+    update: (id, body) => req(`/media?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
     remove: (id) => req(`/media?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    // Opplasting med fremdrift (fetch kan ikke rapportere opplastingsfremdrift).
+    uploadWithProgress: (file, folder, onProgress) =>
+      new Promise((resolve, reject) => {
+        const q = new URLSearchParams({ name: file.name, type: file.type || 'application/octet-stream' });
+        if (folder) q.set('folder', folder);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${BASE}/media?${q}`);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        const token = getToken();
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
+        xhr.onload = () => {
+          let data = null;
+          try {
+            data = JSON.parse(xhr.responseText);
+          } catch {
+            /* ikke JSON */
+          }
+          if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+          else reject(new Error(data?.error || `${xhr.status} ${xhr.statusText}`));
+        };
+        xhr.onerror = () => reject(new Error('Nettverksfeil under opplasting'));
+        xhr.send(file);
+      }),
     url: (id) => `${BASE}/media?id=${encodeURIComponent(id)}&raw=1`,
     upload: (file, folder) => {
       const q = new URLSearchParams({ name: file.name, type: file.type || 'application/octet-stream' });

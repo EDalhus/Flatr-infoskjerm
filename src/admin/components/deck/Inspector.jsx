@@ -15,7 +15,7 @@ import DynamicBackground from '../../../viewer/DynamicBackground.jsx';
 const numRow = (el, set) => (
   <div className="grid grid-cols-4 gap-2">
     {['x', 'y', 'w', 'h'].map((k) => (
-      <label key={k} className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+      <label key={k} className="text-[11px] font-semibold text-muted">
         {k} %
         <Input
           type="number"
@@ -35,7 +35,7 @@ function ElementInspector({ element, categories, onChange, onDelete, onZ }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-bold uppercase tracking-[0.1em] text-ink">
+        <span className="text-sm font-bold text-ink">
           {ELEMENT_LABEL[element.kind] || element.kind}
         </span>
         <button
@@ -47,10 +47,10 @@ function ElementInspector({ element, categories, onChange, onDelete, onZ }) {
       </div>
 
       <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Plassering</div>
+        <div className="mb-1 text-xs font-semibold text-muted">Plassering</div>
         {numRow(element, set)}
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          <label className="text-[11px] font-semibold text-muted">
             Rotasjon °
             <Input
               type="number"
@@ -89,7 +89,7 @@ function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate
 
   return (
     <div className="space-y-4">
-      <span className="text-sm font-bold uppercase tracking-[0.1em] text-ink">Lysbilde</span>
+      <span className="text-sm font-bold text-ink">Lysbilde</span>
 
       <Field label="Navn (valgfritt)">
         <Input value={slide.name || ''} onChange={(e) => set({ name: e.target.value })} />
@@ -126,7 +126,7 @@ function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate
       </div>
 
       <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Bakgrunn</div>
+        <div className="mb-1 text-xs font-semibold text-muted">Bakgrunn</div>
         <div className="mb-2 grid grid-cols-6 gap-1.5">
           {BACKGROUND_PRESETS.map((p, i) => (
             <button

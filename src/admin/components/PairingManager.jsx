@@ -242,7 +242,8 @@ export default function PairingManager({ onChange }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PageHeader
-        crumbs={['Visning', 'Parring']}
+        title="Enheter"
+        subtitle="Apple TV-er og andre spillere. Tast inn koden som vises på TV-en for å koble den til en kanal."
         action={
           pendingCount > 0 ? (
             <span className="rounded-full bg-badge px-2.5 py-1 text-xs font-bold text-badge-ink">
@@ -254,7 +255,7 @@ export default function PairingManager({ onChange }) {
 
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-5xl space-y-6 p-6 pb-24 sm:p-8">
+          <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-24 pt-4 sm:px-8">
             <Card title="Koble til en ny enhet">
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
             <Field label="Parringskode" hint="Vises på TV-en ved oppstart (eller skann QR-en).">
@@ -266,7 +267,7 @@ export default function PairingManager({ onChange }) {
                 autoCapitalize="characters"
                 autoComplete="off"
                 spellCheck={false}
-                className="font-mono text-lg tracking-[0.3em]"
+                className="font-mono text-lg"
               />
             </Field>
             <Field label="Kanal" hint="Hva enheten skal vise etter parring.">
@@ -305,7 +306,7 @@ export default function PairingManager({ onChange }) {
 
         <section className="overflow-hidden rounded-2xl border border-hair bg-card shadow-card">
           <header className="flex items-center gap-3 border-b border-hair bg-zone px-4 py-2.5">
-            <label className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-zoneink">
+            <label className="flex items-center gap-2 text-xs font-semibold text-zoneink">
               <input
                 type="checkbox"
                 checked={allShownSelected}
@@ -373,7 +374,7 @@ export default function PairingManager({ onChange }) {
                       </button>
 
                       <span
-                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${status.cls}`}
+                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${status.cls}`}
                       >
                         {status.label}
                       </span>

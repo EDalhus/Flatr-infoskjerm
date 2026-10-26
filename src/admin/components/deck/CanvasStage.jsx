@@ -345,7 +345,7 @@ export default function CanvasStage({
               }}
             >
               <span
-                className="absolute left-0 top-0 -translate-y-full whitespace-nowrap rounded px-1 py-0.5 text-[11px] font-bold text-white"
+                className="absolute left-0 top-0 -translate-y-full whitespace-nowrap rounded px-1 py-0.5 text-xs font-semibold text-white"
                 style={{ background: p.color }}
               >
                 {p.name}
@@ -371,7 +371,7 @@ export default function CanvasStage({
                 />
               </svg>
               <span
-                className="ml-3 -mt-1 inline-block whitespace-nowrap rounded px-1 py-0.5 text-[11px] font-bold text-white"
+                className="ml-3 -mt-1 inline-block whitespace-nowrap rounded px-1 py-0.5 text-xs font-semibold text-white"
                 style={{ background: p.color }}
               >
                 {p.name}

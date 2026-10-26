@@ -60,9 +60,9 @@ export default function TeamManager({ me }) {
 
   return (
     <>
-      <PageHeader crumbs={['Administrer', 'Team']} />
+      <PageHeader title="Team" subtitle="Hvem som har tilgang til kontoen." />
 
-      <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         {isOwner && (
           <Card title="Inviter en kollega">
             <form onSubmit={invite} className="grid gap-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
@@ -102,7 +102,7 @@ export default function TeamManager({ me }) {
               <Row
                 key={m.user_id}
                 media={
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-tint text-sm font-bold uppercase text-brand">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-tint text-sm font-bold text-brand">
                     {(m.name || m.email).slice(0, 2)}
                   </span>
                 }

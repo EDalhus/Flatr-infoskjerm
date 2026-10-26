@@ -84,7 +84,8 @@ export default function AlertsManager({ onChange }) {
   return (
     <>
       <PageHeader
-        crumbs={['Administrer', 'Live Alerts']}
+        title="Varsler"
+        subtitle="Beskjeder som legges over innholdet på skjermene – til alle eller én kanal."
         action={
           <Button onClick={() => inputRef.current?.focus()}>
             <Icon name="plus" className="h-4 w-4" />
@@ -93,7 +94,7 @@ export default function AlertsManager({ onChange }) {
         }
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <Card title="Send hastemelding">
           <form onSubmit={send} className="grid gap-4 sm:grid-cols-3">
             <div className="sm:col-span-2">
@@ -140,7 +141,7 @@ export default function AlertsManager({ onChange }) {
             right={
               <button
                 onClick={dismissAll}
-                className="text-[11px] font-bold uppercase tracking-[0.12em] text-zoneink/80 hover:text-zoneink"
+                className="text-xs font-semibold text-zoneink/80 hover:text-zoneink"
               >
                 Fjern alle
               </button>

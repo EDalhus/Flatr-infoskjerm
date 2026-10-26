@@ -25,14 +25,14 @@ export default function PresenceStack({ peers = [], connected, className = '' })
             <span
               key={p.id}
               title={p.name}
-              className="grid h-6 w-6 place-items-center rounded-full border-2 border-card text-[10px] font-bold text-white"
+              className="grid h-6 w-6 place-items-center rounded-full border-2 border-card text-[11px] font-semibold text-white"
               style={{ background: p.color || '#8b8d94' }}
             >
               {initials(p.name)}
             </span>
           ))}
           {extra > 0 && (
-            <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-card bg-hair text-[10px] font-bold text-muted">
+            <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-card bg-hair text-[11px] font-semibold text-muted">
               +{extra}
             </span>
           )}

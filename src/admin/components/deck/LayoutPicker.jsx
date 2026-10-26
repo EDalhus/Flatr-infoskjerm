@@ -29,7 +29,7 @@ function MiniSlide({ elements }) {
                 style={{ background: c.fill || '#1f5566', borderRadius: c.shape === 'ellipse' ? '50%' : 2 }}
               />
             ) : (
-              <div className="grid h-full w-full place-items-center rounded bg-white/85 text-[5px] font-bold uppercase text-brand">
+              <div className="grid h-full w-full place-items-center rounded bg-white/85 text-[5px] font-bold text-brand">
                 {ELEMENT_LABEL[el.kind] || el.kind}
               </div>
             )}
@@ -59,7 +59,7 @@ export default function LayoutPicker({ onPick, onPickTemplate, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-hair px-5 py-3">
-          <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-ink">Velg et oppsett</h2>
+          <h2 className="text-sm font-bold text-ink">Velg et oppsett</h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full hover:bg-hair">
             <Icon name="x" className="h-4 w-4" />
           </button>
@@ -83,7 +83,7 @@ export default function LayoutPicker({ onPick, onPickTemplate, onClose }) {
 
           {templates.length > 0 && (
             <>
-              <div className="mb-2 mt-6 text-xs font-bold uppercase tracking-[0.14em] text-muted">
+              <div className="mb-2 mt-6 text-xs font-bold text-muted">
                 Mine maler
               </div>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

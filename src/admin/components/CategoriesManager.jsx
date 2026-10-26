@@ -88,7 +88,7 @@ export default function CategoriesManager({ onChange }) {
   return (
     <>
       <PageHeader
-        crumbs={['Administrer', 'Kategorier']}
+        title="Kategorier" subtitle="Farger og grupper for programpostene."
         action={
           <Button onClick={() => { resetForm(); focusForm(); }}>
             <Icon name="plus" className="h-4 w-4" />
@@ -97,7 +97,7 @@ export default function CategoriesManager({ onChange }) {
         }
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <div ref={formRef}>
           <Card title={editingId ? 'Rediger kategori' : 'Ny kategori'}>
             <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">

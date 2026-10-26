@@ -294,7 +294,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
           </Field>
         </div>
         <div>
-          <div className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+          <div className="mb-1 text-xs font-semibold text-muted">
             Kategorier (ingen = alle)
           </div>
           <div className="flex flex-wrap gap-2">
@@ -358,9 +358,13 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
   if (kind === 'video') {
     return (
       <div className="grid gap-3">
-        <Field label="Video-URL" hint="MP4/WebM eller YouTube/Vimeo.">
-          <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://…" />
-        </Field>
+        <MediaField
+          label="Video"
+          kind="video"
+          value={c.url}
+          onChange={(url) => set({ url })}
+          placeholder="YouTube/Vimeo-lenke, eller velg fra bibliotek"
+        />
         <Field label="Tilpasning">
           <Select value={c.fit || 'contain'} onChange={(e) => set({ fit: e.target.value })}>
             <option value="contain">Vis hele</option>

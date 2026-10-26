@@ -19,7 +19,7 @@ export default function DaypartFields({ value, onChange }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted"
+        className="flex items-center gap-1.5 text-xs font-semibold text-muted"
       >
         <Icon name={open ? 'down' : 'chevron'} className="h-3.5 w-3.5" />
         Vises når
