@@ -79,7 +79,7 @@ export async function pdfToPngs(pdf, { maxSide = 1920, onPage } = {}) {
 }
 
 /** Skjermbilde av en nettside (JPEG). */
-export async function screenshotUrl(url, { width = 1600, height = 900 } = {}) {
+export async function screenshotUrl(url, { width = 1600, height = 900, waitSeconds = 2 } = {}) {
   const form = new FormData();
   form.append('url', url);
   form.append('width', String(width));
@@ -87,6 +87,6 @@ export async function screenshotUrl(url, { width = 1600, height = 900 } = {}) {
   form.append('format', 'jpeg');
   form.append('quality', '85');
   form.append('clip', 'true');
-  form.append('waitDelay', '2s');
+  form.append('waitDelay', `${waitSeconds}s`);
   return gotenberg('/forms/chromium/screenshot/url', form, 60_000);
 }

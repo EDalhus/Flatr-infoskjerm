@@ -74,7 +74,7 @@ function isPublic(method, key, url) {
   if (key === '/api/pairing/request' || key === '/api/heartbeat') return method === 'POST';
   if (key.startsWith('/api/pairing/screenshot/')) return method === 'POST'; // TV-token sjekkes i pairing.js
   if (method !== 'GET') return false;
-  if (['/api/state', '/api/stream', '/api/schedule', '/api/categories', '/api/screens', '/api/snapshot'].includes(key)) {
+  if (['/api/state', '/api/stream', '/api/schedule', '/api/categories', '/api/screens', '/api/snapshot', '/api/feeds'].includes(key)) {
     return true;
   }
   return key === '/api/media' && url.searchParams.get('raw') && url.searchParams.get('id');

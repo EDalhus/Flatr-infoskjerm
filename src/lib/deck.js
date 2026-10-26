@@ -10,7 +10,10 @@ export const ELEMENT_KINDS = [
   { kind: 'qr', label: 'QR-kode', icon: 'tag' },
   { kind: 'video', label: 'Video', icon: 'play' },
   { kind: 'web', label: 'Nettside', icon: 'external' },
-  { kind: 'sponsors', label: 'Sponsorer', icon: 'image' }
+  { kind: 'sponsors', label: 'Sponsorer', icon: 'image' },
+  { kind: 'weather', label: 'Vær (Yr)', icon: 'sun' },
+  { kind: 'rss', label: 'Nyheter (RSS)', icon: 'megaphone' },
+  { kind: 'calendar', label: 'Kalender', icon: 'calendar' }
 ];
 export const ELEMENT_LABEL = Object.fromEntries(ELEMENT_KINDS.map((k) => [k.kind, k.label]));
 export const ELEMENT_ICON = Object.fromEntries(ELEMENT_KINDS.map((k) => [k.kind, k.icon]));
@@ -63,7 +66,10 @@ export const DEFAULT_ELEMENT_CONFIG = {
   qr: { mode: 'schedule', url: '', label: '', caption: '', frame: false },
   video: { url: '', loop: false, mute: true, fit: 'contain' },
   web: { url: '', refreshMinutes: 0 },
-  sponsors: {}
+  sponsors: {},
+  weather: { place: '', lat: null, lon: null, layout: 'now', color: '#ffffff', frame: false },
+  rss: { url: 'https://www.nrk.no/toppsaker.rss', mode: 'ticker', max: 10, speed: 60, color: '#ffffff', background: 'rgba(0,0,0,0.55)', showSource: true },
+  calendar: { url: '', max: 6, days: 14, showLocation: true, color: '#ffffff', frame: false }
 };
 
 const SIZE = {
@@ -76,7 +82,10 @@ const SIZE = {
   qr: { w: 22, h: 34 },
   video: { w: 50, h: 30 },
   web: { w: 50, h: 40 },
-  sponsors: { w: 30, h: 24 }
+  sponsors: { w: 30, h: 24 },
+  weather: { w: 30, h: 30 },
+  rss: { w: 100, h: 9 },
+  calendar: { w: 40, h: 60 }
 };
 
 export function defaultElement(kind, z = 0) {

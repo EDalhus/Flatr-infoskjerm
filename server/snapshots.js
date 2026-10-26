@@ -1,5 +1,6 @@
-// Tar jevnlige skjermbilder av nettside-elementer, så Apple TV (uten
-// nettleser) kan vise dem som bilder. Se adaptForDevices i src/api/_shared.js.
+// Tar jevnlige skjermbilder av nettside-elementer og widgeter (vær, nyheter,
+// kalender), så Apple TV (uten nettleser) kan vise dem som bilder. Se
+// adaptForDevices i src/api/_shared.js. Widgeter rendres via /widget/<id>.
 //
 // Bare kunder med minst én paret TV, og bare nettsider i spillelister som en
 // kanal faktisk viser. Intervallet er elementets «Oppdater hvert (min)», men
@@ -27,15 +28,23 @@ function tenantsWithDevices() {
     .allSync().results;
 }
 
-/** Nettsider i bruk: url -> { minutes, width, height } (største element vinner). */
-async function webTargets(env) {
+const WIDGET_MINUTES = { weather: 30, rss: 10, calendar: 15 };
+const origin = (slug) => `${process.env.PUBLIC_PROTOCOL || 'https'}://${slug}.${process.env.BASE_DOMAIN || 'flatr.no'}`;
+
+/**
+ * Mål i bruk: nøkkel -> { fetchUrl, minutes, width, height, wait }.
+ * Nettsider har adressen som nøkkel, widgeter "widget:<element-id>".
+ * Bare spillelister som en kanal viser (som standard eller i tidsplanen).
+ */
+async function webTargets(env, slug) {
   const { results } = await env.DB.prepare(
-    `SELECT e.config, e.w, e.h, p.orientation
+    `SELECT e.id, e.kind, e.config, e.w, e.h, p.orientation
        FROM deck_elements e
        JOIN deck_slides d ON d.id = e.slide_id
        JOIN playlists p ON p.id = d.playlist_id
-      WHERE e.kind = 'web' AND d.enabled = 1
-        AND p.id IN (SELECT playlist_id FROM screens WHERE playlist_id IS NOT NULL)`
+      WHERE e.kind IN ('web', 'weather', 'rss', 'calendar') AND d.enabled = 1
+        AND (p.id IN (SELECT playlist_id FROM screens WHERE playlist_id IS NOT NULL)
+          OR p.id IN (SELECT playlist_id FROM timeslots WHERE playlist_id IS NOT NULL AND enabled = 1))`
   ).all();
 
   const targets = new Map();
@@ -46,23 +55,39 @@ async function webTargets(env) {
     } catch {
       continue;
     }
-    if (!/^https?:\/\//i.test(cfg.url || '')) continue;
     const [bw, bh] = BASE[r.orientation === 'portrait' ? 'portrait' : 'landscape'];
     const pxW = (Number(r.w) / 100) * bw;
     const pxH = (Number(r.h) / 100) * bh;
+
+    if (r.kind !== 'web') {
+      // Widgeten tegnes i sin faktiske størrelse på lerretet (minst 400 px bred).
+      const scale = Math.max(1, 400 / Math.max(1, pxW));
+      targets.set(`widget:${r.id}`, {
+        fetchUrl: `${origin(slug)}/widget/${r.id}`,
+        minutes: WIDGET_MINUTES[r.kind],
+        width: Math.round(pxW * scale),
+        height: Math.round(Math.max(40, pxH * scale)),
+        wait: 4
+      });
+      continue;
+    }
+
+    if (!/^https?:\/\//i.test(cfg.url || '')) continue;
     // Nettlesere tegner sider for ~1280–1600 px bredde; behold elementets form.
     const width = 1600;
     const height = Math.round(Math.min(3000, Math.max(400, width * (pxH / Math.max(1, pxW)))));
     const minutes = Number(cfg.refreshMinutes) > 0 ? Math.max(MIN_MINUTES, Number(cfg.refreshMinutes)) : DEFAULT_MINUTES;
     const prev = targets.get(cfg.url);
-    if (!prev || width * height > prev.width * prev.height) targets.set(cfg.url, { minutes, width, height });
+    if (!prev || width * height > prev.width * prev.height) {
+      targets.set(cfg.url, { fetchUrl: cfg.url, minutes, width, height, wait: 2 });
+    }
   }
   return targets;
 }
 
 export async function refreshTenant(slug) {
   const env = tenantResources(slug);
-  const targets = await webTargets(env);
+  const targets = await webTargets(env, slug);
 
   for (const [url, t] of targets) {
     const row = await env.DB.prepare('SELECT * FROM web_snapshots WHERE url = ?').bind(url).first();
@@ -73,7 +98,7 @@ export async function refreshTenant(slug) {
 
     const now = new Date().toISOString();
     try {
-      const image = await screenshotUrl(url, { width: t.width, height: t.height });
+      const image = await screenshotUrl(t.fetchUrl, { width: t.width, height: t.height, waitSeconds: t.wait });
       const key = `snapshots/${randomUUID()}.jpg`;
       await env.MEDIA.put(key, image, { httpMetadata: { contentType: 'image/jpeg' } });
       await env.DB.prepare(

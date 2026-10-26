@@ -3,6 +3,59 @@ import { FONTS, FONT_WEIGHTS } from '../../../lib/deck.js';
 import { isoToLocalInput, localInputToIso } from '../../../lib/time.js';
 import { Field, Input, Select, Textarea, Segmented, ButtonGroup, ColorInput } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
+import { useEffect, useState } from 'react';
+
+const RSS_PRESETS = [
+  { label: 'NRK – Toppsaker', url: 'https://www.nrk.no/toppsaker.rss' },
+  { label: 'NRK Møre og Romsdal', url: 'https://www.nrk.no/mr/toppsaker.rss' },
+  { label: 'NRK Sport', url: 'https://www.nrk.no/sport/toppsaker.rss' },
+  { label: 'VG', url: 'https://www.vg.no/rss/feed' },
+  { label: 'E24', url: 'https://e24.no/rss2/' },
+  { label: 'Teknisk Ukeblad', url: 'https://www.tu.no/rss' }
+];
+
+/** Stedssøk (Kartverket) for vær-widgeten. */
+function PlaceSearch({ value, onPick }) {
+  const [q, setQ] = useState('');
+  const [hits, setHits] = useState([]);
+  useEffect(() => {
+    if (q.trim().length < 2) return setHits([]);
+    const t = setTimeout(() => {
+      fetch(`/api/feeds?type=places&q=${encodeURIComponent(q.trim())}`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((rows) => setHits(Array.isArray(rows) ? rows : []))
+        .catch(() => setHits([]));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
+  return (
+    <div className="grid gap-1.5">
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={value ? `Valgt: ${value} – søk for å bytte` : 'Søk sted, f.eks. Ålesund'} />
+      {hits.length > 0 && (
+        <ul className="m-0 max-h-48 list-none overflow-y-auto rounded-xl border border-line bg-card p-1">
+          {hits.map((h, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => {
+                  onPick(h);
+                  setQ('');
+                  setHits([]);
+                }}
+                className="flex w-full items-baseline gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-zone"
+              >
+                <span className="font-semibold text-ink">{h.name}</span>
+                <span className="truncate text-xs text-muted">
+                  {[h.type, h.municipality].filter(Boolean).join(' · ')}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 const Check = ({ label, checked, onChange }) => (
   <label className="flex items-center gap-2 text-sm text-ink">
@@ -373,6 +426,107 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
         </Field>
         <Check label="Løkke" checked={!!c.loop} onChange={(v) => set({ loop: v })} />
         <Check label="Uten lyd" checked={c.mute !== false} onChange={(v) => set({ mute: v })} />
+      </div>
+    );
+  }
+
+  if (kind === 'weather') {
+    return (
+      <div className="grid gap-3">
+        <Field label="Sted" hint="Værdata fra MET Norway (yr.no).">
+          <PlaceSearch value={c.place} onPick={(h) => set({ place: h.name, lat: h.lat, lon: h.lon })} />
+        </Field>
+        <Field label="Visning">
+          <Select value={c.layout || 'now'} onChange={(e) => set({ layout: e.target.value })}>
+            <option value="now">Været nå</option>
+            <option value="hours">Neste timer</option>
+            <option value="days">Neste dager</option>
+          </Select>
+        </Field>
+        <Field label="Tekstfarge">
+          <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
+        </Field>
+        <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
+      </div>
+    );
+  }
+
+  if (kind === 'rss') {
+    const preset = RSS_PRESETS.find((p) => p.url === c.url);
+    return (
+      <div className="grid gap-3">
+        <Field label="Kilde">
+          <Select value={preset ? c.url : '__custom'} onChange={(e) => e.target.value !== '__custom' && set({ url: e.target.value })}>
+            {RSS_PRESETS.map((p) => (
+              <option key={p.url} value={p.url}>
+                {p.label}
+              </option>
+            ))}
+            <option value="__custom">Egen RSS-adresse …</option>
+          </Select>
+        </Field>
+        {!preset && (
+          <Field label="RSS-adresse">
+            <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://…/rss" />
+          </Field>
+        )}
+        <Field label="Visning">
+          <Select value={c.mode || 'ticker'} onChange={(e) => set({ mode: e.target.value })}>
+            <option value="ticker">Rullende linje</option>
+            <option value="single">Én sak av gangen</option>
+            <option value="list">Liste med overskrifter</option>
+          </Select>
+        </Field>
+        {(c.mode || 'ticker') === 'ticker' && (
+          <Field label="Fart">
+            <Select value={c.speed || 60} onChange={(e) => set({ speed: Number(e.target.value) })}>
+              <option value={35}>Rolig</option>
+              <option value={60}>Normal</option>
+              <option value={100}>Rask</option>
+            </Select>
+          </Field>
+        )}
+        <Field label="Antall saker">
+          <Input type="number" min={1} max={30} value={c.max ?? 10} onChange={(e) => set({ max: Number(e.target.value) || 10 })} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Tekst">
+            <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
+          </Field>
+          <Field label="Bakgrunn">
+            <ColorInput
+              value={/^#/.test(c.background || '') ? c.background : '#000000'}
+              onChange={(e) => set({ background: e.target.value })}
+            />
+          </Field>
+        </div>
+        <Check label="Vis kildenavn" checked={c.showSource !== false} onChange={(v) => set({ showSource: v })} />
+      </div>
+    );
+  }
+
+  if (kind === 'calendar') {
+    return (
+      <div className="grid gap-3">
+        <Field
+          label="Kalenderadresse (.ics)"
+          hint="Google: Innstillinger → kalenderen → «Hemmelig adresse i iCal-format». Outlook: Kalender → Del → Publiser → ICS-lenke."
+        >
+          <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://calendar.google.com/…/basic.ics" />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Antall hendelser">
+            <Input type="number" min={1} max={20} value={c.max ?? 6} onChange={(e) => set({ max: Number(e.target.value) || 6 })} />
+          </Field>
+          <Field label="Dager fram">
+            <Input type="number" min={1} max={90} value={c.days ?? 14} onChange={(e) => set({ days: Number(e.target.value) || 14 })} />
+          </Field>
+        </div>
+        <Field label="Tekstfarge">
+          <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
+        </Field>
+        <Check label="Vis sted" checked={c.showLocation !== false} onChange={(v) => set({ showLocation: v })} />
+        <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
       </div>
     );
   }

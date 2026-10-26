@@ -268,12 +268,16 @@ const youtubeId = (url) =>
 
 /**
  * Apple TV har ingen nettleser. For TV-appen (env.DEVICE_MODE) byttes
- * nettside-elementer ut med siste skjermbilde (tas av server/snapshots.js),
- * og YouTube-videoer med videoens forsidebilde.
+ * nettside-elementer og widgetene vær/nyheter/kalender ut med siste
+ * skjermbilde (tas av server/snapshots.js), og YouTube med forsidebildet.
  */
+const DEVICE_WIDGETS = ['weather', 'rss', 'calendar'];
+// Nøkkelen skjermbildet er lagret under (se server/snapshots.js).
+const snapshotKey = (e) => (e.kind === 'web' ? e.config?.url : DEVICE_WIDGETS.includes(e.kind) ? `widget:${e.id}` : null);
+
 async function adaptForDevices(env, deck) {
   const urls = new Set();
-  for (const s of deck) for (const e of s.elements) if (e.kind === 'web' && e.config?.url) urls.add(e.config.url);
+  for (const s of deck) for (const e of s.elements) if (snapshotKey(e)) urls.add(snapshotKey(e));
 
   const shots = {};
   if (urls.size) {
@@ -295,10 +299,15 @@ async function adaptForDevices(env, deck) {
   return deck.map((s) => ({
     ...s,
     elements: s.elements.map((e) => {
-      if (e.kind === 'web' && shots[e.config?.url]) {
-        const shot = shots[e.config.url];
+      const key = snapshotKey(e);
+      if (key && shots[key]) {
+        const shot = shots[key];
         const v = encodeURIComponent(shot.taken_at || '');
-        return { ...e, kind: 'image', config: { url: `/api/snapshot?id=${shot.id}&v=${v}`, fit: 'cover', radius: 0 } };
+        return {
+          ...e,
+          kind: 'image',
+          config: { url: `/api/snapshot?id=${shot.id}&v=${v}`, fit: e.kind === 'web' ? 'cover' : 'contain', radius: 0 }
+        };
       }
       const yt = e.kind === 'video' && youtubeId(e.config?.url);
       if (yt) {

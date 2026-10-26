@@ -5,6 +5,9 @@ import QrSlide from './slides/QrSlide.jsx';
 import VideoSlide from './slides/VideoSlide.jsx';
 import WebSlide from './slides/WebSlide.jsx';
 import SponsorSlide from './slides/SponsorSlide.jsx';
+import WeatherSlide from './slides/WeatherSlide.jsx';
+import RssSlide from './slides/RssSlide.jsx';
+import CalendarSlide from './slides/CalendarSlide.jsx';
 
 function TextEl({ config }) {
   const c = config || {};
@@ -82,7 +85,10 @@ const WIDGET = {
   qr: QrSlide,
   video: VideoSlide,
   web: WebSlide,
-  sponsors: SponsorSlide
+  sponsors: SponsorSlide,
+  weather: WeatherSlide,
+  rss: RssSlide,
+  calendar: CalendarSlide
 };
 
 export default function ElementView({ element, ctx, onNext }) {
@@ -92,5 +98,5 @@ export default function ElementView({ element, ctx, onNext }) {
   if (kind === 'shape') return <ShapeEl config={config} />;
   const W = WIDGET[kind];
   if (!W) return null;
-  return <W slide={{ config, title: null }} ctx={ctx} onNext={onNext} chromeless />;
+  return <W slide={{ config, title: null, elementId: element.id }} ctx={ctx} onNext={onNext} chromeless />;
 }

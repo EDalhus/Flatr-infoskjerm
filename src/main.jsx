@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import './index.css';
 import Viewer from './viewer/Viewer.jsx';
+import WidgetView from './viewer/WidgetView.jsx';
 import Admin from './admin/Admin.jsx';
 import Schedule from './public/Schedule.jsx';
 import Landing from './platform/Landing.jsx';
@@ -37,6 +38,7 @@ const appRouter = (ctx) =>
     { path: '/admin', element: <Admin context={ctx} /> },
     { path: '/display/:screenId', element: <Viewer /> },
     { path: '/preview/:playlistId', element: <Viewer /> },
+    { path: '/widget/:elementId', element: <WidgetView /> },
     { path: '/s', element: <Schedule /> },
     { path: '/s/:screenId', element: <Schedule /> },
     { path: '*', element: <NotFound /> }
@@ -44,7 +46,7 @@ const appRouter = (ctx) =>
 
 // Skjermvisning og offentlig program trenger ikke plattform-konteksten.
 const isPublicPath = (p) =>
-  p.startsWith('/display/') || p.startsWith('/preview/') || p === '/s' || p.startsWith('/s/');
+  p.startsWith('/display/') || p.startsWith('/preview/') || p.startsWith('/widget/') || p === '/s' || p.startsWith('/s/');
 
 function App() {
   const [router, setRouter] = useState(() => {

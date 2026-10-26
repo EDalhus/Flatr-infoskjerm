@@ -179,6 +179,16 @@ body {
   }
 }
 
+/* Rullende nyhetslinje (RSS-widget): innholdet ligger dobbelt, så -50 % gir sømløs løkke. */
+@keyframes tickerScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 /* Dynamiske bakgrunner */
 @keyframes bgDrift {
   0% {
