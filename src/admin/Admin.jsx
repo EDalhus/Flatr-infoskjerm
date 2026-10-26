@@ -25,7 +25,7 @@ import { useCollab } from '../hooks/useCollab.js';
 // Innhold-menyen ('content') eller i brukermenyen ('account').
 const NAV = [
   { id: 'dashboard', label: 'Hjem', icon: 'home', group: 'main', Component: Dashboard },
-  { id: 'screens', label: 'Kanaler', icon: 'monitor', group: 'main', Component: ScreensManager },
+  { id: 'screens', label: 'Skjermer', icon: 'monitor', group: 'main', Component: ScreensManager },
   { id: 'playlists', label: 'Spillelister', icon: 'layers', group: 'main', Component: PlaylistsManager },
   { id: 'timetable', label: 'Tidsplan', icon: 'clock', group: 'main', Component: TimetableManager },
   { id: 'alerts', label: 'Varsler', icon: 'megaphone', group: 'main', Component: AlertsManager },
@@ -137,7 +137,13 @@ function AdminShell({ context }) {
     window.location.href = '/admin';
   };
 
-  const shared = { nav, tab, go, me, tenant, theme, setTheme, logout, lobby, screenCount, current };
+  // Profilfargen vises for andre i editoren (markør og markering).
+  const setColor = async (color) => {
+    setMe((m) => m && { ...m, color, prefs: { ...m.prefs, color } });
+    await api.prefs({ color }).catch(() => {});
+  };
+
+  const shared = { nav, tab, go, me, tenant, theme, setTheme, setColor, logout, lobby, screenCount, current };
   // navKey remonterer siden ved hver navigasjon, så den leser adressen på nytt.
   const content = <Active key={navKey} onChange={bump} onNavigate={go} me={me} theme={theme} />;
 
@@ -146,7 +152,7 @@ function AdminShell({ context }) {
 
 /* ------------------------------ Presis ------------------------------ */
 
-function RailShell({ nav, tab, go, me, tenant, theme, setTheme, logout, lobby, current, children }) {
+function RailShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout, lobby, current, children }) {
   const mainItems = nav.filter((n) => n.group !== 'account');
   return (
     <div className="flex h-screen overflow-hidden bg-paper font-sans text-ink">
@@ -180,6 +186,7 @@ function RailShell({ nav, tab, go, me, tenant, theme, setTheme, logout, lobby, c
             go={go}
             theme={theme}
             setTheme={setTheme}
+            setColor={setColor}
             logout={logout}
             tenant={tenant}
             placement="right"
@@ -208,7 +215,7 @@ function RailShell({ nav, tab, go, me, tenant, theme, setTheme, logout, lobby, c
 
 /* ------------------------------- Varm ------------------------------- */
 
-function TopShell({ nav, tab, go, me, tenant, theme, setTheme, logout, lobby, screenCount, children }) {
+function TopShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout, lobby, screenCount, children }) {
   const mainItems = nav.filter((n) => n.group === 'main');
   const contentItems = nav.filter((n) => n.group === 'content');
   const contentActive = contentItems.some((n) => n.id === tab);
@@ -265,6 +272,7 @@ function TopShell({ nav, tab, go, me, tenant, theme, setTheme, logout, lobby, sc
             go={go}
             theme={theme}
             setTheme={setTheme}
+            setColor={setColor}
             logout={logout}
             tenant={tenant}
             placement="down"
@@ -324,7 +332,7 @@ function MenuItem({ icon, active, onClick, children }) {
 
 const ROLE_LABEL = { owner: 'Eier', editor: 'Redaktør' };
 
-function UserMenu({ me, nav, go, theme, setTheme, logout, tenant, placement, showTenant }) {
+function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, placement, showTenant }) {
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, setOpen);
   const accountItems = nav.filter((n) => n.group === 'account');
@@ -345,7 +353,8 @@ function UserMenu({ me, nav, go, theme, setTheme, logout, tenant, placement, sho
         }`}
       >
         <span
-          className="grid h-8 w-8 place-items-center rounded-full bg-warn-tint text-xs font-bold text-warn"
+          className="grid h-8 w-8 place-items-center rounded-full text-xs font-bold text-white"
+          style={{ background: me?.color || '#8b8d94' }}
           aria-hidden="true"
         >
           {initials(name)}
@@ -371,6 +380,27 @@ function UserMenu({ me, nav, go, theme, setTheme, logout, tenant, placement, sho
           <div className="border-t border-line px-1 py-3">
             <ThemePicker theme={theme} onChange={setTheme} />
           </div>
+
+          {me?.palette && (
+            <div className="border-t border-line px-1 py-3">
+              <div className="mb-2 text-xs font-semibold text-muted">Din farge i editoren</div>
+              <div className="flex flex-wrap gap-1.5">
+                {me.palette.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setColor(c)}
+                    aria-label={`Velg farge ${c}`}
+                    aria-pressed={me.color === c}
+                    className={`h-6 w-6 rounded-full transition-transform hover:scale-110 ${
+                      me.color === c ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''
+                    }`}
+                    style={{ background: c }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="border-t border-line pt-2">
             {accountItems.map((n) => (

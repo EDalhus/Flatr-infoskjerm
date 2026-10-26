@@ -192,7 +192,7 @@ export default function PairingManager({ onChange }) {
     setOk('');
     const clean = normalize(code);
     if (clean.length < 4) return setError('Skriv inn koden som vises på TV-en.');
-    if (!screenId) return setError('Velg hvilken kanal enheten skal vise.');
+    if (!screenId) return setError('Velg hvilken skjerm enheten skal vise.');
     setBusy(true);
     try {
       const res = await api.pairing.link(clean, Number(screenId));
@@ -282,7 +282,7 @@ export default function PairingManager({ onChange }) {
     <div className="flex h-full min-h-0 flex-col">
       <PageHeader
         title="Enheter"
-        subtitle="Apple TV-er og andre spillere. Tast inn koden som vises på TV-en for å koble den til en kanal."
+        subtitle="Apple TV-er og andre spillere. Tast inn koden som vises på TV-en for å koble den til en skjerm."
         action={
           pendingCount > 0 ? (
             <span className="rounded-full bg-badge px-2.5 py-1 text-xs font-bold text-badge-ink">
@@ -309,9 +309,9 @@ export default function PairingManager({ onChange }) {
                 className="font-mono text-lg"
               />
             </Field>
-            <Field label="Kanal" hint="Hva enheten skal vise etter parring.">
+            <Field label="Skjerm" hint="Hva enheten skal vise etter parring.">
               <Select value={screenId} onChange={(e) => setScreenId(e.target.value)}>
-                <option value="">Velg kanal …</option>
+                <option value="">Velg skjerm …</option>
                 {screens.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -351,7 +351,7 @@ export default function PairingManager({ onChange }) {
                 checked={alerts.offline_alerts}
                 onChange={(e) => saveAlerts({ offline_alerts: e.target.checked })}
               />
-              Send e-post til eierne når en skjerm går offline
+              Send e-post til eierne når en TV går offline
             </label>
             {alerts.offline_alerts && (
               <label className="flex items-center gap-2 text-muted">
@@ -409,7 +409,7 @@ export default function PairingManager({ onChange }) {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Søk enhet, kode, kanal …"
+                placeholder="Søk enhet, kode, skjerm …"
                 className="h-8 pl-8 text-xs"
               />
             </div>
@@ -532,7 +532,7 @@ export default function PairingManager({ onChange }) {
             className="rounded-full bg-paper/10 px-3 py-1.5 text-xs font-semibold text-paper focus:outline-none"
           >
             <option value="" className="text-ink">
-              Bytt kanal …
+              Bytt skjerm …
             </option>
             {screens.map((s) => (
               <option key={s.id} value={s.id} className="text-ink">

@@ -29,6 +29,7 @@ import {
   SESSION_TTL_MS
 } from './platform.js';
 import { sendMail, buttonMail, escapeHtml } from './mail.js';
+import { userColorPalette } from '../src/api/_access.js';
 
 export const SESSION_COOKIE = 'flatr_session';
 
@@ -250,6 +251,7 @@ export async function handleTenantAuthRoute(request, ctx) {
     const b = (await readJson(request)) || {};
     const patch = {};
     if (THEMES.includes(b.theme)) patch.theme = b.theme;
+    if (userColorPalette().includes(b.color)) patch.color = b.color;
     return json(updatePrefs(ctx.user.user_id, patch));
   }
 

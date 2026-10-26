@@ -77,7 +77,7 @@ export async function onRequestPost(context) {
   const screenId = toIntOrNull(b.screen_id);
   if (!screenId) return badRequest('screen_id er påkrevd');
   const screen = await env.DB.prepare('SELECT id FROM screens WHERE id = ?').bind(screenId).first();
-  if (!screen) return notFound('Kanal finnes ikke');
+  if (!screen) return notFound('Skjerm finnes ikke');
 
   const { values: v, error } = await fields(env, b);
   if (error) return badRequest(error);

@@ -26,7 +26,7 @@ const KIND_LABEL = {
   media: 'Mediefil',
   deck_slide: 'Lysbilde',
   deck_element: 'Widget',
-  screen: 'Kanal',
+  screen: 'Skjerm',
   playlist: 'Spilleliste'
 };
 
@@ -90,7 +90,7 @@ async function restoreEntry(env, kind, payload) {
     if (payload.slides) {
       const pl = await env.DB
         .prepare('INSERT INTO playlists (name, orientation) VALUES (?, ?) RETURNING id')
-        .bind(row.name || 'Kanal', row.orientation || 'landscape')
+        .bind(row.name || 'Skjerm', row.orientation || 'landscape')
         .first();
       await restoreSlides(env, pl.id, payload.slides, payload.elements);
       row.playlist_id = pl.id;

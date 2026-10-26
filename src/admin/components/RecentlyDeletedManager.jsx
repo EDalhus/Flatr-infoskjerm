@@ -62,7 +62,7 @@ export default function RecentlyDeletedManager({ onChange }) {
       <PageHeader title="Nylig slettet" subtitle="Slettede ting kan gjenopprettes i 30 dager." />
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <p className="text-sm text-muted">
-          Slettede elementer ligger her i 30 dager og kan gjenopprettes. Kanaler og lysbilder
+          Slettede elementer ligger her i 30 dager og kan gjenopprettes. Skjermer og lysbilder
           gjenopprettes med innholdet sitt.
         </p>
         <ErrorText>{error}</ErrorText>

@@ -191,7 +191,7 @@ export default function DeviceDetail({
         {/* live-visning */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className={HEADING}>Kanalens innhold nå</h3>
+            <h3 className={HEADING}>Skjermens innhold nå</h3>
             {playlistId && (
               <a
                 href={`/admin?view=playlists&edit=${playlistId}`}
@@ -204,7 +204,7 @@ export default function DeviceDetail({
           {p.screen_id ? (
             <LiveScreenView screenId={p.screen_id} orientation={orientation} />
           ) : (
-            <p className="text-sm text-muted">Enheten er ikke koblet til en kanal ennå.</p>
+            <p className="text-sm text-muted">Enheten er ikke koblet til en skjerm ennå.</p>
           )}
         </section>
 
@@ -242,7 +242,7 @@ export default function DeviceDetail({
             <h3 className={HEADING}>Innstillinger</h3>
             <div>
               <div className="mb-1 text-xs font-semibold text-muted">
-                Kanal
+                Skjerm
               </div>
               <Select value={p.screen_id ?? ''} onChange={(e) => onReassign(Number(e.target.value))}>
                 {screens.map((s) => (

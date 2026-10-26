@@ -278,7 +278,7 @@ function OverrideDialog({ playlists, tz, onSave, onClose }) {
           <h2 className="m-0 text-lg font-bold text-ink">Overstyr nå</h2>
           <IconButton name="x" label="Lukk" onClick={onClose} />
         </div>
-        <p className="m-0 text-sm text-muted">Kanalen viser dette med en gang, uansett tidsplan.</p>
+        <p className="m-0 text-sm text-muted">Skjermen viser dette med en gang, uansett tidsplan.</p>
         <Field label="Vis">
           <Select value={target} onChange={(e) => setTarget(e.target.value)}>
             {playlists.map((p) => (
@@ -489,7 +489,7 @@ export default function TimetableManager() {
         <PageHeader title="Tidsplan" />
         <div className="mx-auto w-full max-w-6xl px-6 pb-12 pt-4 sm:px-8">
           <p className="rounded-2xl border border-dashed border-line bg-card px-6 py-10 text-center text-muted">
-            Lag en kanal først – så kan du bestemme hva den skal vise når.
+            Lag en skjerm først – så kan du bestemme hva den skal vise når.
           </p>
         </div>
       </>
@@ -500,7 +500,7 @@ export default function TimetableManager() {
     <>
       <PageHeader
         title="Tidsplan"
-        subtitle="Bestem hva hver kanal viser når. Utenom reglene vises kanalens standard-spilleliste."
+        subtitle="Bestem hva hver skjerm viser når. Utenom reglene vises skjermens standard-spilleliste."
         action={
           <>
             <Button variant="outline" onClick={() => setOverriding(true)} disabled={!screen}>
@@ -518,7 +518,7 @@ export default function TimetableManager() {
       <div className="mx-auto w-full max-w-6xl space-y-5 px-6 pb-12 pt-4 sm:px-8">
         <ErrorText>{error}</ErrorText>
 
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Kanal">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Skjerm">
           {(screens || []).map((s) => (
             <button
               key={s.id}
@@ -603,7 +603,7 @@ export default function TimetableManager() {
           <h2 className="m-0 text-base font-bold text-ink">Regler for {screen?.name}</h2>
           {slots.length === 0 ? (
             <p className="m-0 text-sm text-muted">
-              Ingen regler – kanalen viser alltid standard-spillelisten. Klikk i kalenderen for å lage en.
+              Ingen regler – skjermen viser alltid standard-spillelisten. Klikk i kalenderen for å lage en.
             </p>
           ) : (
             <ul className="m-0 flex list-none flex-col gap-2 p-0">

@@ -1,5 +1,5 @@
 import { json, handleOptions } from './_shared.js';
-import { getUser } from './_access.js';
+import { getUser, userColorPalette } from './_access.js';
 
 // GET /api/me – hvem er innlogget (via Cloudflare Access, eller lokal fallback).
 export async function onRequestGet({ request, env }) {
@@ -11,6 +11,7 @@ export async function onRequestGet({ request, env }) {
     color: user.color,
     role: user.role ?? null,
     prefs: user.prefs ?? {},
+    palette: userColorPalette(),
     tenant: env.TENANT ?? null
   });
 }

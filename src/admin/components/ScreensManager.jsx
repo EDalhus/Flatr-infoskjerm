@@ -75,7 +75,7 @@ function NewChannel({ playlists, onCreated, onCancel }) {
       )}
       <div className="flex gap-2 sm:col-span-2">
         <Button type="submit" disabled={busy}>
-          {busy ? 'Oppretter …' : 'Opprett kanal'}
+          {busy ? 'Oppretter …' : 'Opprett skjerm'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
           Avbryt
@@ -113,7 +113,7 @@ function ChannelCard({ s, playlists, onPatch, onEditContent, onDuplicate, onDele
             <h3 className="m-0 flex items-center gap-2 truncate text-base font-bold text-ink">
               <span
                 className={`h-2 w-2 shrink-0 rounded-full ${s.online ? 'bg-ok' : 'bg-muted/40'}`}
-                title={s.online ? 'En skjerm viser kanalen nå' : 'Ingen skjerm viser kanalen nå'}
+                title={s.online ? 'En TV viser skjermen nå' : 'Ingen TV viser skjermen nå'}
               />
               <span className="truncate">{s.name}</span>
             </h3>
@@ -126,8 +126,8 @@ function ChannelCard({ s, playlists, onPatch, onEditContent, onDuplicate, onDele
                   : `${s.slide_count} lysbilde${s.slide_count === 1 ? '' : 'r'}`}
             </p>
           </div>
-          <IconButton name="copy" label="Dupliser kanal" onClick={() => onDuplicate(s)} />
-          <IconButton name="trash" label="Slett kanal" tone="danger" onClick={() => onDelete(s)} />
+          <IconButton name="copy" label="Dupliser skjerm" onClick={() => onDuplicate(s)} />
+          <IconButton name="trash" label="Slett skjerm" tone="danger" onClick={() => onDelete(s)} />
         </div>
 
         <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -239,7 +239,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
   };
 
   const remove = async (s) => {
-    if (!confirm(`Slette kanalen «${s.name}»? Spillelisten beholdes. Kanalen havner i papirkurven.`)) return;
+    if (!confirm(`Slette skjermen «${s.name}»? Spillelisten beholdes. Skjermen havner i papirkurven.`)) return;
     try {
       await api.screens.remove(s.id);
       await load();
@@ -252,13 +252,13 @@ export default function ScreensManager({ onChange, onNavigate }) {
   return (
     <>
       <PageHeader
-        title="Kanaler"
-        subtitle="En kanal er det én eller flere skjermer viser. Velg spilleliste og rotasjon for hver kanal."
+        title="Skjermer"
+        subtitle="En skjerm er det du vil vise ett sted – på én eller flere TV-er. Velg spilleliste og rotasjon for hver skjerm."
         action={
           !creating && (
             <Button onClick={() => setCreating(true)}>
               <Icon name="plus" className="h-4 w-4" />
-              Ny kanal
+              Ny skjerm
             </Button>
           )
         }
@@ -282,11 +282,11 @@ export default function ScreensManager({ onChange, onNavigate }) {
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-tint text-brand">
               <Icon name="monitor" className="h-7 w-7" />
             </div>
-            <h2 className="m-0 text-xl font-bold text-ink">Ingen kanaler ennå</h2>
+            <h2 className="m-0 text-xl font-bold text-ink">Ingen skjermer ennå</h2>
             <p className="m-0 max-w-md text-sm text-muted">
-              Lag en kanal for hvert sted som skal vise sitt eget innhold, for eksempel «Resepsjon» eller «Kantina».
+              Lag en skjerm for hvert sted som skal vise sitt eget innhold, for eksempel «Resepsjon» eller «Kantina».
             </p>
-            <Button onClick={() => setCreating(true)}>Lag din første kanal</Button>
+            <Button onClick={() => setCreating(true)}>Lag din første skjerm</Button>
           </div>
         )}
 

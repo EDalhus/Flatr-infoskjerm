@@ -82,7 +82,7 @@ function ElementInspector({ element, categories, onChange, onDelete, onZ }) {
   );
 }
 
-function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate }) {
+export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveTemplate }) {
   const set = (patch) => onChange(slide.id, patch, true);
   const bg = slide.background || { type: 'color', color: '#0f2733' };
   const setBg = (patch) => set({ background: { ...bg, ...patch } });

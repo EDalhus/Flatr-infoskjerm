@@ -150,10 +150,10 @@ export async function checkLimit(env, kind, extraBytes = 0) {
     );
   }
   if (kind === 'devices' && u.devices >= L.devices) {
-    return json({ error: `Kontoen kan ha ${L.devices} skjermer i betaen. Kontakt oss om du trenger flere.` }, { status: 403 });
+    return json({ error: `Kontoen kan ha ${L.devices} TV-er i betaen. Kontakt oss om du trenger flere.` }, { status: 403 });
   }
   if (kind === 'screens' && u.screens >= L.screens) {
-    return json({ error: `Kontoen kan ha ${L.screens} kanaler i betaen. Kontakt oss om du trenger flere.` }, { status: 403 });
+    return json({ error: `Kontoen kan ha ${L.screens} skjermer i betaen. Kontakt oss om du trenger flere.` }, { status: 403 });
   }
   return null;
 }

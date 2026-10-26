@@ -55,7 +55,7 @@ export async function onRequestGet(context) {
       name: p.off ? 'Skjerm av' : p.name || (p.playlist_id ? 'Slettet spilleliste' : 'Ingenting'),
       minutes: p.minutes
     })),
-    screens: byScreen.map((s) => ({ screen_id: s.screen_id, name: s.name || 'Slettet kanal', minutes: s.minutes })),
+    screens: byScreen.map((s) => ({ screen_id: s.screen_id, name: s.name || 'Slettet skjerm', minutes: s.minutes })),
     devices,
     days: byDay
   });

@@ -50,7 +50,7 @@ function StatusBadge({ online }) {
 
 function Preview({ p, orientation }) {
   if (!p.screen_id) {
-    return <div className="grid aspect-video place-items-center rounded-xl bg-zone text-sm text-muted">Ingen kanal</div>;
+    return <div className="grid aspect-video place-items-center rounded-xl bg-zone text-sm text-muted">Ingen skjerm</div>;
   }
   return <LiveScreenView screenId={p.screen_id} orientation={orientation} />;
 }
@@ -71,7 +71,7 @@ function DeviceCard({ p, orientation, onOpen }) {
           <StatusBadge online={p.online} />
         </div>
         <span className="truncate text-sm text-muted">
-          {p.screen_name ? `Viser «${p.screen_name}»` : 'Ingen kanal valgt'}
+          {p.screen_name ? `Viser «${p.screen_name}»` : 'Ingen skjerm valgt'}
           {!p.online && p.last_seen && ` · sist sett ${timeAgo(p.last_seen)}`}
         </span>
       </div>
@@ -162,16 +162,16 @@ function EmptyState({ onPair, onChannels }) {
         <Icon name="monitor" className="h-7 w-7" />
       </div>
       <div className="max-w-md">
-        <h2 className="m-0 text-xl font-bold text-ink">Koble til din første skjerm</h2>
+        <h2 className="m-0 text-xl font-bold text-ink">Koble til din første TV</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Åpne Flatr-appen på en Apple TV og tast inn koden som vises, eller åpne en kanal-lenke i nettleseren på
+          Åpne Flatr-appen på en Apple TV og tast inn koden som vises, eller åpne lenken til en skjerm i nettleseren på
           skjermen.
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
-        <Button onClick={onPair}>Koble til skjerm</Button>
+        <Button onClick={onPair}>Koble til TV</Button>
         <Button variant="outline" onClick={onChannels}>
-          Se kanalene
+          Se skjermene
         </Button>
       </div>
     </div>
@@ -277,7 +277,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
     <>
       <PageHeader
         eyebrow={greeting(me?.name)}
-        title="Skjermene dine"
+        title="Oversikt"
         action={
           <>
             <Button variant="outline" onClick={() => setComposer((v) => !v)} aria-expanded={composer}>
@@ -286,7 +286,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
             </Button>
             <Button onClick={() => go('pairing')}>
               <Icon name="plus" className="h-4 w-4" />
-              Koble til ny skjerm
+              Koble til TV
             </Button>
           </>
         }
@@ -321,20 +321,20 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
             label="Online akkurat nå"
             value={paired.length ? `${online.length} av ${paired.length}` : '0'}
             sub={
-              !paired.length ? 'Ingen skjermer koblet til' : offline.length ? 'Noen trenger tilsyn' : 'Alt ser bra ut'
+              !paired.length ? 'Ingen TV-er koblet til' : offline.length ? 'Noen trenger tilsyn' : 'Alt ser bra ut'
             }
           />
           {offline.length > 0 ? (
             <SummaryCard
               tone="warn"
               label="Trenger tilsyn"
-              value={plural(offline.length, 'skjerm', 'skjermer')}
+              value={plural(offline.length, 'TV', 'TV-er')}
               sub={offline.map(displayName).join(', ')}
             />
           ) : (
             <SummaryCard
               tone="plain"
-              label="Kanaler"
+              label="Skjermer"
               value={screens.length}
               sub={pending.length ? plural(pending.length, 'enhet venter', 'enheter venter') : 'Klare til visning'}
             />
@@ -352,7 +352,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
         ) : (
           <section className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="m-0 mr-2 text-lg font-bold text-ink">Etter kanal</h2>
+              <h2 className="m-0 mr-2 text-lg font-bold text-ink">Etter skjerm</h2>
               {['all', ...channelFilters].map((f) => (
                 <button
                   key={f}

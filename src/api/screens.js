@@ -68,7 +68,7 @@ export async function onRequestGet({ request, env }) {
       .prepare(`SELECT s.*, ${EXTRA} FROM screens s WHERE s.id = ?`)
       .bind(id)
       .first();
-    return row ? json((await withNow(env, [decorate(row)]))[0]) : notFound('Kanal finnes ikke');
+    return row ? json((await withNow(env, [decorate(row)]))[0]) : notFound('Skjerm finnes ikke');
   }
   const { results } = await env.DB
     .prepare(`SELECT s.*, ${EXTRA} FROM screens s ORDER BY s.name ASC`)
@@ -91,7 +91,7 @@ export async function onRequestPost(context) {
 
   if (cloneId) {
     const src = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(cloneId).first();
-    if (!src) return notFound('Kanal å kopiere finnes ikke');
+    if (!src) return notFound('Skjerm å kopiere finnes ikke');
     const copy = await env.DB
       .prepare(
         `INSERT INTO screens (name, location, orientation, rotation, rotation_seconds, playlist_id)
@@ -140,7 +140,7 @@ export async function onRequestPut(context) {
   if (!b) return badRequest('ugyldig JSON');
 
   const cur = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first();
-  if (!cur) return notFound('Kanal finnes ikke');
+  if (!cur) return notFound('Skjerm finnes ikke');
 
   let playlistId = cur.playlist_id;
   if (b.playlist_id !== undefined) {

@@ -122,7 +122,9 @@ export async function getUser(request, env) {
     } catch {
       prefs = {};
     }
-    return { ...u, name: s.name || u.name, role: s.role, prefs };
+    // Profilfargen (tilfeldig tildelt ved første innlogging) vinner over hash-fargen.
+    const color = PALETTE.includes(prefs.color) ? prefs.color : u.color;
+    return { ...u, color, name: s.name || u.name, role: s.role, prefs };
   }
 
   const teamDomain = env.ACCESS_TEAM_DOMAIN;

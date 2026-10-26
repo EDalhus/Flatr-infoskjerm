@@ -21,7 +21,10 @@ const KINDS = [
   'qr',
   'video',
   'web',
-  'sponsors'
+  'sponsors',
+  'weather',
+  'rss',
+  'calendar'
 ];
 const normKind = (v) => (KINDS.includes(v) ? v : 'text');
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);

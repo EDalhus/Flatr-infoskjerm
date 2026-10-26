@@ -48,8 +48,8 @@ function UrlForm({ kind, onSubmit, onCancel }) {
       </div>
       <p className="m-0 text-xs text-muted sm:col-span-3">
         {kind === 'youtube'
-          ? 'Spilles av i nettleser-skjermer. Apple TV viser videoens forsidebilde.'
-          : 'Vises levende i nettleser-skjermer. Apple TV får et skjermbilde som oppdateres automatisk.'}
+          ? 'Spilles av når skjermen vises i en nettleser. Apple TV viser videoens forsidebilde.'
+          : 'Vises levende i nettlesere. Apple TV får et skjermbilde som oppdateres automatisk.'}
       </p>
     </form>
   );

@@ -37,7 +37,7 @@ export default function DeckPreviewStrip({ screenId }) {
       {!state && !failed && <div className="text-xs text-muted">Laster forhåndsvisning …</div>}
       {failed && <div className="text-xs text-danger">Kunne ikke hente lysbildene.</div>}
       {state && slides.length === 0 && (
-        <div className="text-xs text-muted">Ingen lysbilder på denne kanalen ennå.</div>
+        <div className="text-xs text-muted">Ingen lysbilder på denne skjermen ennå.</div>
       )}
 
       {slides.length > 0 && (

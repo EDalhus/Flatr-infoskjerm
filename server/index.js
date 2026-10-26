@@ -16,7 +16,8 @@ import { getUser } from '../src/api/_access.js';
 import { checkLimit } from '../src/api/_shared.js';
 import { createAssets } from './assets.js';
 import { handleCollabUpgrade } from './collab.js';
-import { getTenantBySlug, tenantResources, sessionUser, sweepPlatform, tenantLimits } from './platform.js';
+import { getTenantBySlug, tenantResources, sessionUser, sweepPlatform, tenantLimits, updatePrefs, platformDb } from './platform.js';
+import { userColorPalette } from '../src/api/_access.js';
 import { handlePlatformRoute, handleTenantAuthRoute, readCookie, SESSION_COOKIE } from './auth.js';
 import { handleApexDevice, claimFromHub, syncRoutes } from './devices.js';
 import { handleImportRoute } from './imports.js';
@@ -83,9 +84,42 @@ function isPublic(method, key, url) {
   return key === '/api/media' && url.searchParams.get('raw') && url.searchParams.get('id');
 }
 
+/**
+ * Gir brukeren en tilfeldig profilfarge første gang (brukes for markør og
+ * markering i editoren). Helst en farge ingen andre på teamet har.
+ */
+function ensureColor(user, tenant) {
+  if (!user) return user;
+  let prefs = {};
+  try {
+    prefs = JSON.parse(user.prefs || '{}') || {};
+  } catch {
+    prefs = {};
+  }
+  const palette = userColorPalette();
+  if (palette.includes(prefs.color)) return user;
+  const taken = new Set(
+    platformDb
+      .prepare(`SELECT u.prefs FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.tenant_id = ? AND u.id != ?`)
+      .bind(tenant.id, user.user_id)
+      .allSync()
+      .results.map((r) => {
+        try {
+          return JSON.parse(r.prefs || '{}').color;
+        } catch {
+          return null;
+        }
+      })
+  );
+  const free = palette.filter((c) => !taken.has(c));
+  const pool = free.length ? free : palette;
+  const color = pool[Math.floor(Math.random() * pool.length)];
+  return { ...user, prefs: JSON.stringify(updatePrefs(user.user_id, { color })) };
+}
+
 async function handleTenant(request, tenant) {
   const url = new URL(request.url);
-  const user = sessionUser(readCookie(request, SESSION_COOKIE), tenant.id);
+  const user = ensureColor(sessionUser(readCookie(request, SESSION_COOKIE), tenant.id), tenant);
   const ctx = { ...ctxBase, tenant, user };
 
   const auth = await handleTenantAuthRoute(request, ctx);

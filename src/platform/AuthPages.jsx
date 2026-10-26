@@ -321,7 +321,7 @@ export function PlatformAdminRedirect({ baseDomain }) {
 
   return (
     <AuthShell
-      title={code ? 'Koble til en skjerm' : 'Gå til din Flatr'}
+      title={code ? 'Koble til en TV' : 'Gå til din Flatr'}
       subtitle={
         code
           ? `Hvilken konto skal skjermen med koden ${code} høre til?`

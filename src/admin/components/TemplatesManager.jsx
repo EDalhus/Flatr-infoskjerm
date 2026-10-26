@@ -42,7 +42,7 @@ export default function TemplatesManager({ onChange }) {
       <PageHeader title="Maler" subtitle="Lagrede lysbilder du kan starte nye lysbilder fra." />
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <p className="text-sm text-muted">
-          Lag maler med «Lagre som mal» på et lysbilde i kanal-editoren. De blir tilgjengelige når
+          Lag maler med «Lagre som mal» på et lysbilde i skjerm-editoren. De blir tilgjengelige når
           du legger til et nytt lysbilde.
         </p>
         <ErrorText>{error}</ErrorText>

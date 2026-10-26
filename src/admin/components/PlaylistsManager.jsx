@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Field, Input, Select, Button, IconButton, PageHeader, ErrorText } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
-import DeckEditor from './deck/DeckEditor.jsx';
+import Editor from './editor/Editor.jsx';
 
 const fmtDuration = (sec) => {
   const s = Math.max(0, Number(sec) || 0);
@@ -95,7 +95,7 @@ function PlaylistCard({ p, onEdit, onDuplicate, onDelete }) {
               </span>
             ))
           ) : (
-            <span className="text-xs text-muted">Ikke i bruk på noen kanal</span>
+            <span className="text-xs text-muted">Ikke i bruk på noen skjerm</span>
           )}
         </div>
         <Button variant="outline" onClick={() => onEdit(p.id)} className="mt-1">
@@ -133,7 +133,7 @@ function PlaylistList({ onEdit, onChange }) {
 
   const remove = async (p) => {
     const warn = p.used_by.length
-      ? `«${p.name}» vises på ${p.used_by.map((u) => u.name).join(', ')}. Kanalene blir tomme til du velger en annen spilleliste.\n\nSlette likevel? Den havner i papirkurven.`
+      ? `«${p.name}» vises på ${p.used_by.map((u) => u.name).join(', ')}. Skjermene blir tomme til du velger en annen spilleliste.\n\nSlette likevel? Den havner i papirkurven.`
       : `Slette «${p.name}»? Den havner i papirkurven.`;
     if (!confirm(warn)) return;
     try {
@@ -149,7 +149,7 @@ function PlaylistList({ onEdit, onChange }) {
     <>
       <PageHeader
         title="Spillelister"
-        subtitle="Lysbilder i rekkefølge. Velg på hver kanal hvilken spilleliste den skal vise."
+        subtitle="Lysbilder i rekkefølge. Velg på hver skjerm hvilken spilleliste den skal vise."
         action={
           !creating && (
             <Button onClick={() => setCreating(true)}>
@@ -170,7 +170,7 @@ function PlaylistList({ onEdit, onChange }) {
             </div>
             <h2 className="m-0 text-xl font-bold text-ink">Ingen spillelister ennå</h2>
             <p className="m-0 max-w-md text-sm text-muted">
-              En spilleliste er innholdet en kanal viser – lysbilder med tekst, bilder, program og mer.
+              En spilleliste er innholdet en skjerm viser – lysbilder med tekst, bilder, program og mer.
             </p>
             <Button onClick={() => setCreating(true)}>Lag din første spilleliste</Button>
           </div>
@@ -186,7 +186,7 @@ function PlaylistList({ onEdit, onChange }) {
   );
 }
 
-export default function PlaylistsManager({ onChange }) {
+export default function PlaylistsManager({ onChange, me }) {
   const [editingId, setEditingId] = useState(readEdit);
 
   const setEdit = (id) => {
@@ -198,7 +198,7 @@ export default function PlaylistsManager({ onChange }) {
   };
 
   return editingId ? (
-    <DeckEditor playlistId={editingId} onBack={() => setEdit(null)} onChange={onChange} />
+    <Editor playlistId={editingId} onBack={() => setEdit(null)} onChange={onChange} me={me} />
   ) : (
     <PlaylistList onEdit={setEdit} onChange={onChange} />
   );

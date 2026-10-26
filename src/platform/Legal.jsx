@@ -73,7 +73,7 @@ export function Privacy() {
       <h2>Formål og rettslig grunnlag</h2>
       <ul>
         <li>Levere tjenesten du har registrert deg for (avtale, GDPR art. 6 nr. 1 b).</li>
-        <li>Sende innloggingslenker, invitasjoner og varsler om skjermer som er frakoblet (avtale).</li>
+        <li>Sende innloggingslenker, invitasjoner og varsler om TV-er som er frakoblet (avtale).</li>
         <li>Sikkerhet, feilretting og forbedring av tjenesten i betaperioden (berettiget interesse, art. 6 nr. 1 f).</li>
       </ul>
       <p>Vi selger ikke opplysninger, viser ikke reklame og bruker ikke sporings- eller analyse-cookies.</p>
@@ -128,10 +128,10 @@ export function Terms() {
       <ul>
         <li>Tjenesten er gratis i betaperioden. Vi gir beskjed i god tid før eventuelle priser innføres.</li>
         <li>
-          Funksjoner kan endres, og det kan forekomme feil og nedetid. Ikke bruk Flatr som eneste kanal for
+          Funksjoner kan endres, og det kan forekomme feil og nedetid. Ikke bruk Flatr som eneste skjerm for
           sikkerhetskritisk informasjon.
         </li>
-        <li>Kontoer har kvoter for lagring, skjermer og kanaler. Ta kontakt om du trenger mer.</li>
+        <li>Kontoer har kvoter for lagring, TV-er og skjermer. Ta kontakt om du trenger mer.</li>
       </ul>
 
       <h2>Ditt innhold</h2>

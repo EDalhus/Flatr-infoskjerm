@@ -53,7 +53,7 @@ function BarList({ title, rows, total }) {
 function downloadCsv(report) {
   const rows = [['Type', 'Navn', 'Minutter']];
   for (const p of report.playlists) rows.push(['Spilleliste', p.name, p.minutes]);
-  for (const s of report.screens) rows.push(['Kanal', s.name, s.minutes]);
+  for (const s of report.screens) rows.push(['Skjerm', s.name, s.minutes]);
   for (const d of report.devices) rows.push(['Enhet', d.name, d.minutes]);
   for (const d of report.days) rows.push(['Dag', d.day, d.minutes]);
   const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
@@ -186,7 +186,7 @@ export default function ReportsManager() {
                 total={total}
                 rows={report.playlists.map((p) => ({ key: `${p.playlist_id}-${p.name}`, name: p.name, minutes: p.minutes }))}
               />
-              <BarList title="Kanaler" total={total} rows={report.screens.map((s) => ({ key: s.screen_id, name: s.name, minutes: s.minutes }))} />
+              <BarList title="Skjermer" total={total} rows={report.screens.map((s) => ({ key: s.screen_id, name: s.name, minutes: s.minutes }))} />
               <BarList title="Enheter" total={total} rows={report.devices.map((d) => ({ key: d.device_id, name: d.name, minutes: d.minutes }))} />
             </div>
 

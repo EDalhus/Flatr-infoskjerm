@@ -93,8 +93,8 @@ function QuotaEditor({ t, onSaved, onClose }) {
   return (
     <form onSubmit={save} className="grid gap-3 border-t border-hair bg-zone p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
       {field('max_storage_mb', 'Lagring (MB)', Math.round(t.limits.storageBytes / 1024 / 1024))}
-      {field('max_devices', 'Skjermer (TV-er)', t.limits.devices)}
-      {field('max_screens', 'Kanaler', t.limits.screens)}
+      {field('max_devices', 'TV-er (enheter)', t.limits.devices)}
+      {field('max_screens', 'Skjermer', t.limits.screens)}
       <div className="flex gap-2">
         <Button type="submit">Lagre</Button>
         <Button type="button" variant="outline" onClick={onClose}>
@@ -178,7 +178,7 @@ export default function SuperAdmin() {
           {[
             ['Kontoer', totals.accounts],
             ['Aktive siste 7 dager', totals.active],
-            ['Parede skjermer', totals.devices],
+            ['Parede TV-er', totals.devices],
             ['Online nå', totals.online],
             ['Lagring totalt', fmtBytes(totals.storage)]
           ].map(([label, value]) => (
@@ -203,8 +203,8 @@ export default function SuperAdmin() {
                 <th className="px-4 py-2.5 font-medium">Eier</th>
                 <th className="px-4 py-2.5 font-medium">Opprettet</th>
                 <th className="px-4 py-2.5 font-medium">Sist innlogget</th>
+                <th className="px-4 py-2.5 font-medium">TV-er</th>
                 <th className="px-4 py-2.5 font-medium">Skjermer</th>
-                <th className="px-4 py-2.5 font-medium">Kanaler</th>
                 <th className="px-4 py-2.5 font-medium">Lysbilder</th>
                 <th className="px-4 py-2.5 font-medium">Lagring</th>
                 <th className="px-4 py-2.5" />
