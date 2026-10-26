@@ -8,7 +8,8 @@ import {
   requireAdmin,
   toIntOrNull,
   corsHeaders,
-  moveToTrash
+  moveToTrash,
+  checkLimit
 } from './_shared.js';
 
 const noBucket = () =>
@@ -140,6 +141,8 @@ export async function onRequestPost(context) {
   const folder = url.searchParams.get('folder') || null;
 
   if (!context.request.body) return badRequest('mangler fil-innhold');
+  const full = await checkLimit(context.env, 'storage', Number(context.request.headers.get('content-length')) || 0);
+  if (full) return full;
 
   const key = `media/${crypto.randomUUID()}`;
   const put = await context.env.MEDIA.put(key, context.request.body, {

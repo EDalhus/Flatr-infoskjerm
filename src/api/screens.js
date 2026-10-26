@@ -8,7 +8,8 @@ import {
   requireAdmin,
   toIntOrNull,
   moveToTrash,
-  resolveScreenContent
+  resolveScreenContent,
+  checkLimit
 } from './_shared.js';
 import { createPlaylist } from './playlists.js';
 
@@ -85,6 +86,8 @@ export async function onRequestPost(context) {
   const env = context.env;
   const b = await readJson(context.request);
   const cloneId = toIntOrNull(b?.duplicate_of);
+  const atLimit = await checkLimit(env, 'screens');
+  if (atLimit) return atLimit;
 
   if (cloneId) {
     const src = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(cloneId).first();

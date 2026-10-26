@@ -7,6 +7,8 @@ import WidgetView from './viewer/WidgetView.jsx';
 import Admin from './admin/Admin.jsx';
 import Schedule from './public/Schedule.jsx';
 import Landing from './platform/Landing.jsx';
+import SuperAdmin from './platform/SuperAdmin.jsx';
+import { Privacy, Terms } from './platform/Legal.jsx';
 import { Signup, PlatformLogin, PlatformAdminRedirect } from './platform/AuthPages.jsx';
 
 const NotFound = () => (
@@ -28,6 +30,9 @@ const platformRouter = (ctx) =>
     { path: '/signup', element: <Signup baseDomain={ctx.base_domain} /> },
     { path: '/login', element: <PlatformLogin /> },
     { path: '/admin', element: <PlatformAdminRedirect baseDomain={ctx.base_domain} /> },
+    { path: '/superadmin', element: <SuperAdmin /> },
+    { path: '/personvern', element: <Privacy /> },
+    { path: '/vilkar', element: <Terms /> },
     { path: '*', element: <NotFound /> }
   ]);
 
@@ -39,6 +44,8 @@ const appRouter = (ctx) =>
     { path: '/display/:screenId', element: <Viewer /> },
     { path: '/preview/:playlistId', element: <Viewer /> },
     { path: '/widget/:elementId', element: <WidgetView /> },
+    { path: '/personvern', element: <Privacy /> },
+    { path: '/vilkar', element: <Terms /> },
     { path: '/s', element: <Schedule /> },
     { path: '/s/:screenId', element: <Schedule /> },
     { path: '*', element: <NotFound /> }

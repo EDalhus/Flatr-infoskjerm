@@ -31,7 +31,8 @@ import {
   readJson,
   requireAdmin,
   toIntOrNull,
-  safeJson
+  safeJson,
+  checkLimit
 } from './_shared.js';
 
 // Kode-alfabet uten forvekslbare tegn (ingen I, O, 0, 1).
@@ -221,6 +222,8 @@ async function handleRequest({ request, env }) {
 async function handleLink(context) {
   const denied = await requireAdmin(context);
   if (denied) return denied;
+  const atLimit = await checkLimit(context.env, 'devices');
+  if (atLimit) return atLimit;
 
   const b = await readJson(context.request);
   const code = String(b?.pairing_code ?? b?.code ?? '')

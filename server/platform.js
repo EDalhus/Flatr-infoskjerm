@@ -97,12 +97,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pairings_code_pending ON pairings (code) W
 `);
 
 // Senere tillegg til eksisterende databaser (ALTER feiler hvis kolonnen finnes).
-for (const sql of [`ALTER TABLE users ADD COLUMN prefs TEXT`]) {
+for (const sql of [
+  `ALTER TABLE users ADD COLUMN prefs TEXT`,
+  // Kvoter pr. kunde (NULL = standard fra miljøvariablene, se tenantLimits).
+  `ALTER TABLE tenants ADD COLUMN max_storage_mb INTEGER`,
+  `ALTER TABLE tenants ADD COLUMN max_devices INTEGER`,
+  `ALTER TABLE tenants ADD COLUMN max_screens INTEGER`,
+  `ALTER TABLE users ADD COLUMN terms_accepted_at TEXT`,
+  `CREATE TABLE IF NOT EXISTS admin_sessions (
+     id_hash TEXT PRIMARY KEY,
+     email TEXT NOT NULL,
+     expires_at TEXT NOT NULL
+   )`
+]) {
   try {
     platformDb.db.exec(sql);
   } catch {
     /* finnes allerede */
   }
+}
+
+/* ------------------------------- kvoter -------------------------------- */
+
+const envInt = (name, fallback) => Number.parseInt(process.env[name], 10) || fallback;
+
+/** Kvotene for en kunde: egne verdier på kunden, ellers standard (beta). */
+export function tenantLimits(tenant) {
+  return {
+    storageBytes: (tenant.max_storage_mb ?? envInt('BETA_STORAGE_MB', 5120)) * 1024 * 1024,
+    devices: tenant.max_devices ?? envInt('BETA_MAX_DEVICES', 10),
+    screens: tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 20)
+  };
 }
 
 /* ------------------------------ hjelpere ------------------------------ */
@@ -319,6 +344,7 @@ export function updatePrefs(userId, patch) {
 export function sweepPlatform() {
   const now = nowIso();
   platformDb.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).runSync();
+  platformDb.prepare('DELETE FROM admin_sessions WHERE expires_at < ?').bind(now).runSync();
   platformDb
     .prepare('DELETE FROM login_tokens WHERE expires_at < ?')
     .bind(new Date(Date.now() - 24 * 3600_000).toISOString())

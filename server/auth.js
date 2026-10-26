@@ -111,6 +111,7 @@ export async function handlePlatformRoute(request, ctx) {
     const name = String(b.name || '').trim().slice(0, 100) || null;
 
     if (!orgName) return json({ error: 'Skriv inn navnet på organisasjonen.' }, 400);
+    if (b.accept_terms !== true) return json({ error: 'Du må godta vilkårene og personvernerklæringen.' }, 400);
     if (!validEmail(email)) return json({ error: 'Skriv inn en gyldig e-postadresse.' }, 400);
     const problem = slugProblem(slug);
     if (problem) return json({ error: problem, field: 'slug' }, 409);
@@ -119,7 +120,7 @@ export async function handlePlatformRoute(request, ctx) {
     const token = createLoginToken({
       purpose: 'signup',
       email,
-      payload: { org_name: orgName, slug, name },
+      payload: { org_name: orgName, slug, name, terms_accepted_at: new Date().toISOString() },
       ttlMs: 24 * 3600_000
     });
     const link = `${ctx.origin(null)}/auth/verify?token=${token}`;
@@ -175,10 +176,16 @@ export async function handlePlatformRoute(request, ctx) {
   if (p === '/auth/verify' && request.method === 'GET') {
     const row = consumeLoginToken(url.searchParams.get('token') || '', 'signup');
     if (!row) return redirect('/signup?error=expired');
-    const { org_name, slug, name } = row.payload || {};
+    const { org_name, slug, name, terms_accepted_at } = row.payload || {};
     let tenant;
+    let user;
     try {
-      ({ tenant } = createTenant({ slug, name: org_name, ownerEmail: row.email, ownerName: name }));
+      ({ tenant, user } = createTenant({ slug, name: org_name, ownerEmail: row.email, ownerName: name }));
+      // Dokumentasjon på at vilkårene ble godtatt (tidspunktet i skjemaet).
+      platformDb
+        .prepare('UPDATE users SET terms_accepted_at = COALESCE(terms_accepted_at, ?) WHERE id = ?')
+        .bind(terms_accepted_at || new Date().toISOString(), user.id)
+        .runSync();
     } catch (err) {
       return redirect(`/signup?error=${err.status === 409 ? 'taken' : 'failed'}`);
     }

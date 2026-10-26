@@ -19,6 +19,14 @@ export function AuthShell({ title, subtitle, children, footer }) {
           <div className="mt-6">{children}</div>
         </div>
         {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
+        <div className="mt-6 flex justify-center gap-4 text-xs text-muted">
+          <a href="/personvern" className="hover:text-ink">
+            Personvern
+          </a>
+          <a href="/vilkar" className="hover:text-ink">
+            Vilkår
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -71,6 +79,7 @@ export function Signup({ baseDomain }) {
   const [slugTouched, setSlugTouched] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [accept, setAccept] = useState(false);
   const [slugState, setSlugState] = useState(null); // { available, reason }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(SIGNUP_ERRORS[params.get('error')] || '');
@@ -103,7 +112,7 @@ export function Signup({ baseDomain }) {
     setError('');
     setBusy(true);
     try {
-      await api.platform.signup({ org_name: org, slug, email, name });
+      await api.platform.signup({ org_name: org, slug, email, name, accept_terms: accept });
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -186,8 +195,28 @@ export function Signup({ baseDomain }) {
             required
           />
         </Field>
+        <label className="flex items-start gap-2.5 text-sm text-ink">
+          <input
+            type="checkbox"
+            required
+            checked={accept}
+            onChange={(e) => setAccept(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0"
+          />
+          <span>
+            Jeg godtar{' '}
+            <Link to="/vilkar" target="_blank" className="font-semibold text-brand hover:underline">
+              vilkårene
+            </Link>{' '}
+            og har lest{' '}
+            <Link to="/personvern" target="_blank" className="font-semibold text-brand hover:underline">
+              personvernerklæringen
+            </Link>
+            .
+          </span>
+        </label>
         <ErrorText>{error}</ErrorText>
-        <Button type="submit" className="w-full py-3" disabled={busy || slugState?.available === false}>
+        <Button type="submit" className="w-full py-3" disabled={busy || !accept || slugState?.available === false}>
           {busy ? 'Sender …' : 'Opprett konto'}
         </Button>
         <p className="text-center text-xs text-muted">Vi sender deg en lenke for å bekrefte e-postadressen.</p>

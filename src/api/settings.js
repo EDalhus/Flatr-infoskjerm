@@ -1,4 +1,4 @@
-import { json, badRequest, handleOptions, readJson, requireAdmin, getTimezone } from './_shared.js';
+import { json, badRequest, handleOptions, readJson, requireAdmin, getTimezone, usage } from './_shared.js';
 
 // Kontoinnstillinger: tidssone (tidsplanen) og offline-varsling (server/monitor.js).
 
@@ -13,7 +13,10 @@ async function readSettings(env) {
   return {
     timezone: await getTimezone(env),
     offline_alerts: map.offline_alerts !== '0',
-    offline_minutes: Number(map.offline_minutes) || 5
+    offline_minutes: Number(map.offline_minutes) || 5,
+    // Kvoter (bare på Node-serveren) og bruk mot dem.
+    limits: env.LIMITS ?? null,
+    usage: env.LIMITS ? await usage(env) : null
   };
 }
 

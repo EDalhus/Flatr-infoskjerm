@@ -1,0 +1,2 @@
+# Nattlig backup av Flatr (se deploy/backup.sh)
+30 3 * * * root /opt/flatr/deploy/backup.sh >> /var/log/flatr-backup.log 2>&1

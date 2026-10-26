@@ -11,6 +11,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { documentKind, officeToPdf, pdfToPngs } from './convert.js';
+import { checkLimit } from '../src/api/_shared.js';
 
 const MAX_BYTES = 100 * 1024 * 1024;
 const jobs = new Map(); // id -> jobb
@@ -107,6 +108,10 @@ export async function handleImportRoute(request, { tenant, user }, env) {
   }
   const playlist = await env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(playlistId).first();
   if (!playlist) return json({ error: 'Spillelisten finnes ikke' }, 404);
+
+  // Sidene blir PNG-er; regn grovt med 3x dokumentets størrelse.
+  const full = await checkLimit(env, 'storage', (Number(request.headers.get('content-length')) || 0) * 3);
+  if (full) return full;
 
   const buffer = Buffer.from(await request.arrayBuffer());
   if (!buffer.length) return json({ error: 'Tom fil' }, 400);

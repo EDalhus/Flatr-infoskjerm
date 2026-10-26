@@ -13,12 +13,14 @@ import path from 'node:path';
 import { getRequestListener } from '@hono/node-server';
 import { routeApi, apiKey, jsonError } from '../src/router.js';
 import { getUser } from '../src/api/_access.js';
+import { checkLimit } from '../src/api/_shared.js';
 import { createAssets } from './assets.js';
 import { handleCollabUpgrade } from './collab.js';
-import { getTenantBySlug, tenantResources, sessionUser, sweepPlatform } from './platform.js';
+import { getTenantBySlug, tenantResources, sessionUser, sweepPlatform, tenantLimits } from './platform.js';
 import { handlePlatformRoute, handleTenantAuthRoute, readCookie, SESSION_COOKIE } from './auth.js';
 import { handleApexDevice, claimFromHub, syncRoutes } from './devices.js';
 import { handleImportRoute } from './imports.js';
+import { handleSuperadminRoute } from './superadmin.js';
 import { startSnapshots } from './snapshots.js';
 import { startMonitor } from './monitor.js';
 
@@ -56,7 +58,8 @@ function tenantEnv(tenant, user) {
     ASSETS,
     SSE_POLL_MS,
     SESSION_USER: user ?? null,
-    TENANT: { slug: tenant.slug, name: tenant.name }
+    TENANT: { slug: tenant.slug, name: tenant.name },
+    LIMITS: tenantLimits(tenant)
   };
 }
 
@@ -113,7 +116,12 @@ async function handleTenant(request, tenant) {
     request.method === 'POST' &&
     ['/api/pairing/link', '/api/pairing/reassign', '/api/pairing/unpair'].includes(key);
 
-  if (isPairingWrite && key === '/api/pairing/link') await claimFromHub(request, tenant, env);
+  if (isPairingWrite && key === '/api/pairing/link') {
+    // Kvoten sjekkes før koden flyttes fra hubben, så TV-en ikke blir hengende.
+    const atLimit = await checkLimit(env, 'devices');
+    if (atLimit) return atLimit;
+    await claimFromHub(request, tenant, env);
+  }
   const res = await routeApi(request, env);
   if (isPairingWrite) await syncRoutes(tenant, env);
   return res;
@@ -124,6 +132,9 @@ async function handlePlatform(request) {
 
   const platform = await handlePlatformRoute(request, ctxBase);
   if (platform) return platform;
+
+  const superadmin = await handleSuperadminRoute(request, ctxBase);
+  if (superadmin) return superadmin;
 
   const device = await handleApexDevice(request, {
     // TV-appen: nettsider/YouTube byttes ut med bilder (se buildState).

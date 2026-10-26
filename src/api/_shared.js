@@ -122,6 +122,42 @@ export function viewerTarget(request, env) {
   return { screenId: playlistId ? null : params.get('screen'), playlistId };
 }
 
+const fmtGb = (b) => `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`;
+
+/** Bruk mot kvotene (env.LIMITS settes av Node-serveren; mangler den, ingen grenser). */
+export async function usage(env) {
+  const [storage, devices, screens] = await Promise.all([
+    env.DB.prepare('SELECT COALESCE(SUM(size), 0) AS b FROM media').first('b'),
+    env.DB.prepare(`SELECT COUNT(*) AS c FROM pairings WHERE status = 'paired'`).first('c'),
+    env.DB.prepare('SELECT COUNT(*) AS c FROM screens').first('c')
+  ]);
+  return { storageBytes: Number(storage) || 0, devices: Number(devices) || 0, screens: Number(screens) || 0 };
+}
+
+/**
+ * Sjekker en kvote før noe nytt legges til. Returnerer en 403/413-respons
+ * hvis grensen er nådd, ellers null.
+ *   kind: 'storage' (extraBytes = størrelsen på det som lastes opp) | 'devices' | 'screens'
+ */
+export async function checkLimit(env, kind, extraBytes = 0) {
+  if (!env.LIMITS) return null;
+  const u = await usage(env);
+  const L = env.LIMITS;
+  if (kind === 'storage' && u.storageBytes + extraBytes > L.storageBytes) {
+    return json(
+      { error: `Lagringsplassen er full (${fmtGb(u.storageBytes)} av ${fmtGb(L.storageBytes)}). Slett filer i biblioteket, eller kontakt oss for mer plass.` },
+      { status: 413 }
+    );
+  }
+  if (kind === 'devices' && u.devices >= L.devices) {
+    return json({ error: `Kontoen kan ha ${L.devices} skjermer i betaen. Kontakt oss om du trenger flere.` }, { status: 403 });
+  }
+  if (kind === 'screens' && u.screens >= L.screens) {
+    return json({ error: `Kontoen kan ha ${L.screens} kanaler i betaen. Kontakt oss om du trenger flere.` }, { status: 403 });
+  }
+  return null;
+}
+
 /** Kontoens tidssone (tidsplanen regner i lokal tid). */
 export async function getTimezone(env) {
   try {

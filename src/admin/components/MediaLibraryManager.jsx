@@ -319,8 +319,16 @@ export default function MediaLibraryManager({ onNavigate }) {
   const [queue, setQueue] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState('');
+  const [quota, setQuota] = useState(null); // bytes, fra kontoens kvote
   const fileRef = useRef(null);
   const dragDepth = useRef(0);
+
+  useEffect(() => {
+    api.settings
+      .get()
+      .then((s) => setQuota(s.limits?.storageBytes ?? null))
+      .catch(() => {});
+  }, []);
 
   const load = () =>
     api.media
@@ -467,7 +475,9 @@ export default function MediaLibraryManager({ onNavigate }) {
     <div className="relative flex min-h-full flex-col" {...dragHandlers}>
       <PageHeader
         title="Mediebibliotek"
-        subtitle={items ? `${items.length} filer · ${fmtBytes(totalBytes)} brukt` : ' '}
+        subtitle={
+          items ? `${items.length} filer · ${fmtBytes(totalBytes)}${quota ? ` av ${fmtBytes(quota)}` : ''} brukt` : ' '
+        }
         action={
           <>
             <Button variant="outline" onClick={newFolder}>
