@@ -9,8 +9,11 @@ import Inspector from './Inspector.jsx';
 import LayoutPicker from './LayoutPicker.jsx';
 import PresenceStack from './PresenceStack.jsx';
 
-export default function DeckEditor({ screenId, onBack, onChange }) {
-  const [screen, setScreen] = useState(null);
+// Editor for én spilleliste (rekkefølgen av lysbilder). Kanaler som viser
+// spillelisten oppdateres live.
+export default function DeckEditor({ playlistId, onBack, onChange }) {
+  const [playlist, setPlaylist] = useState(null);
+  const [nameDraft, setNameDraft] = useState('');
   const [slides, setSlides] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selSlide, setSelSlide] = useState(null);
@@ -23,12 +26,13 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
 
   const reload = async (keepSlide) => {
     try {
-      const [scr, deck, cats] = await Promise.all([
-        api.screens.list(),
-        api.deck.get(screenId),
+      const [pl, deck, cats] = await Promise.all([
+        api.playlists.get(playlistId),
+        api.deck.get(playlistId),
         api.categories.list()
       ]);
-      setScreen((scr || []).find((s) => String(s.id) === String(screenId)) || null);
+      setPlaylist(pl || null);
+      setNameDraft(pl?.name || '');
       setSlides(deck || []);
       setCategories(cats || []);
       setSelSlide((prev) => {
@@ -42,14 +46,14 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
 
   useEffect(() => {
     reload();
-  }, [screenId]);
+  }, [playlistId]);
   useEffect(() => {
     setSelEl(null);
   }, [selSlide]);
 
   const slide = slides.find((s) => s.id === selSlide) || null;
   const element = slide?.elements?.find((e) => e.id === selEl) || null;
-  const orientation = screen?.orientation === 'portrait' ? 'portrait' : 'landscape';
+  const orientation = playlist?.orientation === 'portrait' ? 'portrait' : 'landscape';
 
   const debounce = (key, fn, ms = 350) => {
     clearTimeout(timers.current[key]);
@@ -95,7 +99,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const collab = useCollab(screenId, { onOp: onRemoteOp });
+  const collab = useCollab(`pl-${playlistId}`, { onOp: onRemoteOp });
   collabRef.current = collab;
   const sendOp = (op) => collabRef.current?.sendOp(op);
 
@@ -191,7 +195,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
   const addSlide = async (layout) => {
     try {
       const s = await api.deck.slide.create({
-        screen_id: Number(screenId),
+        playlist_id: Number(playlistId),
         name: layout?.label,
         elements: layout?.elements || []
       });
@@ -204,7 +208,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
   };
   const addSlideFromTemplate = async (tpl) => {
     try {
-      const s = await api.deck.slide.create({ screen_id: Number(screenId), template_id: tpl.id });
+      const s = await api.deck.slide.create({ playlist_id: Number(playlistId), template_id: tpl.id });
       await reload(s.id);
       onChange?.();
       sendOp({ k: 'deck.reload' });
@@ -224,7 +228,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
   };
   const deleteSlide = async (sid) => {
     if (slides.length <= 1) {
-      setErr('En kanal må ha minst ett lysbilde.');
+      setErr('En spilleliste må ha minst ett lysbilde.');
       return;
     }
     if (!confirm('Slette lysbildet? Det havner i papirkurven.')) return;
@@ -257,19 +261,21 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
 
   const setOrientation = async (o) => {
     try {
-      await api.screens.update(screenId, { orientation: o });
-      setScreen((sc) => ({ ...sc, orientation: o }));
+      const pl = await api.playlists.update(playlistId, { orientation: o });
+      setPlaylist(pl);
       sendOp({ k: 'deck.reload' });
+      onChange?.();
     } catch (e) {
       setErr(e.message);
     }
   };
 
-  const setRotation = async (r) => {
+  const saveName = async () => {
+    const name = nameDraft.trim();
+    if (!name || name === playlist?.name) return setNameDraft(playlist?.name || '');
     try {
-      await api.screens.update(screenId, { rotation: r });
-      setScreen((sc) => ({ ...sc, rotation: r }));
-      sendOp({ k: 'deck.reload' });
+      setPlaylist(await api.playlists.update(playlistId, { name }));
+      onChange?.();
     } catch (e) {
       setErr(e.message);
     }
@@ -313,8 +319,23 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           <Icon name="back" className="h-4 w-4" />
           Tilbake
         </Button>
-        <div className="min-w-0 truncate text-sm font-bold text-ink">
-          {screen?.name || 'Kanal'}
+        <div className="flex min-w-0 flex-col">
+          <label className="sr-only" htmlFor="playlist-name">
+            Navn på spillelisten
+          </label>
+          <input
+            id="playlist-name"
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+            className="min-w-0 rounded-md bg-transparent px-1 text-sm font-bold text-ink hover:bg-hair focus:bg-paper focus:outline-none focus:ring-2 focus:ring-focus/30"
+          />
+          <span className="truncate px-1 text-[11px] text-muted">
+            {playlist?.used_by?.length
+              ? `Vises på ${playlist.used_by.map((u) => u.name).join(', ')}`
+              : 'Ikke i bruk på noen kanal'}
+          </span>
         </div>
 
         <div className="flex overflow-hidden rounded-lg border border-line">
@@ -330,19 +351,6 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
             </button>
           ))}
         </div>
-
-        <select
-          value={screen?.rotation ?? 0}
-          onChange={(e) => setRotation(Number(e.target.value))}
-          title="Rotasjon for fysisk montering – styres herfra, ikke fra TV-en"
-          className="rounded-lg border border-line bg-card px-2 py-1.5 text-xs font-bold text-ink focus:border-brand focus:outline-none"
-        >
-          {[0, 90, 135, 180, 270].map((r) => (
-            <option key={r} value={r}>
-              {r}°
-            </option>
-          ))}
-        </select>
 
         <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
           <Icon name="plus" className="h-4 w-4" />
@@ -375,7 +383,7 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
         <button
           onClick={() => setSnap((v) => !v)}
           title="Snapping til senter/kanter"
-          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] ${
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
             snap ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-card text-muted hover:bg-hair'
           }`}
         >
@@ -383,10 +391,10 @@ export default function DeckEditor({ screenId, onBack, onChange }) {
           Snapping
         </button>
         <a
-          href={`${origin}/display/${screenId}`}
+          href={`${origin}/preview/${playlistId}`}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold text-ink hover:bg-hair"
         >
           <Icon name="eye" className="h-3.5 w-3.5" />
           Forhåndsvis

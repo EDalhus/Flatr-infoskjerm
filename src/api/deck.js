@@ -1,13 +1,21 @@
 import { json, badRequest, handleOptions, toIntOrNull, safeJson } from './_shared.js';
 
-// GET /api/deck?screen=ID  -> lysbilder med elementer
+// GET /api/deck?playlist=ID  -> lysbilder med elementer
+// GET /api/deck?screen=ID    -> det samme for spillelisten kanalen viser
 export async function onRequestGet({ request, env }) {
-  const screen = toIntOrNull(new URL(request.url).searchParams.get('screen'));
-  if (!screen) return badRequest('screen er påkrevd');
+  const params = new URL(request.url).searchParams;
+  let playlist = toIntOrNull(params.get('playlist'));
+  const screen = toIntOrNull(params.get('screen'));
+  if (!playlist && screen) {
+    const row = await env.DB.prepare('SELECT playlist_id FROM screens WHERE id = ?').bind(screen).first();
+    playlist = row?.playlist_id ?? null;
+    if (!playlist) return json([]);
+  }
+  if (!playlist) return badRequest('playlist er påkrevd');
 
   const { results: slides } = await env.DB
-    .prepare('SELECT * FROM deck_slides WHERE screen_id = ? ORDER BY position ASC, id ASC')
-    .bind(screen)
+    .prepare('SELECT * FROM deck_slides WHERE playlist_id = ? ORDER BY position ASC, id ASC')
+    .bind(playlist)
     .all();
 
   const ids = (slides ?? []).map((s) => s.id);

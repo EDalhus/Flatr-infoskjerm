@@ -8,6 +8,7 @@ import SponsorsManager from './components/SponsorsManager.jsx';
 import MediaLibraryManager from './components/MediaLibraryManager.jsx';
 import TemplatesManager from './components/TemplatesManager.jsx';
 import ScreensManager from './components/ScreensManager.jsx';
+import PlaylistsManager from './components/PlaylistsManager.jsx';
 import AlertsManager from './components/AlertsManager.jsx';
 import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
@@ -23,13 +24,14 @@ import { useCollab } from '../hooks/useCollab.js';
 const NAV = [
   { id: 'dashboard', label: 'Hjem', icon: 'home', group: 'main', Component: Dashboard },
   { id: 'screens', label: 'Kanaler', icon: 'monitor', group: 'main', Component: ScreensManager },
+  { id: 'playlists', label: 'Spillelister', icon: 'layers', group: 'main', Component: PlaylistsManager },
   { id: 'alerts', label: 'Varsler', icon: 'megaphone', group: 'main', Component: AlertsManager },
   { id: 'pairing', label: 'Enheter', icon: 'link', group: 'main', Component: PairingManager },
   { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ScheduleManager },
   { id: 'categories', label: 'Kategorier', icon: 'tag', group: 'content', Component: CategoriesManager },
   { id: 'sponsors', label: 'Sponsorer', icon: 'image', group: 'content', Component: SponsorsManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
-  { id: 'templates', label: 'Maler', icon: 'layers', group: 'content', Component: TemplatesManager },
+  { id: 'templates', label: 'Maler', icon: 'copy', group: 'content', Component: TemplatesManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
   { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
   { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager }
@@ -81,6 +83,7 @@ function AdminShell({ context }) {
   const [screenCount, setScreenCount] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [me, setMe] = useState(null);
+  const [navKey, setNavKey] = useState(0);
   const [theme, setTheme] = useTheme(me);
 
   const tenant = context?.tenant ?? null;
@@ -112,14 +115,17 @@ function AdminShell({ context }) {
   // Global tilstedeværelse – alle som er pålogget Flatr.
   const lobby = useCollab('lobby', { where: current.label });
 
-  const go = (id) => {
-    setTab(id);
+  // `params` legges i adressen (f.eks. { edit: 3 } åpner spilleliste 3 i editoren).
+  const go = (id, params = {}) => {
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.set('view', id);
       url.searchParams.delete('edit');
+      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
       window.history.replaceState(null, '', url);
     }
+    setTab(id);
+    setNavKey((k) => k + 1);
   };
 
   const logout = async () => {
@@ -128,7 +134,8 @@ function AdminShell({ context }) {
   };
 
   const shared = { nav, tab, go, me, tenant, theme, setTheme, logout, lobby, screenCount, current };
-  const content = <Active onChange={bump} onNavigate={go} me={me} theme={theme} />;
+  // navKey remonterer siden ved hver navigasjon, så den leser adressen på nytt.
+  const content = <Active key={navKey} onChange={bump} onNavigate={go} me={me} theme={theme} />;
 
   return theme === 'presis' ? <RailShell {...shared}>{content}</RailShell> : <TopShell {...shared}>{content}</TopShell>;
 }

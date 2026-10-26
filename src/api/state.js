@@ -1,6 +1,7 @@
-import { json, handleOptions, buildState, touchScreen, corsHeaders } from './_shared.js';
+import { json, handleOptions, buildState, touchScreen, corsHeaders, viewerTarget } from './_shared.js';
 
 // GET /api/state?screen=1
+// GET /api/state?playlist=1   (forhåndsvisning av en spilleliste i admin)
 // Full starttilstand for en Viewer (brukes ved oppstart og som SSE-fallback).
 //
 // Betinget henting: svaret får en `ETag` = innholds-signaturen. Sender klienten
@@ -8,8 +9,9 @@ import { json, handleOptions, buildState, touchScreen, corsHeaders } from './_sh
 // beholder TV-en sin siste gyldige tilstand, og kan fortsette å vise den også
 // når nettet faller (cache siste 200-svar lokalt på enheten).
 export async function onRequestGet({ request, env }) {
-  const screenId = new URL(request.url).searchParams.get('screen');
-  const [state] = await Promise.all([buildState(env, screenId), touchScreen(env, screenId)]);
+  const { screenId, playlistId, denied } = viewerTarget(request, env);
+  if (denied) return denied;
+  const [state] = await Promise.all([buildState(env, screenId, { playlistId }), touchScreen(env, screenId)]);
 
   const etag = `W/"${state.version}"`;
   const inm = request.headers.get('If-None-Match');

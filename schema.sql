@@ -5,6 +5,10 @@
 -- Har du en database fra en tidligere versjon: kjør migreringene i
 -- ./migrations/ i rekkefølge (se README → «Migrering»).
 --
+-- NB: Dette er grunnskjemaet (versjon 0). På Node-serveren kjøres
+-- server/tenantMigrations.js etterpå – blant annet flyttes lysbildene fra
+-- kanalen til gjenbrukbare spillelister (deck_slides.playlist_id).
+--
 -- Modell: hver skjerm er en rekke lysbilder (deck_slides). Hvert lysbilde er
 -- én fri canvas med posisjonerte widgets (deck_elements). Tabellene
 -- screen_slides / playlists er historikk fra sone-modellen og brukes ikke.

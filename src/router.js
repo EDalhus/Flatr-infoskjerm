@@ -2,6 +2,7 @@
 // (src/worker.js) og Node-serveren (server/index.js).
 
 import * as screens from './api/screens.js';
+import * as playlists from './api/playlists.js';
 import * as deck from './api/deck.js';
 import * as deckSlides from './api/deckSlides.js';
 import * as deckElements from './api/deckElements.js';
@@ -23,6 +24,7 @@ export { pairing };
 
 const ROUTES = {
   '/api/screens': screens,
+  '/api/playlists': playlists,
   '/api/deck': deck,
   '/api/deck-slides': deckSlides,
   '/api/deck-elements': deckElements,

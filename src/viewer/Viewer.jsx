@@ -13,13 +13,16 @@ import AlertOverlay from './components/AlertOverlay.jsx';
 const EMPTY = { screen: null, deck: [], categories: [], schedule: [], sponsors: [], alerts: [] };
 
 export default function Viewer() {
-  const { screenId } = useParams();
+  // /display/:screenId = en kanal. /preview/:playlistId = forhåndsvisning av
+  // en spilleliste fra admin (krever innlogging, ingen kanal).
+  const { screenId, playlistId } = useParams();
   const [params] = useSearchParams();
   // ?preview=1 – innebygd i admin-panelet: ikke meld heartbeat / hold skjermen våken.
-  const preview = params.get('preview') === '1';
+  const preview = params.get('preview') === '1' || !!playlistId;
+  const target = useMemo(() => (playlistId ? { playlist: playlistId } : screenId), [playlistId, screenId]);
   const now = useNow(1000);
   useWakeLock(!preview);
-  useHeartbeat(preview ? null : screenId);
+  useHeartbeat(preview || playlistId ? null : screenId);
 
   const [state, setState] = useState(EMPTY);
   const [loaded, setLoaded] = useState(false);
@@ -27,7 +30,7 @@ export default function Viewer() {
   useEffect(() => {
     let alive = true;
     api
-      .getState(screenId)
+      .getState(target)
       .then((data) => {
         if (alive && data) {
           setState(data);
@@ -38,14 +41,14 @@ export default function Viewer() {
     return () => {
       alive = false;
     };
-  }, [screenId]);
+  }, [target]);
 
   const onData = useCallback((data) => {
     setState(data);
     setLoaded(true);
   }, []);
 
-  const connected = useSSE(api.streamUrl(screenId), { snapshot: onData, update: onData });
+  const connected = useSSE(api.streamUrl(target), { snapshot: onData, update: onData });
 
   const orientation = state.screen?.orientation === 'portrait' ? 'portrait' : 'landscape';
   const base = BASE_SIZE[orientation];
@@ -83,9 +86,11 @@ export default function Viewer() {
       >
         {loaded && !state.screen ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-paper p-16 text-center text-ink">
-            <div className="text-5xl font-black">Kanal {screenId}</div>
+            <div className="text-5xl font-black">{playlistId ? 'Spilleliste' : `Kanal ${screenId}`}</div>
             <p className="max-w-xl text-2xl text-muted">
-              Fant ikke kanalen. Opprett den i admin, eller sjekk ID-en i adressen.
+              {playlistId
+                ? 'Fant ikke spillelisten, eller du er ikke logget inn.'
+                : 'Fant ikke kanalen. Opprett den i admin, eller sjekk ID-en i adressen.'}
             </p>
           </div>
         ) : (

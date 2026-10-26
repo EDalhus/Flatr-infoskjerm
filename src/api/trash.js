@@ -15,9 +15,7 @@ const TABLE = {
   category: 'categories',
   template: 'templates',
   media: 'media',
-  deck_element: 'deck_elements',
-  screen_slide: 'screen_slides',
-  playlist_item: 'playlist_items'
+  deck_element: 'deck_elements'
 };
 
 const KIND_LABEL = {
@@ -29,8 +27,7 @@ const KIND_LABEL = {
   deck_slide: 'Lysbilde',
   deck_element: 'Widget',
   screen: 'Kanal',
-  screen_slide: 'Slide (gammel)',
-  playlist_item: 'Spilleliste-element (gammel)'
+  playlist: 'Spilleliste'
 };
 
 async function insertRow(env, table, row, keepId) {
@@ -48,60 +45,78 @@ async function tryInsert(env, table, row) {
   }
 }
 
+/** Gjenoppretter lysbilder (+ elementer) inn i en spilleliste med nye id-er. */
+async function restoreSlides(env, playlistId, slides = [], elements = []) {
+  const slideIdMap = {};
+  for (const s of slides) {
+    const c = { ...s, playlist_id: playlistId };
+    const oldId = c.id;
+    delete c.id;
+    delete c.screen_id; // eldre papirkurv-rader (før spillelister)
+    try {
+      slideIdMap[oldId] = await insertRow(env, 'deck_slides', c, false);
+    } catch {
+      /* hopp over */
+    }
+  }
+  for (const e of elements) {
+    const ns = slideIdMap[e.slide_id];
+    if (!ns) continue;
+    const c = { ...e, slide_id: ns };
+    delete c.id;
+    try {
+      await insertRow(env, 'deck_elements', c, false);
+    } catch {
+      /* hopp over */
+    }
+  }
+}
+
+const playlistExists = async (env, id) =>
+  !!(id && (await env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(id).first()));
+
 async function restoreEntry(env, kind, payload) {
-  // Skjerm: gjenopprett skjerm → lysbilder → elementer, med nye id-er.
-  if (kind === 'screen') {
-    const newScreenId = await tryInsert(env, 'screens', payload.row);
-    const slideIdMap = {};
-    for (const s of payload.slides || []) {
-      const c = { ...s, screen_id: newScreenId };
-      const oldId = c.id;
-      delete c.id;
-      try {
-        slideIdMap[oldId] = await insertRow(env, 'deck_slides', c, false);
-      } catch {
-        /* hopp over */
-      }
-    }
-    for (const e of payload.elements || []) {
-      const ns = slideIdMap[e.slide_id];
-      if (!ns) continue;
-      const c = { ...e, slide_id: ns };
-      delete c.id;
-      try {
-        await insertRow(env, 'deck_elements', c, false);
-      } catch {
-        /* hopp over */
-      }
-    }
+  // Spilleliste: gjenopprett listen → lysbilder → elementer.
+  if (kind === 'playlist') {
+    const newId = await tryInsert(env, 'playlists', payload.row);
+    await restoreSlides(env, newId, payload.slides, payload.elements);
     return;
   }
 
-  // Lysbilde: gjenopprett lysbildet + elementene sine.
+  // Kanal. Eldre rader (før spillelister) har lysbildene med seg – de får en
+  // egen spilleliste. Nyere peker bare på spillelisten sin.
+  if (kind === 'screen') {
+    const row = { ...payload.row };
+    if (payload.slides) {
+      const pl = await env.DB
+        .prepare('INSERT INTO playlists (name, orientation) VALUES (?, ?) RETURNING id')
+        .bind(row.name || 'Kanal', row.orientation || 'landscape')
+        .first();
+      await restoreSlides(env, pl.id, payload.slides, payload.elements);
+      row.playlist_id = pl.id;
+    } else if (!(await playlistExists(env, row.playlist_id))) {
+      row.playlist_id = null;
+    }
+    await tryInsert(env, 'screens', row);
+    return;
+  }
+
+  // Lysbilde: tilbake i spillelisten sin (eldre rader: kanalens spilleliste).
   if (kind === 'deck_slide') {
     const c = { ...payload.row };
     delete c.id;
+    if (c.screen_id !== undefined) {
+      const scr = await env.DB.prepare('SELECT playlist_id FROM screens WHERE id = ?').bind(c.screen_id).first();
+      c.playlist_id = scr?.playlist_id ?? null;
+      delete c.screen_id;
+    }
+    if (!(await playlistExists(env, c.playlist_id))) throw new Error('Spillelisten lysbildet hørte til finnes ikke lenger');
     const newId = await tryInsert(env, 'deck_slides', c);
     for (const e of payload.elements || []) {
       const ec = { ...e, slide_id: newId };
       delete ec.id;
       try {
         await insertRow(env, 'deck_elements', ec, false);
-      } catch {
-        /* hopp over */
-      }
-    }
-    return;
-  }
-
-  // Historikk-modell (sone-slides / spillelister)
-  if (kind === 'playlist') {
-    const newId = await tryInsert(env, 'playlists', payload.row);
-    for (const ch of payload.items || []) {
-      const c = { ...ch, playlist_id: newId };
-      delete c.id;
-      try {
-        await insertRow(env, 'playlist_items', c, false);
       } catch {
         /* hopp over */
       }

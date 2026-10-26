@@ -11,6 +11,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { D1Database } from './d1.js';
 import { DiskBucket } from './r2.js';
+import { migrateTenant } from './tenantMigrations.js';
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || './data');
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -154,7 +155,9 @@ export function tenantResources(slug) {
     const dir = tenantDir(slug);
     const dbFile = path.join(dir, 'db.sqlite');
     if (!existsSync(dbFile)) throw new Error(`mangler database for ${slug}`);
-    r = { DB: new D1Database(dbFile), MEDIA: new DiskBucket(path.join(dir, 'media')) };
+    const DB = new D1Database(dbFile);
+    migrateTenant(DB.db);
+    r = { DB, MEDIA: new DiskBucket(path.join(dir, 'media')) };
     envCache.set(slug, r);
   }
   return r;
@@ -169,6 +172,7 @@ export function createTenant({ slug, name, ownerEmail, ownerName }) {
   mkdirSync(path.join(dir, 'media'), { recursive: true });
   const db = new D1Database(path.join(dir, 'db.sqlite'));
   db.db.exec(TENANT_SCHEMA);
+  migrateTenant(db.db);
   db.close();
 
   const d = platformDb.db;

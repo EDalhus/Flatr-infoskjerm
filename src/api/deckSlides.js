@@ -67,9 +67,9 @@ export async function onRequestGet({ request, env }) {
 }
 
 // POST /api/deck-slides
-//   { screen_id, position? }           -> nytt tomt lysbilde
+//   { playlist_id, position? }         -> nytt tomt lysbilde
 //   { duplicate_of }                   -> klon lysbilde + elementer
-//   { screen_id, template_id }         -> fra mal
+//   { playlist_id, template_id }       -> fra mal
 export async function onRequestPost(context) {
   const denied = await requireAdmin(context);
   if (denied) return denied;
@@ -81,17 +81,17 @@ export async function onRequestPost(context) {
     const src = await env.DB.prepare('SELECT * FROM deck_slides WHERE id = ?').bind(cloneId).first();
     if (!src) return notFound('Lysbilde finnes ikke');
     await env.DB
-      .prepare('UPDATE deck_slides SET position = position + 1 WHERE screen_id = ? AND position > ?')
-      .bind(src.screen_id, src.position)
+      .prepare('UPDATE deck_slides SET position = position + 1 WHERE playlist_id = ? AND position > ?')
+      .bind(src.playlist_id, src.position)
       .run();
     const copy = await env.DB
       .prepare(
         `INSERT INTO deck_slides
-           (screen_id, position, name, duration_seconds, transition, transition_ms, background, enabled)
+           (playlist_id, position, name, duration_seconds, transition, transition_ms, background, enabled)
          VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING *`
       )
       .bind(
-        src.screen_id,
+        src.playlist_id,
         src.position + 1,
         src.name ? `${src.name} (kopi)` : null,
         src.duration_seconds,
@@ -112,14 +112,14 @@ export async function onRequestPost(context) {
     return json({ ...copy, background: safeJson(copy.background, {}), elements: [] }, { status: 201 });
   }
 
-  const screenId = toIntOrNull(b?.screen_id);
-  if (!screenId) return badRequest('screen_id er påkrevd');
-  const screen = await env.DB.prepare('SELECT id FROM screens WHERE id = ?').bind(screenId).first();
-  if (!screen) return notFound('Kanal finnes ikke');
+  const playlistId = toIntOrNull(b?.playlist_id);
+  if (!playlistId) return badRequest('playlist_id er påkrevd');
+  const playlist = await env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(playlistId).first();
+  if (!playlist) return notFound('Spillelisten finnes ikke');
 
   const maxRow = await env.DB
-    .prepare('SELECT COALESCE(MAX(position), -1) AS m FROM deck_slides WHERE screen_id = ?')
-    .bind(screenId)
+    .prepare('SELECT COALESCE(MAX(position), -1) AS m FROM deck_slides WHERE playlist_id = ?')
+    .bind(playlistId)
     .first();
   const position = toIntOrNull(b?.position) ?? (maxRow?.m ?? -1) + 1;
 
@@ -133,11 +133,11 @@ export async function onRequestPost(context) {
   const slide = await env.DB
     .prepare(
       `INSERT INTO deck_slides
-         (screen_id, position, name, duration_seconds, transition, transition_ms, background, enabled)
+         (playlist_id, position, name, duration_seconds, transition, transition_ms, background, enabled)
        VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING *`
     )
     .bind(
-      screenId,
+      playlistId,
       position,
       tpl?.name ?? b?.name ?? null,
       toIntOrNull(tpl?.duration_seconds) ?? 15,

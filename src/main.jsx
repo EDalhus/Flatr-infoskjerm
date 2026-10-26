@@ -36,13 +36,15 @@ const appRouter = (ctx) =>
     { path: '/', element: <Navigate to="/admin" replace /> },
     { path: '/admin', element: <Admin context={ctx} /> },
     { path: '/display/:screenId', element: <Viewer /> },
+    { path: '/preview/:playlistId', element: <Viewer /> },
     { path: '/s', element: <Schedule /> },
     { path: '/s/:screenId', element: <Schedule /> },
     { path: '*', element: <NotFound /> }
   ]);
 
 // Skjermvisning og offentlig program trenger ikke plattform-konteksten.
-const isPublicPath = (p) => p.startsWith('/display/') || p === '/s' || p.startsWith('/s/');
+const isPublicPath = (p) =>
+  p.startsWith('/display/') || p.startsWith('/preview/') || p === '/s' || p.startsWith('/s/');
 
 function App() {
   const [router, setRouter] = useState(() => {

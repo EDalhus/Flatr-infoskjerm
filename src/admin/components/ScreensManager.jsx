@@ -1,48 +1,199 @@
+// Kanaler – det en gruppe skjermer viser. Hver kanal viser én spilleliste
+// (innholdet redigeres under Spillelister) og har sin egen rotasjon for
+// fysisk montering.
+
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
-import {
-  Icon,
-  Field,
-  Input,
-  Select,
-  Button,
-  IconButton,
-  Card,
-  GroupCard,
-  Row,
-  MediaTile,
-  PageHeader,
-  ErrorText
-} from './ui.jsx';
-
-const ORIENTATION_OPTIONS = [
-  { value: 'landscape', label: '16:9' },
-  { value: 'portrait', label: '9:16' }
-];
+import { Icon, Field, Input, Select, Button, IconButton, PageHeader, ErrorText } from './ui.jsx';
+import LiveScreenView from './LiveScreenView.jsx';
 
 // Fjernstyrt rotasjon for fysisk montering (grader). Styres herfra, ikke fra TV-en.
 const ROTATION_OPTIONS = [0, 90, 135, 180, 270];
-import DeckEditor from './deck/DeckEditor.jsx';
+const NEW_PLAYLIST = 'new';
 
-function OnlineDot({ online }) {
+function NewChannel({ playlists, onCreated, onCancel }) {
+  const [form, setForm] = useState({ name: '', location: '', playlist: NEW_PLAYLIST, orientation: 'landscape', rotation: 0 });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const created = await api.screens.create({
+        name: form.name,
+        location: form.location || null,
+        rotation: form.rotation,
+        ...(form.playlist === NEW_PLAYLIST
+          ? { orientation: form.orientation }
+          : { playlist_id: Number(form.playlist) })
+      });
+      onCreated(created);
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  };
+
   return (
-    <span
-      className={`h-2.5 w-2.5 shrink-0 rounded-full ${online ? 'bg-ok' : 'bg-muted/50'}`}
-      title={online ? 'Online' : 'Offline'}
-    />
+    <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-line bg-card p-5 shadow-card sm:grid-cols-2">
+      <Field label="Navn">
+        <Input autoFocus required value={form.name} onChange={(e) => set({ name: e.target.value })} placeholder="Resepsjon" />
+      </Field>
+      <Field label="Plassering">
+        <Input value={form.location} onChange={(e) => set({ location: e.target.value })} placeholder="1. etasje" />
+      </Field>
+      <Field label="Viser spilleliste">
+        <Select value={form.playlist} onChange={(e) => set({ playlist: e.target.value })}>
+          <option value={NEW_PLAYLIST}>+ Ny spilleliste med samme navn</option>
+          {playlists.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {form.playlist === NEW_PLAYLIST ? (
+        <Field label="Format">
+          <Select value={form.orientation} onChange={(e) => set({ orientation: e.target.value })}>
+            <option value="landscape">Liggende 16:9</option>
+            <option value="portrait">Stående 9:16</option>
+          </Select>
+        </Field>
+      ) : (
+        <Field label="Rotasjon" hint="Roterer visningen for fysisk montering.">
+          <Select value={form.rotation} onChange={(e) => set({ rotation: Number(e.target.value) })}>
+            {ROTATION_OPTIONS.map((r) => (
+              <option key={r} value={r}>
+                {r}°
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
+      <div className="flex gap-2 sm:col-span-2">
+        <Button type="submit" disabled={busy}>
+          {busy ? 'Oppretter …' : 'Opprett kanal'}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Avbryt
+        </Button>
+      </div>
+      {error && (
+        <div className="sm:col-span-2">
+          <ErrorText>{error}</ErrorText>
+        </div>
+      )}
+    </form>
   );
 }
 
-function ScreenList({ onEdit, onChange }) {
-  const [screens, setScreens] = useState([]);
-  const [form, setForm] = useState({ name: '', location: '', orientation: 'landscape', rotation: 0 });
+function ChannelCard({ s, playlists, onPatch, onEditContent, onDuplicate, onDelete }) {
+  const [copied, setCopied] = useState(false);
+  const link = `${window.location.origin}/display/${s.id}`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      window.prompt('Kopier lenken:', link);
+    }
+  };
+
+  return (
+    <article className="flex flex-col gap-3 rounded-2xl border border-hair bg-card p-2.5 shadow-card">
+      <LiveScreenView screenId={s.id} orientation={s.orientation} />
+      <div className="flex flex-col gap-3 px-1.5 pb-1.5">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="m-0 flex items-center gap-2 truncate text-base font-bold text-ink">
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${s.online ? 'bg-ok' : 'bg-muted/40'}`}
+                title={s.online ? 'En skjerm viser kanalen nå' : 'Ingen skjerm viser kanalen nå'}
+              />
+              <span className="truncate">{s.name}</span>
+            </h3>
+            <p className="m-0 truncate text-sm text-muted">
+              {s.location ? `${s.location} · ` : ''}
+              {s.slide_count} lysbilde{s.slide_count === 1 ? '' : 'r'}
+            </p>
+          </div>
+          <IconButton name="copy" label="Dupliser kanal" onClick={() => onDuplicate(s)} />
+          <IconButton name="trash" label="Slett kanal" tone="danger" onClick={() => onDelete(s)} />
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <label className="min-w-0">
+            <span className="sr-only">Spilleliste for {s.name}</span>
+            <Select
+              value={s.playlist_id ?? ''}
+              onChange={(e) => onPatch(s.id, { playlist_id: e.target.value ? Number(e.target.value) : null })}
+            >
+              <option value="">Ingen spilleliste</option>
+              {playlists.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label>
+            <span className="sr-only">Rotasjon</span>
+            <Select
+              value={s.rotation ?? 0}
+              onChange={(e) => onPatch(s.id, { rotation: Number(e.target.value) })}
+              className="!w-20"
+              title="Rotasjon for fysisk montering"
+            >
+              {ROTATION_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}°
+                </option>
+              ))}
+            </Select>
+          </label>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => onEditContent(s)} disabled={!s.playlist_id} className="flex-1">
+            <Icon name="edit" className="h-4 w-4" />
+            Rediger innhold
+          </Button>
+          <Button variant="outline" onClick={copy} title={link}>
+            <Icon name={copied ? 'check' : 'link'} className="h-4 w-4" />
+            {copied ? 'Kopiert' : 'Lenke'}
+          </Button>
+          <a
+            href={link}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Åpne ${s.name} i ny fane`}
+            className="grid h-10 w-10 place-items-center rounded-xl border border-line bg-card text-ink hover:bg-hair"
+          >
+            <Icon name="external" className="h-4 w-4" />
+          </a>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export default function ScreensManager({ onChange, onNavigate }) {
+  const [screens, setScreens] = useState(null);
+  const [playlists, setPlaylists] = useState([]);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
 
   const load = () =>
-    api.screens
-      .list()
-      .then((rows) => setScreens(rows || []))
+    Promise.all([api.screens.list(), api.playlists.list()])
+      .then(([s, p]) => {
+        setScreens(s || []);
+        setPlaylists(p || []);
+      })
       .catch((e) => setError(e.message));
 
   useEffect(() => {
@@ -51,32 +202,21 @@ function ScreenList({ onEdit, onChange }) {
     return () => clearInterval(id);
   }, []);
 
-  const create = async (e) => {
-    e.preventDefault();
-    setError('');
-    setBusy(true);
-    try {
-      const created = await api.screens.create({
-        name: form.name,
-        location: form.location || null,
-        orientation: form.orientation,
-        rotation: form.rotation
-      });
-      setForm({ name: '', location: '', orientation: 'landscape', rotation: 0 });
-      await load();
-      onChange?.();
-      if (created?.id) onEdit(created.id);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const editContent = (s) => onNavigate?.('playlists', { edit: s.playlist_id });
 
-  const patchScreen = async (id, patch) => {
-    setScreens((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  // Eldre lenker (?view=screens&edit=<kanal>) åpner nå kanalens spilleliste.
+  useEffect(() => {
+    const legacy = new URLSearchParams(window.location.search).get('edit');
+    if (!legacy || !screens) return;
+    const s = screens.find((x) => String(x.id) === legacy);
+    if (s?.playlist_id) editContent(s);
+  }, [screens]);
+
+  const patch = async (id, body) => {
+    setScreens((prev) => prev.map((s) => (s.id === id ? { ...s, ...body } : s)));
     try {
-      await api.screens.update(id, patch);
+      const updated = await api.screens.update(id, body);
+      setScreens((prev) => prev.map((s) => (s.id === id ? updated : s)));
       onChange?.();
     } catch (err) {
       setError(err.message);
@@ -84,9 +224,9 @@ function ScreenList({ onEdit, onChange }) {
     }
   };
 
-  const duplicate = async (id) => {
+  const duplicate = async (s) => {
     try {
-      await api.screens.duplicate(id);
+      await api.screens.duplicate(s.id);
       await load();
       onChange?.();
     } catch (err) {
@@ -94,176 +234,72 @@ function ScreenList({ onEdit, onChange }) {
     }
   };
 
-  const remove = async (id) => {
-    if (!confirm('Slette kanalen? Den havner i papirkurven med alle lysbilder.')) return;
+  const remove = async (s) => {
+    if (!confirm(`Slette kanalen «${s.name}»? Spillelisten beholdes. Kanalen havner i papirkurven.`)) return;
     try {
-      await api.screens.remove(id);
+      await api.screens.remove(s.id);
       await load();
       onChange?.();
     } catch (err) {
       setError(err.message);
     }
   };
-
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   return (
     <>
-      <PageHeader crumbs={['Visning', 'Kanaler']} />
-      <div className="mx-auto w-full max-w-5xl space-y-6 p-6 sm:p-8">
-        <p className="-mb-1 text-sm text-muted">
-          En kanal er et lysbildeshow du kobler én eller flere skjermer til.
-        </p>
-        <Card title="Ny kanal">
-          <form onSubmit={create} className="grid gap-4 sm:grid-cols-2">
-            <Field label="Navn">
-              <Input
-                required
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Hovedscene"
-              />
-            </Field>
-            <Field label="Plassering">
-              <Input
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="Storsalen"
-              />
-            </Field>
-            <Field label="Orientering" hint="Design-lerretet lysbildene bygges på.">
-              <Select
-                value={form.orientation}
-                onChange={(e) => setForm({ ...form, orientation: e.target.value })}
-              >
-                <option value="landscape">Liggende 16:9</option>
-                <option value="portrait">Stående 9:16</option>
-              </Select>
-            </Field>
-            <Field label="Rotasjon" hint="Roterer visningen for fysisk montering.">
-              <Select
-                value={form.rotation}
-                onChange={(e) => setForm({ ...form, rotation: Number(e.target.value) })}
-              >
-                {ROTATION_OPTIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}°
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={busy}>
-                {busy ? 'Oppretter …' : 'Opprett og rediger'}
-              </Button>
-            </div>
-          </form>
-          <div className="mt-3">
-            <ErrorText>{error}</ErrorText>
-          </div>
-        </Card>
-
-        {screens.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line px-5 py-8 text-center text-muted">
-            Ingen kanaler opprettet.
-          </p>
-        ) : (
-          <GroupCard label={`Kanaler · ${screens.length}`} icon="monitor">
-            {screens.map((s) => (
-              <Row
-                key={s.id}
-                media={
-                  <MediaTile tone="brand">
-                    <Icon name="monitor" className="h-5 w-5" />
-                  </MediaTile>
-                }
-                title={
-                  <span className="flex items-center gap-2">
-                    <OnlineDot online={s.online} />
-                    {s.name} <span className="font-normal text-muted">#{s.id}</span>
-                  </span>
-                }
-                meta={
-                  <>
-                    <Icon name="layers" className="h-3.5 w-3.5" />
-                    <span>{s.slide_count ?? 0} lysbilder</span>
-                    {s.rotation ? <span>· {s.rotation}° rotert</span> : null}
-                    {s.location && <span>· {s.location}</span>}
-                  </>
-                }
-                actions={
-                  <>
-                    <Select
-                      value={s.orientation === 'portrait' ? 'portrait' : 'landscape'}
-                      onChange={(e) => patchScreen(s.id, { orientation: e.target.value })}
-                      className="w-[88px]"
-                      title="Orientering (design-lerret)"
-                    >
-                      {ORIENTATION_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </Select>
-                    <Select
-                      value={s.rotation ?? 0}
-                      onChange={(e) => patchScreen(s.id, { rotation: Number(e.target.value) })}
-                      className="w-[84px]"
-                      title="Rotasjon for fysisk montering"
-                    >
-                      {ROTATION_OPTIONS.map((r) => (
-                        <option key={r} value={r}>
-                          {r}°
-                        </option>
-                      ))}
-                    </Select>
-                    <IconButton name="x" label="Slett" tone="danger" onClick={() => remove(s.id)} />
-                    <IconButton name="copy" label="Dupliser" onClick={() => duplicate(s.id)} />
-                    <a
-                      href={`${origin}/display/${s.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:bg-hair"
-                    >
-                      <Icon name="external" className="h-3.5 w-3.5" />
-                      Åpne
-                    </a>
-                    <Button size="sm" variant="outline" onClick={() => onEdit(s.id)}>
-                      Rediger
-                    </Button>
-                  </>
-                }
-              />
-            ))}
-          </GroupCard>
+      <PageHeader
+        title="Kanaler"
+        subtitle="En kanal er det én eller flere skjermer viser. Velg spilleliste og rotasjon for hver kanal."
+        action={
+          !creating && (
+            <Button onClick={() => setCreating(true)}>
+              <Icon name="plus" className="h-4 w-4" />
+              Ny kanal
+            </Button>
+          )
+        }
+      />
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
+        {creating && (
+          <NewChannel
+            playlists={playlists}
+            onCancel={() => setCreating(false)}
+            onCreated={async () => {
+              setCreating(false);
+              await load();
+              onChange?.();
+            }}
+          />
         )}
+        <ErrorText>{error}</ErrorText>
+
+        {screens && screens.length === 0 && !creating && (
+          <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-line bg-card px-6 py-14 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-tint text-brand">
+              <Icon name="monitor" className="h-7 w-7" />
+            </div>
+            <h2 className="m-0 text-xl font-bold text-ink">Ingen kanaler ennå</h2>
+            <p className="m-0 max-w-md text-sm text-muted">
+              Lag en kanal for hvert sted som skal vise sitt eget innhold, for eksempel «Resepsjon» eller «Kantina».
+            </p>
+            <Button onClick={() => setCreating(true)}>Lag din første kanal</Button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {(screens || []).map((s) => (
+            <ChannelCard
+              key={s.id}
+              s={s}
+              playlists={playlists}
+              onPatch={patch}
+              onEditContent={editContent}
+              onDuplicate={duplicate}
+              onDelete={remove}
+            />
+          ))}
+        </div>
       </div>
     </>
-  );
-}
-
-const initialEdit = () => {
-  if (typeof window === 'undefined') return null;
-  const v = new URLSearchParams(window.location.search).get('edit');
-  return v && /^\d+$/.test(v) ? Number(v) : null;
-};
-
-export default function ScreensManager({ onChange }) {
-  const [editingId, setEditingId] = useState(initialEdit);
-
-  const setEdit = (id) => {
-    setEditingId(id);
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (id) url.searchParams.set('edit', id);
-      else url.searchParams.delete('edit');
-      window.history.replaceState(null, '', url);
-    }
-  };
-
-  return editingId ? (
-    <DeckEditor screenId={editingId} onBack={() => setEdit(null)} onChange={onChange} />
-  ) : (
-    <ScreenList onEdit={setEdit} onChange={onChange} />
   );
 }

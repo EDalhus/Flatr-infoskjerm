@@ -1,4 +1,4 @@
-import { corsHeaders, buildState, touchScreen } from './_shared.js';
+import { corsHeaders, buildState, touchScreen, viewerTarget } from './_shared.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -7,8 +7,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // Cloudflare Functions er tilstandsløse, så vi poller D1 og differ på en signatur.
 // EventSource i klienten kobler seg til igjen automatisk når vi lukker strømmen.
 export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const screenId = url.searchParams.get('screen');
+  const { screenId, playlistId, denied } = viewerTarget(request, env);
+  if (denied) return denied;
   const pollMs = Math.max(1000, Number.parseInt(env.SSE_POLL_MS ?? '3000', 10) || 3000);
 
   const encoder = new TextEncoder();
@@ -30,7 +30,7 @@ export async function onRequestGet({ request, env }) {
 
       try {
         await touchScreen(env, screenId);
-        const initial = await buildState(env, screenId);
+        const initial = await buildState(env, screenId, { playlistId });
         lastVersion = initial.version;
         send('snapshot', initial);
 
@@ -43,7 +43,7 @@ export async function onRequestGet({ request, env }) {
 
           let state;
           try {
-            state = await buildState(env, screenId);
+            state = await buildState(env, screenId, { playlistId });
           } catch (err) {
             send('error', { message: String(err?.message ?? err) });
             continue;

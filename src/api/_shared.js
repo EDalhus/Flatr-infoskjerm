@@ -107,6 +107,20 @@ const pickDaypart = (row) => {
   return out;
 };
 
+/**
+ * Leser ?screen= / ?playlist= for state/stream. Forhåndsvisning av en
+ * spilleliste (uten kanal) krever innlogging på Node-serveren, siden
+ * spillelister kan være utkast. Returnerer { screenId, playlistId } eller en 401.
+ */
+export function viewerTarget(request, env) {
+  const params = new URL(request.url).searchParams;
+  const playlistId = toIntOrNull(params.get('playlist'));
+  if (playlistId && 'SESSION_USER' in env && !env.SESSION_USER) {
+    return { denied: json({ error: 'Ikke innlogget' }, { status: 401 }) };
+  }
+  return { screenId: playlistId ? null : params.get('screen'), playlistId };
+}
+
 /** Oppdaterer last_seen for en skjerm (online-status i admin). */
 export async function touchScreen(env, screenId) {
   const id = toIntOrNull(screenId);
@@ -126,20 +140,36 @@ export async function touchScreen(env, screenId) {
  * (med utledet status), sponsorer og aktive alerts.
  * Gjenbrukes av /api/state og /api/stream.
  */
-export async function buildState(env, screenId) {
+export async function buildState(env, screenId, { playlistId: previewPlaylistId } = {}) {
   const id = toIntOrNull(screenId);
   const now = Date.now();
 
-  const [screen, deckSlides, categories, schedule, sponsors, alerts] = await Promise.all([
-    id ? env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first() : Promise.resolve(null),
-    id
+  // Kanalen viser en spilleliste. Med `playlistId` (forhåndsvisning i admin)
+  // vises spillelisten direkte, uten kanal.
+  let screen = null;
+  let playlistId = toIntOrNull(previewPlaylistId);
+  if (playlistId) {
+    const p = await env.DB.prepare('SELECT * FROM playlists WHERE id = ?').bind(playlistId).first();
+    screen = p ? { id: null, name: p.name, orientation: p.orientation, rotation: 0, playlist_id: p.id } : null;
+    if (!p) playlistId = null;
+  } else if (id) {
+    screen = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first();
+    playlistId = screen?.playlist_id ?? null;
+    if (screen && playlistId) {
+      const p = await env.DB.prepare('SELECT orientation FROM playlists WHERE id = ?').bind(playlistId).first();
+      if (p) screen = { ...screen, orientation: p.orientation };
+    }
+  }
+
+  const [deckSlides, categories, schedule, sponsors, alerts] = await Promise.all([
+    playlistId
       ? env.DB
           .prepare(
             `SELECT * FROM deck_slides
-               WHERE screen_id = ? AND enabled = 1
+               WHERE playlist_id = ? AND enabled = 1
                ORDER BY position ASC, id ASC`
           )
-          .bind(id)
+          .bind(playlistId)
           .all()
       : Promise.resolve({ results: [] }),
     env.DB.prepare('SELECT * FROM categories ORDER BY name ASC').all(),

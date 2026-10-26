@@ -44,6 +44,11 @@ async function req(path, { method = 'GET', body } = {}) {
   return data;
 }
 
+const viewerQuery = (target) => {
+  if (target && typeof target === 'object') return `?playlist=${encodeURIComponent(target.playlist)}`;
+  return target ? `?screen=${encodeURIComponent(target)}` : '';
+};
+
 const crud = (resource) => ({
   list: (query = '') => req(`/${resource}${query}`),
   create: (body) => req(`/${resource}`, { method: 'POST', body }),
@@ -59,8 +64,16 @@ export const api = {
   schedule: crud('schedule'),
   sponsors: crud('sponsors'),
   categories: crud('categories'),
+  playlists: {
+    list: () => req('/playlists'),
+    get: (id) => req(`/playlists?id=${encodeURIComponent(id)}`),
+    create: (body) => req('/playlists', { method: 'POST', body }),
+    update: (id, body) => req(`/playlists?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+    remove: (id) => req(`/playlists?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    duplicate: (id, name) => req('/playlists', { method: 'POST', body: { duplicate_of: id, name } })
+  },
   deck: {
-    get: (screenId) => req(`/deck?screen=${encodeURIComponent(screenId)}`),
+    get: (playlistId) => req(`/deck?playlist=${encodeURIComponent(playlistId)}`),
     slide: {
       get: (id) => req(`/deck-slides?id=${encodeURIComponent(id)}`),
       create: (body) => req('/deck-slides', { method: 'POST', body }),
@@ -154,8 +167,7 @@ export const api = {
   },
   heartbeat: (screenId) =>
     req(`/heartbeat?screen=${encodeURIComponent(screenId)}`, { method: 'POST' }),
-  getState: (screenId) =>
-    req(`/state${screenId ? `?screen=${encodeURIComponent(screenId)}` : ''}`),
-  streamUrl: (screenId) =>
-    `${BASE}/stream${screenId ? `?screen=${encodeURIComponent(screenId)}` : ''}`
+  // `target` er en kanal-id, eller { playlist: id } for forhåndsvisning av en spilleliste.
+  getState: (target) => req(`/state${viewerQuery(target)}`),
+  streamUrl: (target) => `${BASE}/stream${viewerQuery(target)}`
 };
