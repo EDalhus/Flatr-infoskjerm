@@ -12,6 +12,16 @@ services:
       - "127.0.0.1:8787:8787"
     depends_on:
       - mail
+      - converter
+
+  # Konvertering: Office -> PDF (LibreOffice) og skjermbilder av nettsider
+  # (Chromium). Bare tilgjengelig på det interne Docker-nettet.
+  converter:
+    image: gotenberg/gotenberg:8.37.0
+    restart: unless-stopped
+    command:
+      - gotenberg
+      - --api-timeout=180s
 
   # Send-only e-postserver (Postfix + DKIM). Tar bare imot fra det interne
   # Docker-nettet og leverer direkte til mottakernes servere.

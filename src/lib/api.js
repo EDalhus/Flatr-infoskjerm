@@ -44,6 +44,30 @@ async function req(path, { method = 'GET', body } = {}) {
   return data;
 }
 
+/** POST av en fil med fremdrift (0–1). Svarer med JSON-kroppen. */
+function xhrUpload(url, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    const token = getToken();
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
+    xhr.onload = () => {
+      let data = null;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        /* ikke JSON */
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error(data?.error || `${xhr.status} ${xhr.statusText}`));
+    };
+    xhr.onerror = () => reject(new Error('Nettverksfeil under opplasting'));
+    xhr.send(file);
+  });
+}
+
 const viewerQuery = (target) => {
   if (target && typeof target === 'object') return `?playlist=${encodeURIComponent(target.playlist)}`;
   return target ? `?screen=${encodeURIComponent(target)}` : '';
@@ -105,43 +129,22 @@ export const api = {
     get: (id) => req(`/media?id=${encodeURIComponent(id)}`),
     update: (id, body) => req(`/media?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
     remove: (id) => req(`/media?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
-    // Opplasting med fremdrift (fetch kan ikke rapportere opplastingsfremdrift).
-    uploadWithProgress: (file, folder, onProgress) =>
-      new Promise((resolve, reject) => {
-        const q = new URLSearchParams({ name: file.name, type: file.type || 'application/octet-stream' });
-        if (folder) q.set('folder', folder);
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${BASE}/media?${q}`);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        const token = getToken();
-        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
-        xhr.onload = () => {
-          let data = null;
-          try {
-            data = JSON.parse(xhr.responseText);
-          } catch {
-            /* ikke JSON */
-          }
-          if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-          else reject(new Error(data?.error || `${xhr.status} ${xhr.statusText}`));
-        };
-        xhr.onerror = () => reject(new Error('Nettverksfeil under opplasting'));
-        xhr.send(file);
-      }),
     url: (id) => `${BASE}/media?id=${encodeURIComponent(id)}&raw=1`,
-    upload: (file, folder) => {
+    upload: (file, folder) => api.media.uploadWithProgress(file, folder),
+    // Opplasting med fremdrift (fetch kan ikke rapportere opplastingsfremdrift).
+    uploadWithProgress: (file, folder, onProgress) => {
       const q = new URLSearchParams({ name: file.name, type: file.type || 'application/octet-stream' });
       if (folder) q.set('folder', folder);
-      const headers = { 'Content-Type': file.type || 'application/octet-stream' };
-      const token = getToken();
-      if (token) headers.Authorization = `Bearer ${token}`;
-      return fetch(`${BASE}/media?${q}`, { method: 'POST', headers, body: file }).then(async (r) => {
-        const d = await r.json().catch(() => null);
-        if (!r.ok) throw new Error(d?.error || `${r.status} ${r.statusText}`);
-        return d;
-      });
+      return xhrUpload(`${BASE}/media?${q}`, file, onProgress);
     }
+  },
+  // Dokument (PDF/PowerPoint …) -> lysbilder. Gir { job }; følg med status().
+  imports: {
+    start: (file, { playlistId, duration }, onProgress) => {
+      const q = new URLSearchParams({ playlist_id: playlistId, name: file.name, duration: duration ?? 10 });
+      return xhrUpload(`${BASE}/import?${q}`, file, onProgress);
+    },
+    status: (job) => req(`/import?job=${encodeURIComponent(job)}`)
   },
   alerts: {
     list: (all = false) => req(`/alerts${all ? '?all=1' : ''}`),

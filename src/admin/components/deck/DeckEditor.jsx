@@ -9,6 +9,75 @@ import Inspector from './Inspector.jsx';
 import LayoutPicker from './LayoutPicker.jsx';
 import PresenceStack from './PresenceStack.jsx';
 
+const hostOf = (url) => {
+  try {
+    return new URL(url).host.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+/** Lengden på en videofil i hele sekunder (null hvis den ikke kan leses). */
+function videoSeconds(url) {
+  return new Promise((resolve) => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    const done = (val) => {
+      v.removeAttribute('src');
+      resolve(val);
+    };
+    v.onloadedmetadata = () => done(Number.isFinite(v.duration) ? Math.max(2, Math.ceil(v.duration)) : null);
+    v.onerror = () => done(null);
+    setTimeout(() => done(null), 8000);
+    v.src = url;
+  });
+}
+
+const PHASE = {
+  upload: 'Laster opp',
+  queued: 'Venter',
+  converting: 'Konverterer dokumentet',
+  rendering: 'Lager lysbilder',
+  saving: 'Lagrer'
+};
+
+function ImportBanner({ state, onClose }) {
+  const pct =
+    state.phase === 'upload'
+      ? Math.round((state.upload || 0) * 100)
+      : state.total
+        ? Math.round((state.done / state.total) * 100)
+        : null;
+  return (
+    <div className="flex shrink-0 items-center gap-3 border-b border-line bg-brand-tint px-4 py-2.5 text-sm">
+      <Icon name="layers" className="h-4 w-4 shrink-0 text-brand" />
+      <span className="min-w-0 flex-1 truncate text-ink">
+        <span className="font-semibold">{state.name}</span>
+        {state.error ? (
+          <span className="text-danger"> · {state.error}</span>
+        ) : (
+          <span className="text-muted">
+            {' '}
+            · {PHASE[state.phase] || 'Jobber'}
+            {state.phase !== 'upload' && state.total ? ` (${state.done}/${state.total} sider)` : ''} …
+          </span>
+        )}
+      </span>
+      {!state.error && pct != null && (
+        <span className="h-1.5 w-40 shrink-0 overflow-hidden rounded-full bg-card">
+          <span className="block h-full rounded-full bg-brand transition-[width]" style={{ width: `${pct}%` }} />
+        </span>
+      )}
+      {state.error && (
+        <button type="button" onClick={onClose} className="font-semibold text-brand hover:underline">
+          Lukk
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Editor for én spilleliste (rekkefølgen av lysbilder). Kanaler som viser
 // spillelisten oppdateres live.
 export default function DeckEditor({ playlistId, onBack, onChange }) {
@@ -22,6 +91,7 @@ export default function DeckEditor({ playlistId, onBack, onChange }) {
   const [widgetMenu, setWidgetMenu] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [snap, setSnap] = useState(true);
+  const [importing, setImporting] = useState(null); // { name, phase, upload, done, total, error }
   const timers = useRef({});
 
   const reload = async (keepSlide) => {
@@ -206,6 +276,62 @@ export default function DeckEditor({ playlistId, onBack, onChange }) {
       setErr(e.message);
     }
   };
+  // Ett lysbilde med et medium i fullskjerm (bilde, video, YouTube, nettside).
+  const addMediaSlide = async ({ kind, url, name, refresh }) => {
+    const full = { x: 0, y: 0, w: 100, h: 100, z: 0, rotation: 0 };
+    const spec = {
+      image: { el: { kind: 'image', config: { url, fit: 'contain', radius: 0 } }, title: name || 'Bilde', secs: 10 },
+      video: { el: { kind: 'video', config: { url, loop: false, mute: true, fit: 'contain' } }, title: name || 'Video', secs: 30 },
+      youtube: { el: { kind: 'video', config: { url, loop: false, mute: true, fit: 'contain' } }, title: 'YouTube', secs: 60 },
+      web: { el: { kind: 'web', config: { url, refreshMinutes: refresh ?? 15 } }, title: hostOf(url) || 'Nettside', secs: 20 }
+    }[kind];
+    if (!spec) return;
+    // Videofiler: bruk videoens lengde som visningstid.
+    const secs = kind === 'video' ? (await videoSeconds(url)) || spec.secs : spec.secs;
+    try {
+      const s = await api.deck.slide.create({
+        playlist_id: Number(playlistId),
+        name: spec.title.replace(/\.[a-z0-9]+$/i, ''),
+        elements: [{ ...full, ...spec.el }]
+      });
+      await api.deck.slide.update(s.id, {
+        duration_seconds: secs,
+        background: { type: 'color', color: '#000000' }
+      });
+      await reload(s.id);
+      onChange?.();
+      sendOp({ k: 'deck.reload' });
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
+  // Dokument -> ett lysbilde pr. side (konverteres på serveren).
+  const importDocument = async (file) => {
+    setImporting({ name: file.name, phase: 'upload', upload: 0, done: 0, total: 0 });
+    try {
+      const { job } = await api.imports.start(file, { playlistId, duration: 10 }, (p) =>
+        setImporting((st) => st && { ...st, upload: p })
+      );
+      setImporting((st) => st && { ...st, phase: 'converting' });
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 1200));
+        const st = await api.imports.status(job);
+        setImporting((cur) => cur && { ...cur, phase: st.phase, done: st.done, total: st.total });
+        if (st.status === 'error') throw new Error(st.error || 'Importen feilet');
+        if (st.status === 'done') {
+          await reload(st.slide_ids?.[0]);
+          onChange?.();
+          sendOp({ k: 'deck.reload' });
+          setImporting(null);
+          return;
+        }
+      }
+    } catch (e) {
+      setImporting((st) => ({ ...(st || {}), error: e.message }));
+    }
+  };
+
   const addSlideFromTemplate = async (tpl) => {
     try {
       const s = await api.deck.slide.create({ playlist_id: Number(playlistId), template_id: tpl.id });
@@ -401,6 +527,8 @@ export default function DeckEditor({ playlistId, onBack, onChange }) {
         </a>
       </div>
 
+      {importing && <ImportBanner state={importing} onClose={() => setImporting(null)} />}
+
       {err && (
         <div className="shrink-0 px-4 py-2">
           <ErrorText>{err}</ErrorText>
@@ -457,6 +585,8 @@ export default function DeckEditor({ playlistId, onBack, onChange }) {
         <LayoutPicker
           onPick={addSlide}
           onPickTemplate={addSlideFromTemplate}
+          onPickMedia={addMediaSlide}
+          onImportDocument={importDocument}
           onClose={() => setPickerOpen(false)}
         />
       )}

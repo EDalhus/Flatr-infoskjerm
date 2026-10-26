@@ -18,6 +18,8 @@ import { handleCollabUpgrade } from './collab.js';
 import { getTenantBySlug, tenantResources, sessionUser, sweepPlatform } from './platform.js';
 import { handlePlatformRoute, handleTenantAuthRoute, readCookie, SESSION_COOKIE } from './auth.js';
 import { handleApexDevice, claimFromHub, syncRoutes } from './devices.js';
+import { handleImportRoute } from './imports.js';
+import { startSnapshots } from './snapshots.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -70,7 +72,9 @@ function isPublic(method, key, url) {
   if (key.startsWith('/api/pairing/status/')) return method === 'GET';
   if (key === '/api/pairing/request' || key === '/api/heartbeat') return method === 'POST';
   if (method !== 'GET') return false;
-  if (['/api/state', '/api/stream', '/api/schedule', '/api/categories', '/api/screens'].includes(key)) return true;
+  if (['/api/state', '/api/stream', '/api/schedule', '/api/categories', '/api/screens', '/api/snapshot'].includes(key)) {
+    return true;
+  }
   return key === '/api/media' && url.searchParams.get('raw') && url.searchParams.get('id');
 }
 
@@ -101,6 +105,8 @@ async function handleTenant(request, tenant) {
   if (!user && !isPublic(request.method, key, url)) return jsonError(401, 'Ikke innlogget');
 
   const env = tenantEnv(tenant, user);
+  if (key === '/api/import') return handleImportRoute(request, ctx, env);
+
   const isPairingWrite =
     request.method === 'POST' &&
     ['/api/pairing/link', '/api/pairing/reassign', '/api/pairing/unpair'].includes(key);
@@ -118,7 +124,8 @@ async function handlePlatform(request) {
   if (platform) return platform;
 
   const device = await handleApexDevice(request, {
-    tenantEnv: (t) => tenantEnv(t, null),
+    // TV-appen: nettsider/YouTube byttes ut med bilder (se buildState).
+    tenantEnv: (t) => ({ ...tenantEnv(t, null), DEVICE_MODE: true }),
     origin: ctxBase.origin
   });
   if (device) return device;
@@ -185,6 +192,9 @@ setInterval(() => {
     console.error('[sweep]', err);
   }
 }, 3600_000).unref();
+
+// Skjermbilder av nettsider til Apple TV krever konverterings-containeren.
+if (process.env.CONVERTER_URL) startSnapshots();
 
 server.listen(PORT, () => {
   console.log(`Flatr kjører på :${PORT}  (${PROTOCOL}://${BASE_DOMAIN}, kunder på *.${BASE_DOMAIN})`);

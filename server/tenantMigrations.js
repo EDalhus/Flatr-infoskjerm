@@ -53,6 +53,22 @@ const MIGRATIONS = [
   ALTER TABLE deck_slides_new RENAME TO deck_slides;
   CREATE INDEX IF NOT EXISTS idx_deck_slides_playlist ON deck_slides (playlist_id, position);
   CREATE INDEX IF NOT EXISTS idx_screens_playlist ON screens (playlist_id);
+  `,
+
+  // 2: Skjermbilder av nettsider. Apple TV har ingen nettleser, så TV-appen
+  //    får et jevnlig oppdatert skjermbilde i stedet for selve nettsiden.
+  `
+  CREATE TABLE IF NOT EXISTS web_snapshots (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    url          TEXT NOT NULL UNIQUE,
+    r2_key       TEXT,
+    content_type TEXT,
+    width        INTEGER,
+    height       INTEGER,
+    taken_at     TEXT,
+    error        TEXT,
+    tried_at     TEXT
+  );
   `
 ];
 

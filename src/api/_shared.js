@@ -213,7 +213,7 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
 
   const state = {
     screen: screen || null,
-    deck,
+    deck: env.DEVICE_MODE ? await adaptForDevices(env, deck) : deck,
     categories: categories.results ?? [],
     schedule: scheduleRows,
     sponsors: sponsors.results ?? [],
@@ -222,6 +222,56 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
   };
   state.version = signature(state);
   return state;
+}
+
+const youtubeId = (url) =>
+  (/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{11})/.exec(url || '') || [])[1];
+
+/**
+ * Apple TV har ingen nettleser. For TV-appen (env.DEVICE_MODE) byttes
+ * nettside-elementer ut med siste skjermbilde (tas av server/snapshots.js),
+ * og YouTube-videoer med videoens forsidebilde.
+ */
+async function adaptForDevices(env, deck) {
+  const urls = new Set();
+  for (const s of deck) for (const e of s.elements) if (e.kind === 'web' && e.config?.url) urls.add(e.config.url);
+
+  const shots = {};
+  if (urls.size) {
+    try {
+      const list = [...urls];
+      const { results } = await env.DB
+        .prepare(
+          `SELECT id, url, taken_at FROM web_snapshots
+            WHERE r2_key IS NOT NULL AND url IN (${list.map(() => '?').join(',')})`
+        )
+        .bind(...list)
+        .all();
+      for (const r of results ?? []) shots[r.url] = r;
+    } catch {
+      /* tabellen finnes ikke (Worker) – behold nettside-elementene */
+    }
+  }
+
+  return deck.map((s) => ({
+    ...s,
+    elements: s.elements.map((e) => {
+      if (e.kind === 'web' && shots[e.config?.url]) {
+        const shot = shots[e.config.url];
+        const v = encodeURIComponent(shot.taken_at || '');
+        return { ...e, kind: 'image', config: { url: `/api/snapshot?id=${shot.id}&v=${v}`, fit: 'cover', radius: 0 } };
+      }
+      const yt = e.kind === 'video' && youtubeId(e.config?.url);
+      if (yt) {
+        return {
+          ...e,
+          kind: 'image',
+          config: { url: `https://img.youtube.com/vi/${yt}/hqdefault.jpg`, fit: e.config?.fit || 'contain', radius: 0 }
+        };
+      }
+      return e;
+    })
+  }));
 }
 
 /** Lettvekts endrings-signatur (djb2) over innhold – uten serverTime.

@@ -19,6 +19,7 @@ import * as state from './api/state.js';
 import * as stream from './api/stream.js';
 import * as pairing from './api/pairing.js';
 import * as me from './api/me.js';
+import * as snapshot from './api/snapshot.js';
 
 export { pairing };
 
@@ -39,7 +40,8 @@ const ROUTES = {
   '/api/heartbeat': heartbeat,
   '/api/state': state,
   '/api/stream': stream,
-  '/api/me': me
+  '/api/me': me,
+  '/api/snapshot': snapshot
 };
 
 const METHOD_HANDLER = {
