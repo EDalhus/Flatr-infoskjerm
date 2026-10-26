@@ -20,7 +20,7 @@ export default function LiveScreenView({ screenId, playlistId, orientation = 'la
         src={playlistId ? `/preview/${playlistId}` : `/display/${screenId}?preview=1`}
         tabIndex={-1}
         scrolling="no"
-        className="absolute left-0 top-0 origin-top-left border-0"
+        className="pointer-events-none absolute left-0 top-0 origin-top-left border-0"
         style={{ width: base.w, height: base.h, transform: `scale(${scale})` }}
       />
     </div>

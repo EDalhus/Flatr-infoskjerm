@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import DeviceDetail from './DeviceDetail.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
-import { codeDisplay, displayName, timeAgo, timeUntil } from './pairingHelpers.js';
+import { codeDisplay, displayName, clientSummary, timeAgo, timeUntil } from './pairingHelpers.js';
 import { Icon, Input, Select, Button, PageHeader, ErrorText } from './ui.jsx';
 
 const LAST_KEY = 'flatr.pairing.lastDevice';
@@ -207,9 +207,8 @@ function StatusPill({ p }) {
 function DeviceCard({ p, screens, selected, selecting, onToggle, onOpen }) {
   const screen = screens.find((s) => s.id === p.screen_id);
   const orientation = screen?.orientation === 'portrait' ? 'portrait' : 'landscape';
-  const model = [p.client_info?.model, p.client_info?.tvos_version || p.client_info?.os_version ? `tvOS ${p.client_info?.tvos_version || p.client_info?.os_version}` : null]
-    .filter(Boolean)
-    .join(' · ');
+  // «arm64 · tvOS 26.2 · app 1.0 (1) · 3840×2160»
+  const model = clientSummary(p.client_info);
   return (
     <article
       className={`group relative flex flex-col gap-3 rounded-2xl border bg-card p-2.5 shadow-card transition-shadow hover:shadow-pop ${
