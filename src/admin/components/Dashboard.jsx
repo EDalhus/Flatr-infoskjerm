@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api.js';
-import { Icon, Button, Input, PageHeader, ErrorText } from './ui.jsx';
+import { Icon, Button, Input, Select, PageHeader, ErrorText } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
 import { displayName, timeAgo } from './pairingHelpers.js';
 
@@ -185,6 +185,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
   const [filter, setFilter] = useState('all');
   const [composer, setComposer] = useState(false);
   const [message, setMessage] = useState('');
+  const [target, setTarget] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
@@ -251,13 +252,24 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
     go('pairing');
   };
 
+  const dismissAlert = async (id) => {
+    try {
+      if (id) await api.alerts.dismiss(id);
+      else await api.alerts.dismissAll();
+      await load();
+      onChange?.();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const sendAlert = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
     setError('');
     setBusy(true);
     try {
-      await api.alerts.create({ message: message.trim(), target_screen_id: null });
+      await api.alerts.create({ message: message.trim(), target_screen_id: target ? Number(target) : null });
       setMessage('');
       setSent(true);
       setTimeout(() => {
@@ -305,15 +317,56 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
                 autoFocus
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Skriv en hastemelding til alle skjermer …"
+                placeholder="Skriv en melding, f.eks. «Brannøvelse – forlat lokalet rolig.»"
               />
             </label>
+            <label className="shrink-0">
+              <span className="sr-only">Hvilke skjermer</span>
+              <Select value={target} onChange={(e) => setTarget(e.target.value)} className="!w-48">
+                <option value="">Alle skjermer</option>
+                {screens.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
             <Button type="submit" variant="danger" disabled={busy || !message.trim()} className="shrink-0">
-              {busy ? 'Sender …' : sent ? 'Sendt ✓' : 'Send til alle'}
+              {busy ? 'Sender …' : sent ? 'Sendt ✓' : 'Send nå'}
             </Button>
           </form>
         )}
         <ErrorText>{error}</ErrorText>
+
+        {activeAlerts.length > 0 && (
+          <section className="rounded-2xl border border-danger/30 bg-danger-tint/40 p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Icon name="megaphone" className="h-4 w-4 text-danger" />
+              <h2 className="m-0 flex-1 text-sm font-bold text-ink">Vises på skjermene nå</h2>
+              {activeAlerts.length > 1 && (
+                <button type="button" onClick={() => dismissAlert(null)} className="text-sm font-semibold text-danger hover:underline">
+                  Avslutt alle
+                </button>
+              )}
+            </div>
+            <ul className="m-0 list-none space-y-1.5 p-0">
+              {activeAlerts.map((a) => (
+                <li key={a.id} className="flex items-center gap-3 rounded-xl bg-card px-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-ink">{a.message}</span>
+                    <span className="block text-xs text-muted">
+                      {a.target_screen_id ? screens.find((s) => s.id === a.target_screen_id)?.name || 'Én skjerm' : 'Alle skjermer'}
+                      {a.created_at ? ` · sendt ${timeAgo(a.created_at)}` : ''}
+                    </span>
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => dismissAlert(a.id)}>
+                    Avslutt
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="grid gap-4 md:grid-cols-3">
           <SummaryCard

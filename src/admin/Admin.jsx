@@ -9,7 +9,6 @@ import ScreensManager from './components/ScreensManager.jsx';
 import PlaylistsManager from './components/PlaylistsManager.jsx';
 import TimetableManager from './components/TimetableManager.jsx';
 import ReportsManager from './components/ReportsManager.jsx';
-import AlertsManager from './components/AlertsManager.jsx';
 import PairingManager from './components/PairingManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 import TeamManager from './components/TeamManager.jsx';
@@ -26,7 +25,6 @@ const NAV = [
   { id: 'screens', label: 'Skjermer', icon: 'monitor', group: 'main', Component: ScreensManager },
   { id: 'playlists', label: 'Spillelister', icon: 'layers', group: 'main', Component: PlaylistsManager },
   { id: 'timetable', label: 'Tidsplan', icon: 'clock', group: 'main', Component: TimetableManager },
-  { id: 'alerts', label: 'Varsler', icon: 'megaphone', group: 'main', Component: AlertsManager },
   { id: 'pairing', label: 'Enheter', icon: 'link', group: 'main', Component: PairingManager },
   { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
@@ -38,7 +36,7 @@ const NAV = [
 ];
 
 // Gamle adresser som er slått sammen med andre sider.
-const VIEW_ALIAS = { categories: 'schedule', sponsors: 'media' };
+const VIEW_ALIAS = { categories: 'schedule', sponsors: 'media', alerts: 'dashboard' };
 
 const initialTab = () => {
   if (typeof window === 'undefined') return 'dashboard';
