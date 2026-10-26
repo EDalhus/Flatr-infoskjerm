@@ -168,7 +168,6 @@ export default function DeviceDetail({ pairing: p, screens, onClose, onCommand, 
               <ActionButton icon="trash" label="Tøm cache" onClick={() => onCommand('clear_cache', 'Tøm cache')} />
               <ActionButton icon="power" label="Start på nytt" onClick={() => onCommand('reboot', 'Restart')} />
             </div>
-            <p className="m-0 mt-2.5 text-xs text-muted">«Identifiser» viser navnet stort på TV-en, så du ser hvilken som er hvilken.</p>
           </Card>
         )}
 
