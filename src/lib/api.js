@@ -101,6 +101,12 @@ export const api = {
     update: (body) => req('/settings', { method: 'PUT', body }),
     testWebhook: () => req('/settings?test=webhook', { method: 'POST', body: {} })
   },
+  activity: (before, q) => req(`/activity?${new URLSearchParams({ ...(before ? { before } : {}), ...(q ? { q } : {}) })}`),
+  versions: {
+    list: (playlistId) => req(`/versions?playlist=${encodeURIComponent(playlistId)}`),
+    get: (id) => req(`/versions?id=${encodeURIComponent(id)}`),
+    restore: (id) => req(`/versions?id=${encodeURIComponent(id)}&restore=1`, { method: 'POST', body: {} })
+  },
   // AI-assistenten (src/api/ai.js). send() gir rå Response (SSE) til AiPanel.
   ai: {
     app: () => req('/ai'),

@@ -30,6 +30,7 @@ import { serveAppIcon } from './appIcons.js';
 import { startSnapshots, requestRefresh } from './snapshots.js';
 import { startMonitor } from './monitor.js';
 import { startNotices } from './notices.js';
+import { afterWrite, beforeWrite } from '../src/api/activity.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -219,8 +220,19 @@ async function handleTenant(request, tenant) {
     }
     await claimFromHub(request, tenant, env);
   }
+  // Aktivitetslogg og versjonshistorikk: beskriv vellykkede endringer.
+  const write = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+  env.AFTER_WRITE = (info) => afterWrite(env, user, info);
+  const before = write ? await beforeWrite(env, request.method, key, url).catch(() => null) : null;
+  const isJson = /json/i.test(request.headers.get('content-type') || '');
+  const body = write && isJson ? await request.clone().json().catch(() => null) : null;
+
   const res = await routeApi(request, env);
   if (isPairingWrite) await syncRoutes(tenant, env);
+  if (write && res.ok && user) {
+    const result = /json/i.test(res.headers.get('content-type') || '') ? await res.clone().json().catch(() => null) : null;
+    afterWrite(env, user, { method: request.method, key, url, body, result, before });
+  }
   return res;
 }
 

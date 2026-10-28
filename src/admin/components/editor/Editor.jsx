@@ -14,6 +14,7 @@ import LayoutPicker from '../deck/LayoutPicker.jsx';
 import { MediaPicker } from '../MediaPicker.jsx';
 import Stage from './Stage.jsx';
 import Panel from './Panel.jsx';
+import VersionHistory from './VersionHistory.jsx';
 import SlideRail from './SlideRail.jsx';
 import { bbox, clamp, round } from './geometry.js';
 import { hostOf, videoSeconds, ImportBanner } from './media.jsx';
@@ -69,6 +70,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const [err, setErr] = useState('');
   const [toast, setToast] = useState('');
   const readOnly = me?.role === 'viewer';
+  const [historyOpen, setHistoryOpen] = useState(false);
   // Høyre panel: design | layers | ai. ⌘K sender en melding hit (aiPending).
   const [panelTab, setPanelTab] = useState('design');
   const [aiPending, setAiPending] = useState(null);
@@ -850,6 +852,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
             </button>
           </div>
           <ToolButton icon="layers" label={snap ? 'Snapping på' : 'Snapping av'} active={snap} onClick={() => setSnap((v) => !v)} />
+          <ToolButton icon="clock" label="Versjonshistorikk" onClick={() => (flush(), setHistoryOpen(true))} />
           {aiEnabled && (
           <button
             type="button"
@@ -998,6 +1001,20 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
         </div>
       </div>
 
+      {historyOpen && (
+        <VersionHistory
+          playlistId={playlistId}
+          orientation={orientation}
+          readOnly={readOnly}
+          onClose={() => setHistoryOpen(false)}
+          onRestored={() => {
+            reload();
+            sendOp({ k: 'deck.reload' });
+            onChange?.();
+            say('Versjonen er gjenopprettet');
+          }}
+        />
+      )}
       {pickerOpen && (
         <LayoutPicker
           onPick={addSlide}

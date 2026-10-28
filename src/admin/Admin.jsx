@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import AiCommand from './components/AiCommand.jsx';
 import BrandManager from './components/BrandManager.jsx';
+import ActivityManager from './components/ActivityManager.jsx';
 import { setBrand } from './brandStore.js';
 import { Icon } from './components/ui.jsx';
 import Dashboard from './components/Dashboard.jsx';
@@ -38,6 +39,7 @@ const NAV = [
   // Bare på Node-serveren (kontoer med e-postinnlogging).
   { id: 'account', label: 'Konto og sikkerhet', icon: 'lock', group: 'account', Component: AccountManager, tenantOnly: true },
   { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
+  { id: 'activity', label: 'Aktivitet', icon: 'clock', group: 'account', Component: ActivityManager, tenantOnly: true },
   { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager }
 ];
 

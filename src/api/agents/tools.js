@@ -258,6 +258,11 @@ async function call(env, method, path, body) {
   const text = await res.text();
   const data = text ? safeJson(text, null) : null;
   if (!res.ok) throw new Error(data?.error || `${method} ${path} svarte ${res.status}`);
+  // Versjonshistorikk også for AI-ens endringer (selve AI-forespørselen er logget).
+  if (method !== 'GET' && env.AFTER_WRITE) {
+    const url = new URL(`http://flatr.internal${path}`);
+    await env.AFTER_WRITE({ method, key: url.pathname, url, body, result: data, silent: true });
+  }
   return data;
 }
 

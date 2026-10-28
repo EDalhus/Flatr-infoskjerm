@@ -212,6 +212,50 @@ const MIGRATIONS = [
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
   CREATE INDEX IF NOT EXISTS ai_messages_playlist ON ai_messages (playlist_id, id);
+  `,
+  // 12: Team og kontroll – aktivitetslogg, versjonshistorikk per presentasjon,
+  //     godkjenning før publisering og kommentarer i editoren.
+  `
+  CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    user_email TEXT,
+    user_name TEXT,
+    action TEXT NOT NULL,
+    target_type TEXT,
+    target_id INTEGER,
+    target_name TEXT,
+    detail TEXT,
+    count INTEGER NOT NULL DEFAULT 1
+  );
+  CREATE INDEX IF NOT EXISTS activity_at ON activity_log (at);
+  CREATE TABLE IF NOT EXISTS playlist_versions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    playlist_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    author TEXT,
+    kind TEXT NOT NULL DEFAULT 'auto',
+    data TEXT NOT NULL,
+    slide_count INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS playlist_versions_pl ON playlist_versions (playlist_id, id);
+  ALTER TABLE playlists ADD COLUMN published_version_id INTEGER;
+  ALTER TABLE playlists ADD COLUMN review_requested_at TEXT;
+  ALTER TABLE playlists ADD COLUMN review_requested_by TEXT;
+  ALTER TABLE playlists ADD COLUMN review_note TEXT;
+  CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    playlist_id INTEGER NOT NULL,
+    slide_id INTEGER,
+    element_id INTEGER,
+    parent_id INTEGER,
+    author_email TEXT,
+    author_name TEXT,
+    body TEXT NOT NULL,
+    resolved INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE INDEX IF NOT EXISTS comments_pl ON comments (playlist_id, id);
   `
 ];
 
