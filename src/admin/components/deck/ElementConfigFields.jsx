@@ -443,8 +443,66 @@ const Check = ({ label, checked, onChange }) => (
 );
 
 /** Type-spesifikke felter for et canvas-element. `cfg` = element.config, `set(patch)`. */
-export default function ElementConfigFields({ kind, cfg, set, categories = [] }) {
+export default function ElementConfigFields({ kind, cfg, set, categories = [], slides = [] }) {
   const c = cfg || {};
+
+  if (kind === 'button') {
+    return (
+      <div className="grid gap-3">
+        <Field label="Tekst på knappen">
+          <Input value={c.label || ''} onChange={(e) => set({ label: e.target.value })} />
+        </Field>
+        <Field label="Når noen trykker">
+          <Select value={c.action || 'next'} onChange={(e) => set({ action: e.target.value })}>
+            <option value="next">Gå til neste lysbilde</option>
+            <option value="prev">Gå til forrige lysbilde</option>
+            <option value="slide">Gå til et bestemt lysbilde</option>
+            <option value="url">Vis en nettside</option>
+          </Select>
+        </Field>
+        {c.action === 'slide' && (
+          <Field label="Lysbilde">
+            <Select value={c.slideId || ''} onChange={(e) => set({ slideId: Number(e.target.value) || null })}>
+              <option value="">Velg …</option>
+              {slides.map((s, i) => (
+                <option key={s.id} value={s.id}>
+                  {i + 1}. {s.name || 'Lysbilde'}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+        {c.action === 'url' && (
+          <Field label="Nettside" hint="Vises over lysbildet med en Lukk-knapp. Noen nettsteder tillater ikke å bli vist slik.">
+            <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://…" />
+          </Field>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Knappefarge">
+            <ColorInput value={c.fill || '#ffffff'} onChange={(e) => set({ fill: e.target.value })} />
+          </Field>
+          <Field label="Tekstfarge">
+            <ColorInput value={c.color || '#0f2733'} onChange={(e) => set({ color: e.target.value })} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Skriftstørrelse (px)">
+            <Input type="number" min={16} max={200} value={c.size ?? 44} onChange={(e) => set({ size: Number(e.target.value) || 44 })} />
+          </Field>
+          <Field label="Hjørner">
+            <Select value={String(c.radius ?? 999)} onChange={(e) => set({ radius: Number(e.target.value) })}>
+              <option value="999">Runde</option>
+              <option value="24">Avrundet</option>
+              <option value="0">Firkantet</option>
+            </Select>
+          </Field>
+        </div>
+        <p className="m-0 text-xs text-muted">
+          Knapper virker på berøringsskjermer i nettleser. Når noen trykker eller sveiper, stopper automatisk bytte; etter 45 sekunder uten berøring går skjermen tilbake til første lysbilde. På Apple TV vises knappen bare som et merke.
+        </p>
+      </div>
+    );
+  }
 
   if (kind === 'text') {
     const fill = c.fill && c.fill.type === 'gradient' ? c.fill : null;

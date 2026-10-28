@@ -496,6 +496,14 @@ async function adaptForDevices(env, deck) {
   const adapted = deck.map((s) => ({
     ...s,
     elements: s.elements.flatMap((e) => {
+      // Knapper (berøringsskjermer) har ingen funksjon på TV-en: vis dem som merke.
+      if (e.kind === 'button') {
+        const c = e.config || {};
+        return [
+          { ...e, kind: 'shape', config: { shape: 'rect', fill: c.fill || '#ffffff', radius: Math.min(Number(c.radius ?? 999), 400), opacity: 100 } },
+          { ...e, id: -e.id, z: e.z, kind: 'text', config: { text: c.label || '', size: Number(c.size) || 44, weight: c.weight ?? 700, color: c.color || '#0f2733', align: 'center', valign: 'middle', font: c.font || '', autoFit: true } }
+        ];
+      }
       // Kakeregn er en animasjon: TV-apper som kan tegne effekter selv (hodet
       // X-Flatr-Features: effects) får det som eget element, de andre hopper over.
       if (e.kind === 'app' && e.config?.effect === 'rain') {

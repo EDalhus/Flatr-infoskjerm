@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { isWithinDaypart } from '../lib/daypart.js';
 import { backgroundStyle } from '../lib/deck.js';
 import SlideCanvas from './SlideCanvas.jsx';
@@ -21,6 +21,10 @@ const OUT_ANIM = {
   'push-left': 'deckPushOutLeft',
   'push-up': 'deckPushOutUp'
 };
+
+// Berøringsskjermer: et trykk eller sveip setter automatisk bytte på pause; etter
+// IDLE_MS uten berøring går skjermen tilbake til første lysbilde og fortsetter.
+const IDLE_MS = 45_000;
 
 export default function DeckPlayer({ deck, ctx }) {
   const now = ctx.now;
@@ -52,15 +56,46 @@ export default function DeckPlayer({ deck, ctx }) {
     setIndex(nextIdx);
   };
   const next = () => go((index + 1) % Math.max(1, count));
+  const prevSlide = () => go((index - 1 + count) % Math.max(1, count));
+
+  // Interaksjon (knapper, sveip): pause og nettside-visning, tilbake etter IDLE_MS.
+  const [paused, setPaused] = useState(false);
+  const [overlay, setOverlay] = useState(null);
+  const idleTimer = useRef(null);
+  const swipeX = useRef(null);
+  const backToStart = useRef(null);
+  backToStart.current = () => {
+    setPaused(false);
+    setOverlay(null);
+    go(0);
+  };
+  const touch = () => {
+    setPaused(true);
+    clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => backToStart.current(), IDLE_MS);
+  };
+  useEffect(() => () => clearTimeout(idleTimer.current), []);
+  const nav = {
+    act: (c) => {
+      touch();
+      if (c.action === 'prev') prevSlide();
+      else if (c.action === 'slide') {
+        const i = slides.findIndex((s) => s.id === Number(c.slideId));
+        if (i >= 0) go(i);
+      } else if (c.action === 'url' && /^https?:\/\//.test(c.url || '')) setOverlay(c.url);
+      else next();
+    }
+  };
+  const playerCtx = { ...ctx, nav };
 
   useEffect(() => {
-    if (count < 2) return undefined;
+    if (count < 2 || paused) return undefined;
     const cur = slides[index % count];
     const secs = Math.max(2, Number(cur?.duration_seconds) || 15);
     const t = setTimeout(() => go((index + 1) % count), secs * 1000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, index, count]);
+  }, [key, index, count, paused]);
 
   useEffect(() => {
     if (!prev) return undefined;
@@ -86,7 +121,19 @@ export default function DeckPlayer({ deck, ctx }) {
   return (
     <div
       className="relative h-full w-full overflow-hidden"
-      style={backgroundStyle(cur.background)}
+      style={{ ...backgroundStyle(cur.background), touchAction: 'pan-y' }}
+      onPointerDown={(e) => {
+        swipeX.current = e.clientX;
+      }}
+      onPointerUp={(e) => {
+        const dx = e.clientX - (swipeX.current ?? e.clientX);
+        swipeX.current = null;
+        if (Math.abs(dx) > 80 && count > 1) {
+          touch();
+          if (dx < 0) next();
+          else prevSlide();
+        }
+      }}
     >
       {prev && (
         <div
@@ -102,8 +149,20 @@ export default function DeckPlayer({ deck, ctx }) {
         className="absolute inset-0"
         style={inAnim ? { animation: `${inAnim} ${cur.transition_ms ?? 600}ms both ${EASE}` } : undefined}
       >
-        <SlideCanvas slide={cur} ctx={ctx} onNext={next} />
+        <SlideCanvas slide={cur} ctx={playerCtx} onNext={next} />
       </div>
+      {overlay && (
+        <div className="absolute inset-0 z-50 bg-white" onPointerDown={touch}>
+          <iframe title="Nettside" src={overlay} className="h-full w-full border-0" />
+          <button
+            type="button"
+            onClick={() => (setOverlay(null), touch())}
+            className="absolute right-6 top-6 rounded-full bg-black/80 px-8 py-4 text-3xl font-bold text-white shadow-2xl"
+          >
+            ✕ Lukk
+          </button>
+        </div>
+      )}
     </div>
   );
 }

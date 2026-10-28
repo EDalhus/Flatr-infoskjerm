@@ -14,7 +14,8 @@ export const ELEMENT_KINDS = [
   { kind: 'weather', label: 'Vær (Yr)', icon: 'sun' },
   { kind: 'rss', label: 'Nyheter (RSS)', icon: 'megaphone' },
   { kind: 'calendar', label: 'Kalender', icon: 'calendar' },
-  { kind: 'app', label: 'Flatr App', icon: 'sparkle' }
+  { kind: 'app', label: 'Flatr App', icon: 'sparkle' },
+  { kind: 'button', label: 'Knapp (berøring)', icon: 'link' }
 ];
 // «Sponsorer» er erstattet av bildekarusellen, men eldre elementer vises fortsatt.
 export const ELEMENT_LABEL = { sponsors: 'Sponsorer', ...Object.fromEntries(ELEMENT_KINDS.map((k) => [k.kind, k.label])) };
@@ -86,6 +87,8 @@ export const DEFAULT_ELEMENT_CONFIG = {
   rss: { url: 'https://www.nrk.no/toppsaker.rss', mode: 'ticker', max: 10, speed: 60, color: '#ffffff', background: 'rgba(0,0,0,0.55)', showSource: true },
   calendar: { url: '', max: 6, days: 14, showLocation: true, color: '#ffffff', frame: false },
   // Flatr App (AIS): view = map | cards | arrivals. mmsi tom = hele flåten.
+  // Knapp for berøringsskjermer: action = next | prev | slide (slideId) | url (url)
+  button: { label: 'Trykk her', action: 'next', slideId: null, url: '', fill: '#ffffff', color: '#0f2733', radius: 999, size: 44, weight: 700 },
   app: { appId: null, view: 'map', mmsi: [], quayId: '', area: 'fleet', labels: true, mapStyle: 'nautical', colorBy: 'type', legend: true, color: '#ffffff', frame: false }
 };
 
@@ -104,7 +107,8 @@ const SIZE = {
   weather: { w: 30, h: 30 },
   rss: { w: 100, h: 9 },
   calendar: { w: 40, h: 60 },
-  app: { w: 50, h: 60 }
+  app: { w: 50, h: 60 },
+  button: { w: 22, h: 10 }
 };
 
 export function defaultElement(kind, z = 0) {

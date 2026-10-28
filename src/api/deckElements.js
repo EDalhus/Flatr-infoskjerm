@@ -26,7 +26,8 @@ const KINDS = [
   'rss',
   'calendar',
   'carousel',
-  'app'
+  'app',
+  'button'
 ];
 const normKind = (v) => (KINDS.includes(v) ? v : 'text');
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);

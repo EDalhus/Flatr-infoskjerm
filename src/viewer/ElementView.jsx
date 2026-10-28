@@ -121,6 +121,32 @@ function ImageEl({ config }) {
   );
 }
 
+/** Knapp for berøringsskjermer. Navigasjonen kommer fra DeckPlayer (ctx.nav); i editoren gjør den ingenting. */
+function ButtonEl({ config, ctx }) {
+  const c = config || {};
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        ctx?.nav?.act(c);
+      }}
+      className="grid h-full w-full place-items-center px-[0.6em] text-center leading-tight shadow-lg transition-transform active:scale-95"
+      style={{
+        background: c.fill || '#ffffff',
+        color: c.color || '#0f2733',
+        borderRadius: Number(c.radius ?? 999),
+        fontSize: Number(c.size) || 44,
+        fontWeight: c.weight ?? 700,
+        fontFamily: c.font || undefined,
+        cursor: ctx?.nav ? 'pointer' : 'default'
+      }}
+    >
+      {c.label || 'Trykk her'}
+    </button>
+  );
+}
+
 function ShapeEl({ config }) {
   const c = config || {};
   const style = { background: c.fill || '#1f5566', opacity: (c.opacity ?? 100) / 100 };
@@ -150,6 +176,7 @@ export default function ElementView({ element, ctx, onNext }) {
   if (kind === 'text') return <TextEl config={config} />;
   if (kind === 'image') return <ImageEl config={config} />;
   if (kind === 'shape') return <ShapeEl config={config} />;
+  if (kind === 'button') return <ButtonEl config={config} ctx={ctx} />;
   const W = WIDGET[kind];
   if (!W) return null;
   return <W slide={{ config, title: null, elementId: element.id }} ctx={ctx} onNext={onNext} chromeless />;

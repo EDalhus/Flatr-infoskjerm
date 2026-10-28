@@ -86,7 +86,7 @@ function AlignRow({ onAlign, hint }) {
   );
 }
 
-function ElementDesign({ el, orientation, categories, onPatch, onConfig, onLayer, onAlign, onDuplicate, onDelete }) {
+function ElementDesign({ el, orientation, categories, slides, onPatch, onConfig, onLayer, onAlign, onDuplicate, onDelete }) {
   const base = BASE_SIZE[orientation] || BASE_SIZE.landscape;
   const toPx = (pct, axis) => Math.round((pct / 100) * (axis === 'x' ? base.w : base.h));
   const toPct = (v, axis) => (v / (axis === 'x' ? base.w : base.h)) * 100;
@@ -159,7 +159,7 @@ function ElementDesign({ el, orientation, categories, onPatch, onConfig, onLayer
       </Section>
 
       <section className="px-4 py-4">
-        <ElementConfigFields kind={el.kind} cfg={el.config} set={onConfig} categories={categories} />
+        <ElementConfigFields kind={el.kind} cfg={el.config} set={onConfig} categories={categories} slides={slides} />
       </section>
     </>
   );
@@ -449,6 +449,7 @@ export default function Panel(props) {
             el={selected[0]}
             orientation={orientation}
             categories={categories}
+            slides={props.slides || []}
             onPatch={(patch) => props.onPatch([{ id: selected[0].id, patch }])}
             onConfig={(cfg) => props.onPatch([{ id: selected[0].id, patch: { config: { ...selected[0].config, ...cfg } } }])}
             onLayer={(dir) => props.onLayer(dir)}

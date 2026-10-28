@@ -27,6 +27,7 @@ export const KINDS_DOC = `Element kinds and their config (only set the fields yo
 - video: { url (YouTube or uploaded video), loop, mute, fit }
 - web: a web page { url, refreshMinutes }
 - app: a Flatr App from list_data.apps. AIS apps: { appId, view: 'map'|'cards'|'arrivals'|'calls', quayId, groups: [] }; view 'calls' is the port-call schedule (planned arrivals with cargo and next port) with { title, callDays: 1-30 }. Birthdays: { appId, days: 1-7, title, valign: top|middle|bottom }. Cake rain (birthdays effect layer, full slide, in front): { appId, effect: 'rain', amount: 'few'|'normal'|'many', opacity }.
+- button: tap target for touch screens (browser kiosks): { label, action: 'next'|'prev'|'slide'|'url', slideId, url, fill, color, size, radius }. Only add when the user asks for an interactive/touch screen.
 Widgets with frame:true get a dark translucent card behind them.`;
 
 /** Merkevaresettet som bindende regler (tom streng hvis ikke satt). */
