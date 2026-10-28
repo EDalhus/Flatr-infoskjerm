@@ -93,7 +93,7 @@ function cleanAisConfig(c) {
     quays.push({ id: str(q?.id, 40) || crypto.randomUUID().slice(0, 8), name: str(q?.name) || 'Kai', lat, lon });
     if (quays.length >= 50) break;
   }
-  return { client_id: str(c?.client_id, 200), fleet, quays, calls: cleanCalls(c?.calls) };
+  return { client_id: str(c?.client_id, 200), fleet, quays, calls: cleanCalls(c?.calls), calls_notify: c?.calls_notify === true };
 }
 
 const customDef = (env, row) => (row.kind === 'custom' && env.APP_CATALOG ? env.APP_CATALOG.customAppFor(row.app_ref) : null);

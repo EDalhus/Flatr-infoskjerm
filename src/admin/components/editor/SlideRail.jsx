@@ -26,10 +26,11 @@ function period(s) {
   return null;
 }
 
-export default function SlideRail({ slides, orientation, selectedId, peers, onSelect, onAdd, onDuplicate, onDelete, onMove, onCopyTo, playlistId }) {
+export default function SlideRail({ slides, orientation, selectedId, peers, onSelect, onAdd, onDuplicate, onDelete, onMove, onCopyTo, onAi, playlistId }) {
   const { rowProps } = useListDnd((from, to) => onMove(from, to));
   // «Kopier til …»: de andre presentasjonene, hentet når menyen åpnes.
   const [copyFor, setCopyFor] = useState(null);
+  const [aiFor, setAiFor] = useState(null);
   const [others, setOthers] = useState(null);
   useEffect(() => {
     if (!copyFor || others) return;
@@ -104,6 +105,17 @@ export default function SlideRail({ slides, orientation, selectedId, peers, onSe
                 >
                   <Icon name="copy" className="h-3.5 w-3.5" />
                 </button>
+                {onAi && (
+                  <button
+                    type="button"
+                    onClick={() => setAiFor(aiFor === s.id ? null : s.id)}
+                    className="grid h-6 w-6 place-items-center rounded-md bg-card/90 text-brand shadow-card hover:bg-card"
+                    aria-label="AI for dette lysbildet"
+                    title="AI for dette lysbildet"
+                  >
+                    <Icon name="sparkle" className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 {onCopyTo && (
                   <button
                     type="button"
@@ -125,6 +137,27 @@ export default function SlideRail({ slides, orientation, selectedId, peers, onSe
                   <Icon name="trash" className="h-3.5 w-3.5" />
                 </button>
               </div>
+              {aiFor === s.id && (
+                <div className="absolute left-2 right-2 top-9 z-20 rounded-xl border border-line bg-card p-1 shadow-pop">
+                  {[
+                    ['better', 'Forbedre designet'],
+                    ['variants', 'Lag 3 varianter'],
+                    ['shorter', 'Kortere og tydeligere tekst']
+                  ].map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => {
+                        setAiFor(null);
+                        onAi(s, k);
+                      }}
+                      className="block w-full rounded-lg px-2 py-1.5 text-left text-sm text-ink hover:bg-zone"
+                    >
+                      ✦ {label}
+                    </button>
+                  ))}
+                </div>
+              )}
               {copyFor === s.id && (
                 <div className="absolute left-2 right-2 top-9 z-20 max-h-64 overflow-y-auto rounded-xl border border-line bg-card p-1 shadow-pop">
                   <div className="px-2 py-1.5 text-[11px] font-semibold text-muted">Kopier til …</div>

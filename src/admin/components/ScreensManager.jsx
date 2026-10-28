@@ -408,7 +408,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
           </>
         )}
 
-        {alerts && list.some((s) => s.device) && (
+        {alerts && (
           <section className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-line bg-card px-5 py-4 text-sm">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zone text-muted">
               <Icon name="megaphone" className="h-4 w-4" />
@@ -469,6 +469,12 @@ export default function ScreensManager({ onChange, onNavigate }) {
                 </form>
               )}
             </div>
+            <label className="flex w-full items-center gap-2 border-t border-hair pt-3 text-muted">
+              <input type="checkbox" checked={!!alerts.daily_digest} onChange={(e) => saveAlerts({ daily_digest: e.target.checked })} />
+              <span>
+                <span className="font-semibold text-ink">Daglig helsesjekk kl. 07</span> – e-post{alerts.webhook ? ' og Slack/Teams' : ''} med frakoblede TV-er, skjermer uten innhold, widgeter som feiler og lysbilder som utløper. Sendes bare når noe bør sjekkes.
+              </span>
+            </label>
           </section>
         )}
 

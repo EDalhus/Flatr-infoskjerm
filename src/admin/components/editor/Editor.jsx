@@ -897,6 +897,20 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onDelete={deleteSlide}
           onMove={moveSlide}
           playlistId={playlistId}
+          onAi={
+            aiEnabled
+              ? (s, kind) => {
+                  const ref = `lysbilde ${slides.findIndex((x) => x.id === s.id) + 1}${s.name ? ` «${s.name}»` : ''} (id ${s.id})`;
+                  const text = {
+                    better: `Forbedre designet på ${ref}. Behold innholdet og budskapet, men gjør komposisjonen, hierarkiet og typografien bedre. Se på det før og etter.`,
+                    variants: `Lag 3 varianter av ${ref} som nye lysbilder rett etter det, med ulik komposisjon og stil men samme innhold. Gi dem navn som «Variant A/B/C». Ikke endre originalen.`,
+                    shorter: `Gjør teksten på ${ref} kortere og tydeligere, lesbar på avstand på et par sekunder. Behold designet.`
+                  }[kind];
+                  setPanelTab('ai');
+                  setAiPending({ id: Date.now(), text });
+                }
+              : undefined
+          }
           onCopyTo={async (sid, target) => {
             try {
               await api.deck.slide.copyTo(sid, target.id);

@@ -195,7 +195,18 @@ export default function AisCalls({ app, onSaved }) {
   const [live, setLive] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [hook, setHook] = useState(null);
   const now = Date.now();
+  useEffect(() => {
+    api.settings.get().then((s) => setHook(s.webhook || false)).catch(() => setHook(false));
+  }, []);
+  const setNotify = async (on) => {
+    try {
+      onSaved(await api.apps.update(app.id, { config: { calls_notify: on } }));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   useEffect(() => setCalls(app.config?.calls || []), [app.updated_at]);
   useEffect(() => {
@@ -266,6 +277,23 @@ export default function AisCalls({ app, onSaved }) {
             onCancel={() => setEditing(null)}
           />
         )}
+
+        <label className="flex items-start gap-2 border-t border-hair px-5 py-3 text-sm text-muted">
+          <input type="checkbox" className="mt-0.5" checked={!!app.config?.calls_notify} disabled={hook === false} onChange={(e) => setNotify(e.target.checked)} />
+          <span>
+            <span className="font-semibold text-ink">Varsle i {hook?.kind === 'teams' ? 'Teams' : 'Slack/Teams'}</span> når en båt fra flåten nærmer seg kaia (under en time), ankommer, eller er mer enn en time forsinket.
+            {hook === false && (
+              <>
+                {' '}
+                Koble til Slack eller Teams under{' '}
+                <a href="/admin?view=screens" className="font-semibold text-brand hover:underline">
+                  Skjermer
+                </a>{' '}
+                først.
+              </>
+            )}
+          </span>
+        </label>
 
         <div className="flex flex-wrap items-center gap-2 border-t border-hair px-5 py-3">
           <div className="flex rounded-full bg-zone p-0.5 text-xs font-semibold">

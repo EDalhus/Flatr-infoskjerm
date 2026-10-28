@@ -29,6 +29,7 @@ import { handleAppMarketRoute, customAppFor, canInstallCustom, countInstall, run
 import { serveAppIcon } from './appIcons.js';
 import { startSnapshots, requestRefresh } from './snapshots.js';
 import { startMonitor } from './monitor.js';
+import { startNotices } from './notices.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -290,6 +291,7 @@ setInterval(() => {
 if (process.env.CONVERTER_URL) startSnapshots();
 // Visningslogg og offline-varsel for parede skjermer.
 startMonitor();
+startNotices();
 
 server.listen(PORT, () => {
   console.log(`Flatr kjører på :${PORT}  (${PROTOCOL}://${BASE_DOMAIN}, kunder på *.${BASE_DOMAIN})`);
