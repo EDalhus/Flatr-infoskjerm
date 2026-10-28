@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { ELEMENT_KINDS, ELEMENT_ICON, defaultElement } from '../../../lib/deck.js';
 import { useCollab } from '../../../hooks/useCollab.js';
+import { applyBrandToElements, brandBackground } from '../../../lib/brand.js';
+import { getBrand } from '../../brandStore.js';
 import { usePreviewCtx } from '../deck/previewCtx.js';
 import { Icon, ErrorText } from '../ui.jsx';
 import LayoutPicker from '../deck/LayoutPicker.jsx';
@@ -351,7 +353,8 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
     setMoreOpen(false);
     if (!slide) return;
     const d = defaultElement(kind, maxZ() + 1);
-    const el = { ...d, x: round(50 - d.w / 2), y: round(50 - d.h / 2), ...box, config: { ...d.config, ...configPatch } };
+    const [branded] = applyBrandToElements([{ ...d, config: { ...d.config, ...configPatch } }], getBrand());
+    const el = { ...branded, x: round(50 - d.w / 2), y: round(50 - d.h / 2), ...box };
     try {
       const [created] = await createElements(slide.id, [el]);
       pushHistory({ type: 'add', slideId: slide.id, els: [created] });
@@ -507,7 +510,14 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
 
   const addSlide = async (layout) => {
     try {
-      const s = await api.deck.slide.create({ playlist_id: Number(playlistId), name: layout?.label, elements: layout?.elements || [] });
+      // Merkevaren: skrift og tekstfarge på tekstene, og bakgrunnsfargen.
+      const brand = getBrand();
+      const s = await api.deck.slide.create({
+        playlist_id: Number(playlistId),
+        name: layout?.label,
+        elements: applyBrandToElements(layout?.elements || [], brand),
+        background: brandBackground(brand) || undefined
+      });
       await afterStructural(s.id);
     } catch (e) {
       setErr(e.message);

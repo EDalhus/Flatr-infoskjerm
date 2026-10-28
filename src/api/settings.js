@@ -1,5 +1,6 @@
 import { json, badRequest, handleOptions, readJson, requireAdmin, getTimezone, usage } from './_shared.js';
 import { webhookKind, sendWebhook } from '../lib/webhook.js';
+import { cleanBrand } from '../lib/brand.js';
 
 // Kontoinnstillinger: tidssone (tidsplanen) og offline-varsling (server/monitor.js),
 // også til Slack eller Teams via webhook.
@@ -18,11 +19,21 @@ async function readSettings(env) {
     offline_minutes: Number(map.offline_minutes) || 5,
     // Adressen er en hemmelighet hos Slack/Teams – vis bare hvilken tjeneste og slutten.
     webhook: map.webhook_url ? { kind: webhookKind(map.webhook_url), hint: `…${map.webhook_url.slice(-6)}` } : null,
+    // Merkevaresettet (logo, farger, skrifter) – se src/lib/brand.js.
+    brand: map.brand ? cleanBrand(safeParse(map.brand)) : null,
     // Kvoter (bare på Node-serveren) og bruk mot dem.
     limits: env.LIMITS ?? null,
     usage: env.LIMITS ? await usage(env) : null
   };
 }
+
+const safeParse = (s) => {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+};
 
 const setValue = (env, key, value) =>
   env.DB.prepare(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`)
@@ -68,6 +79,7 @@ export async function onRequestPut(context) {
       await setValue(context.env, 'webhook_url', url);
     }
   }
+  if (b.brand !== undefined) await setValue(context.env, 'brand', JSON.stringify(cleanBrand(b.brand)));
   return json(await readSettings(context.env));
 }
 

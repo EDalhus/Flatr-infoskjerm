@@ -1,6 +1,7 @@
 import { json, badRequest, notFound, handleOptions, readJson, requireAdmin, toIntOrNull, safeJson, previewToken } from './_shared.js';
 import { decryptSecret } from './apps.js';
 import { AGENTS, AGENT_KINDS } from './agents/index.js';
+import { cleanBrand } from '../lib/brand.js';
 import { addPdf, addLink, addText, archiveItem, activeItems, publicItem, loadItems } from './agents/context.js';
 
 // AI-assistenten i editoren (⌘K / AI-fanen). Assistentene er Flatr Apps
@@ -134,6 +135,12 @@ function slideScreenshot(env, request, playlistId) {
   };
 }
 
+/** Merkevaresettet (Merkevare-siden), eller null. */
+async function readBrand(env) {
+  const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = 'brand'`).first();
+  return row?.value ? cleanBrand(safeJson(row.value, {})) : null;
+}
+
 /** Legger forbruket (tokens) til i appens innstillinger. */
 async function addUsage(env, appId, usage) {
   const row = await env.DB.prepare('SELECT config FROM apps WHERE id = ?').bind(appId).first();
@@ -238,6 +245,7 @@ export async function onRequestPost(context) {
     .first();
   let answered = false;
 
+  const brand = await readBrand(env);
   const enc = new TextEncoder();
   let closed = false;
   const body = new ReadableStream({
@@ -266,7 +274,8 @@ export async function onRequestPost(context) {
           },
           usage: (u) => addUsage(env, assistant.row.id, u),
           screenshot: slideScreenshot(env, request, playlistId),
-          contextItems: (ids) => loadItems(env, assistant.config, ids)
+          contextItems: (ids) => loadItems(env, assistant.config, ids),
+          brand
         })
         .catch(async (err) => {
           console.warn('[ai]', err?.message || err);

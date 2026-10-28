@@ -93,7 +93,7 @@ export async function run(ctx) {
   const tools = makeTools(env, playlistId, { screenshot: ctx.screenshot });
   const toolDefs = claudeTools(canSee);
   const pl = await env.DB.prepare('SELECT orientation FROM playlists WHERE id = ?').bind(playlistId).first();
-  const system = systemPrompt(pl?.orientation, { canSee });
+  const system = systemPrompt(pl?.orientation, { canSee, brand: ctx.brand });
   const effort = EFFORTS.includes(config?.effort) ? config.effort : 'medium';
 
   for (let step = 0; step < MAX_STEPS; step++) {

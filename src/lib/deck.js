@@ -20,8 +20,20 @@ export const ELEMENT_KINDS = [
 export const ELEMENT_LABEL = { sponsors: 'Sponsorer', ...Object.fromEntries(ELEMENT_KINDS.map((k) => [k.kind, k.label])) };
 export const ELEMENT_ICON = { sponsors: 'image', ...Object.fromEntries(ELEMENT_KINDS.map((k) => [k.kind, k.icon])) };
 
+// Google Fonts (OFL) lastes i index.html og ligger også i Apple TV-appen (Fonts/).
 export const FONTS = [
   { value: '', label: 'Standard (Inter)' },
+  { value: '"Montserrat", sans-serif', label: 'Montserrat' },
+  { value: '"Manrope", sans-serif', label: 'Manrope' },
+  { value: '"Outfit", sans-serif', label: 'Outfit' },
+  { value: '"Raleway", sans-serif', label: 'Raleway' },
+  { value: '"Nunito", sans-serif', label: 'Nunito' },
+  { value: '"Oswald", sans-serif', label: 'Oswald (smal)' },
+  { value: '"Bebas Neue", sans-serif', label: 'Bebas Neue (plakat)' },
+  { value: '"Archivo Black", sans-serif', label: 'Archivo Black (tung)' },
+  { value: '"Playfair Display", serif', label: 'Playfair Display (elegant)' },
+  { value: '"DM Serif Display", serif', label: 'DM Serif Display' },
+  { value: '"Lora", serif', label: 'Lora' },
   { value: 'Georgia, serif', label: 'Georgia' },
   { value: '"Times New Roman", Times, serif', label: 'Times New Roman' },
   { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },

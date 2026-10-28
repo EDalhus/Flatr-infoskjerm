@@ -143,7 +143,7 @@ export async function onRequestPost(context) {
       toIntOrNull(tpl?.duration_seconds) ?? 15,
       normTransition(tpl?.transition),
       toIntOrNull(tpl?.transition_ms) ?? 600,
-      bgString(tpl?.background)
+      bgString(tpl?.background ?? b?.background)
     )
     .first();
 

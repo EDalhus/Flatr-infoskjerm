@@ -1,6 +1,7 @@
 import { safeJson, toIntOrNull } from '../_shared.js';
 import { routeApi } from '../../router.js';
-import { DEFAULT_ELEMENT_CONFIG, BASE_SIZE } from '../../lib/deck.js';
+import { DEFAULT_ELEMENT_CONFIG, BASE_SIZE, FONTS } from '../../lib/deck.js';
+import { brandIsEmpty, BRAND_COLORS } from '../../lib/brand.js';
 
 // Felles for alle AI-assistentene (Claude AI, senere andre): instruksene om
 // Flatr-lerretet og verktøyene som leser og endrer ÉN presentasjon. Hvert
@@ -11,7 +12,7 @@ import { DEFAULT_ELEMENT_CONFIG, BASE_SIZE } from '../../lib/deck.js';
 
 export const KINDS_DOC = `Element kinds and their config (only set the fields you need; the rest get defaults):
 - text: { text ('\\n' = line break), size (px on the canvas), weight (300-900), align: left|center|right, valign: top|middle|bottom, color '#rrggbb', font, lineHeight (1.0-1.4), tracking (letter spacing in px, e.g. 4-12 for small caps-style labels), italic, shadow (true = soft drop shadow), fill: null | { type:'gradient', from, to, angle } (gradient text) }
-  font is one of: '' (Inter – clean, modern; default), 'Georgia, serif' (warm, editorial), '"Times New Roman", Times, serif', '"Helvetica Neue", Helvetica, Arial, sans-serif', '"Trebuchet MS", sans-serif', 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif' (loud poster headlines), '"Courier New", Courier, monospace'.
+  font is exactly one of these values (label in parentheses): ${FONTS.map((f) => `${JSON.stringify(f.value)} (${f.label})`).join(', ')}. Pair a characterful heading font with a calm body font.
   Emoji render in colour and work well as large icons (a text element with one emoji at 120-260 px).
 - shape: { shape: 'rect'|'ellipse'|'triangle', fill '#rrggbb', radius (px, rect only), opacity (0-100) }. Shapes may extend past the canvas edge (x or y below 0 or w beyond 100) – use that for big decorative circles and colour blocks.
 - image: { url (only urls from list_media), fit: 'contain'|'cover', radius }
@@ -28,7 +29,21 @@ export const KINDS_DOC = `Element kinds and their config (only set the fields yo
 - app: a Flatr App from list_data.apps. AIS apps: { appId, view: 'map'|'cards'|'arrivals'|'calls', quayId, groups: [] }; view 'calls' is the port-call schedule (planned arrivals with cargo and next port) with { title, callDays: 1-30 }. Birthdays: { appId, days: 1-7, title, valign: top|middle|bottom }. Cake rain (birthdays effect layer, full slide, in front): { appId, effect: 'rain', amount: 'few'|'normal'|'many', opacity }.
 Widgets with frame:true get a dark translucent card behind them.`;
 
-export function systemPrompt(orientation, { canSee = false } = {}) {
+/** Merkevaresettet som bindende regler (tom streng hvis ikke satt). */
+function brandSection(b) {
+  if (brandIsEmpty(b)) return '';
+  const lines = [];
+  if (b.name) lines.push(`- Company / brand: ${b.name}`);
+  if (b.logo) lines.push(`- Logo (image url, use it with an image element – never recreate it with text): ${b.logo}`);
+  for (const { key, label } of BRAND_COLORS) if (b.colors?.[key]) lines.push(`- ${label} (${key}): ${b.colors[key]}`);
+  for (const c of b.extra || []) lines.push(`- Extra colour ${c.name || ''}: ${c.hex}`);
+  if (b.fonts?.heading) lines.push(`- Heading font: ${JSON.stringify(b.fonts.heading)}`);
+  if (b.fonts?.body) lines.push(`- Body font: ${JSON.stringify(b.fonts.body)}`);
+  if (b.notes) lines.push(`- Rules from the customer: ${b.notes}`);
+  return `\n\n# The account's brand kit (binding)\nUse exactly these. Build your palette from these colours only (tints/opacity of them are fine); use these fonts for headings and body; place the logo where it fits the composition (typically a corner, small).\n${lines.join('\n')}`;
+}
+
+export function systemPrompt(orientation, { canSee = false, brand = null } = {}) {
   const size = BASE_SIZE[orientation === 'portrait' ? 'portrait' : 'landscape'];
   return `You are the art director and designer inside Flatr, a Norwegian digital-signage service. You build and edit ONE presentation (slides shown on TV screens in workplaces, receptions and canteens) using the tools. You cannot change screens, users or settings – only this presentation.
 
@@ -69,7 +84,7 @@ ${canSee ? `3. After building or changing a slide, call look_at_slide and LOOK a
 ${KINDS_DOC}
 
 Backgrounds: { type:'color', color } | { type:'gradient', from, to, angle } | { type:'dynamic', preset:'aurora'|'gradient'|'waves'|'mesh', base, colors:[2-4 colours] } | { type:'image', url, fit }.
-Transitions (update_slide): none | fade | dissolve | push-left | push-up.`;
+Transitions (update_slide): none | fade | dissolve | push-left | push-up.${brandSection(brand)}`;
 }
 
 /* --------------------------------- verktøy -------------------------------- */

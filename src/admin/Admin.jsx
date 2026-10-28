@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import AiCommand from './components/AiCommand.jsx';
+import BrandManager from './components/BrandManager.jsx';
+import { setBrand } from './brandStore.js';
 import { Icon } from './components/ui.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ProgramManager from './components/ProgramManager.jsx';
@@ -30,6 +32,7 @@ const NAV = [
   { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'copy', group: 'content', Component: TemplatesManager },
+  { id: 'brand', label: 'Merkevare', icon: 'tag', group: 'content', Component: BrandManager },
   { id: 'apps', label: 'Flatr Apps', icon: 'sparkle', group: 'content', Component: AppsManager },
   { id: 'reports', label: 'Rapporter', icon: 'chart', group: 'content', Component: ReportsManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
@@ -105,6 +108,11 @@ function AdminShell({ context }) {
       }
     }
     api.me().then(setMe).catch(() => setMe(null));
+    // Merkevaren brukes av editoren (fargesnarveier, standardskrift).
+    api.settings
+      .get()
+      .then((s) => setBrand(s.brand || null))
+      .catch(() => {});
   }, [tenant]);
 
   useEffect(() => {

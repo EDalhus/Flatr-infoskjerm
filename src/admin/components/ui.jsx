@@ -1,5 +1,7 @@
 /* Delte UI-byggeklosser for admin – mørk lilla palett, gruppekort og listerader. */
 import { forwardRef } from 'react';
+import { brandSwatches } from '../../lib/brand.js';
+import { useBrand } from '../brandStore.js';
 
 const ICONS = {
   calendar: (
@@ -240,12 +242,36 @@ export const Select = forwardRef(function Select({ className = '', ...props }, r
 
 /** Fargevelger med samme høyde/kant som resten. */
 export function ColorInput({ className = '', ...props }) {
-  return (
+  // Merkevarefargene (Merkevare-siden) som snarveier under velgeren.
+  const swatches = brandSwatches(useBrand());
+  const input = (
     <input
       type="color"
       {...props}
-      className={`h-9 w-full cursor-pointer rounded-xl border border-line bg-paper p-1 ${className}`}
+      className={`h-9 w-full cursor-pointer rounded-xl border border-line bg-paper p-1 ${swatches.length ? '' : className}`}
     />
+  );
+  if (!swatches.length) return input;
+  return (
+    <span className={`block ${className}`}>
+      {input}
+      <span className="mt-1.5 flex flex-wrap gap-1">
+        {swatches.map((c) => (
+          <button
+            key={c.hex}
+            type="button"
+            title={`${c.name} (${c.hex})`}
+            aria-label={`Merkevarefarge ${c.name}`}
+            onClick={(e) => {
+              e.preventDefault();
+              props.onChange?.({ target: { value: c.hex } });
+            }}
+            className={`h-5 w-5 rounded-md border ${String(props.value || '').toLowerCase() === c.hex ? 'border-ink ring-2 ring-focus/40' : 'border-line'}`}
+            style={{ background: c.hex }}
+          />
+        ))}
+      </span>
+    </span>
   );
 }
 
