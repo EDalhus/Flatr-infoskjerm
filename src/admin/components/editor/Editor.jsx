@@ -68,6 +68,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const [snap, setSnap] = useState(true);
   const [err, setErr] = useState('');
   const [toast, setToast] = useState('');
+  const readOnly = me?.role === 'viewer';
   // Høyre panel: design | layers | ai. ⌘K sender en melding hit (aiPending).
   const [panelTab, setPanelTab] = useState('design');
   const [aiPending, setAiPending] = useState(null);
@@ -921,7 +922,12 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           }}
         />
 
-        <main className="relative min-w-0 flex-1">
+        <main className={`relative min-w-0 flex-1 ${readOnly ? '[&>*:first-child]:pointer-events-none' : ''}`}>
+          {readOnly && (
+            <div className="absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full bg-card px-4 py-1.5 text-xs font-semibold text-muted shadow-card">
+              Du har lesetilgang – du kan se, men ikke endre
+            </div>
+          )}
           {slide ? (
             <Stage
               slide={slide}
@@ -958,6 +964,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           )}
         </main>
 
+        <div className={readOnly ? 'pointer-events-none opacity-60' : 'contents'}>
         <Panel
           slide={slide}
           selected={selected}
@@ -988,6 +995,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
             onChange?.();
           }}
         />
+        </div>
       </div>
 
       {pickerOpen && (

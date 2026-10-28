@@ -147,7 +147,7 @@ function BackupCodes({ codes }) {
   );
 }
 
-function TwoFactorCard({ enabled, onChange }) {
+export function TwoFactorCard({ enabled, onChange }) {
   const [password, setPassword] = useState('');
   const [setup, setSetup] = useState(null); // { totpURI, backupCodes }
   const [code, setCode] = useState('');

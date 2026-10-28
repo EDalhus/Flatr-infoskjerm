@@ -138,8 +138,22 @@ function ensureColor(user, tenant) {
 async function currentUser(request, tenant) {
   const s = await authSession(request);
   if (!s?.user?.emailVerified) return null;
-  return memberByEmail(tenant.id, s.user.email) ?? null;
+  const member = memberByEmail(tenant.id, s.user.email);
+  return member ? { ...member, two_factor: !!s.user.twoFactorEnabled } : null;
 }
+
+/** Kontoen krever tofaktor for alle (Team → «Krev tofaktor»). */
+async function requires2fa(tenant) {
+  try {
+    const row = await tenantResources(tenant.slug).DB.prepare(`SELECT value FROM settings WHERE key = 'require_2fa'`).first();
+    return row?.value === '1';
+  } catch {
+    return false;
+  }
+}
+
+// Det en leser og en bruker uten påkrevd tofaktor fortsatt får gjøre.
+const ALWAYS_ALLOWED = new Set(['/api/me', '/api/context', '/api/plan']);
 
 async function handleTenant(request, tenant) {
   const url = new URL(request.url);
@@ -164,12 +178,26 @@ async function handleTenant(request, tenant) {
       base_domain: BASE_DOMAIN,
       tenant: { slug: tenant.slug, name: tenant.name },
       signed_in: !!user,
+      // Kontoen krever tofaktor, og brukeren har det ikke: admin viser oppsettet.
+      needs_2fa: !!user && !user.two_factor && (await requires2fa(tenant)),
       // Innlogget i Flatr, men ikke medlem her – login-siden sier «ingen tilgang».
       account: user ? null : (await authSession(request))?.user?.email ?? null
     });
   }
 
   if (!user && !isPublic(request.method, key, url)) return jsonError(401, 'Ikke innlogget');
+  if (user && !ALWAYS_ALLOWED.has(key)) {
+    if (!user.two_factor && (await requires2fa(tenant))) {
+      return new Response(JSON.stringify({ error: 'Kontoen krever tofaktor. Slå det på under Konto og sikkerhet.', code: 'needs_2fa' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      });
+    }
+    // Lesere kan se alt, men ikke endre noe.
+    if (user.role === 'viewer' && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+      return jsonError(403, 'Du har lesetilgang og kan ikke endre noe. Be en eier om å gi deg redaktørtilgang.');
+    }
+  }
 
   const env = tenantEnv(tenant, user);
   if (key === '/api/import') return handleImportRoute(request, ctx, env);

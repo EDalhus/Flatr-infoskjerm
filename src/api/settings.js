@@ -18,6 +18,7 @@ async function readSettings(env) {
     offline_alerts: map.offline_alerts !== '0',
     offline_minutes: Number(map.offline_minutes) || 5,
     daily_digest: map.daily_digest === '1',
+    require_2fa: map.require_2fa === '1',
     // Adressen er en hemmelighet hos Slack/Teams – vis bare hvilken tjeneste og slutten.
     webhook: map.webhook_url ? { kind: webhookKind(map.webhook_url), hint: `…${map.webhook_url.slice(-6)}` } : null,
     // Merkevaresettet (logo, farger, skrifter) – se src/lib/brand.js.
@@ -67,6 +68,13 @@ export async function onRequestPut(context) {
   }
   if (b.offline_alerts !== undefined) await setValue(context.env, 'offline_alerts', b.offline_alerts ? '1' : '0');
   if (b.daily_digest !== undefined) await setValue(context.env, 'daily_digest', b.daily_digest ? '1' : '0');
+  if (b.require_2fa !== undefined) {
+    if (context.env.SESSION_USER && context.env.SESSION_USER.role !== 'owner') return json({ error: 'Bare eiere kan endre dette.' }, { status: 403 });
+    // Eieren som slår det på, må ha tofaktor selv (ellers stenger de seg ute).
+    if (b.require_2fa && context.env.SESSION_USER && !context.env.SESSION_USER.two_factor)
+      return badRequest('Slå på tofaktor for din egen bruker først (Konto og sikkerhet).');
+    await setValue(context.env, 'require_2fa', b.require_2fa ? '1' : '0');
+  }
   if (b.offline_minutes !== undefined) {
     const m = Number.parseInt(b.offline_minutes, 10);
     if (!(m >= 2 && m <= 1440)) return badRequest('Minutter må være mellom 2 og 1440');

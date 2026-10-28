@@ -346,7 +346,7 @@ export async function handleTenantAuthRoute(request, ctx) {
 
 /* --------------------------------- team --------------------------------- */
 
-const ROLES = ['owner', 'editor'];
+const ROLES = ['owner', 'editor', 'viewer'];
 const THEMES = ['presis'];
 
 function listMembers(tenantId) {

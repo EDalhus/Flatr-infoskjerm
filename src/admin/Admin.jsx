@@ -15,7 +15,7 @@ import ReportsManager from './components/ReportsManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 import TeamManager from './components/TeamManager.jsx';
 import AppsManager from './components/AppsManager.jsx';
-import AccountManager from './components/AccountManager.jsx';
+import AccountManager, { TwoFactorCard } from './components/AccountManager.jsx';
 import Login from './Login.jsx';
 import { useTheme } from './components/ThemePicker.jsx';
 import OnlineBar from './components/OnlineBar.jsx';
@@ -83,7 +83,36 @@ function useDismiss(open, setOpen) {
 // som Worker uten e-postinnlogging, og admin vises som før.
 export default function Admin({ context }) {
   if (context?.mode === 'tenant' && !context.signed_in) return <Login tenant={context.tenant} account={context.account} />;
+  if (context?.needs_2fa) return <Require2fa tenant={context.tenant} />;
   return <AdminShell context={context} />;
+}
+
+/** Kontoen krever tofaktor, og brukeren har det ikke ennå: sett det opp før noe annet. */
+function Require2fa({ tenant }) {
+  return (
+    <div className="min-h-screen bg-paper px-4 py-16">
+      <div className="mx-auto grid max-w-lg gap-5">
+        <LogoLockup className="h-8" />
+        <div>
+          <h1 className="m-0 text-2xl font-bold text-ink">Slå på tofaktor</h1>
+          <p className="m-0 mt-2 text-sm leading-relaxed text-muted">
+            {tenant?.name || 'Kontoen'} krever tofaktor for alle i teamet. Det tar et minutt: skann en QR-kode med en autentiseringsapp (f.eks. Google Authenticator, 1Password eller Microsoft Authenticator) og skriv inn koden.
+          </p>
+        </div>
+        <TwoFactorCard enabled={false} onChange={() => window.location.reload()} />
+        <button
+          type="button"
+          onClick={async () => {
+            await api.auth.logout().catch(() => {});
+            window.location.href = '/admin';
+          }}
+          className="justify-self-start text-sm font-semibold text-muted hover:text-ink"
+        >
+          Logg ut
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function AdminShell({ context }) {
@@ -174,7 +203,12 @@ function AdminShell({ context }) {
 
   return (
     <>
-      <RailShell {...shared}>{content}</RailShell>
+      <RailShell {...shared}>
+        {me?.role === 'viewer' && (
+          <div className="border-b border-line bg-zone px-6 py-2 text-center text-xs font-medium text-muted">Du har lesetilgang i {tenant?.name || 'kontoen'}: du kan se alt, men ikke endre noe.</div>
+        )}
+        {content}
+      </RailShell>
       <AiCommand go={go} me={me} />
     </>
   );

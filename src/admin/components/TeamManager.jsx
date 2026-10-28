@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Field, Input, Select, Button, IconButton, Card, GroupCard, Row, PageHeader, ErrorText } from './ui.jsx';
 
-const ROLE_LABEL = { owner: 'Eier', editor: 'Redaktør' };
+const ROLE_LABEL = { owner: 'Eier', editor: 'Redaktør', viewer: 'Leser' };
 
 export default function TeamManager({ me }) {
   const [members, setMembers] = useState([]);
@@ -12,6 +12,18 @@ export default function TeamManager({ me }) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const isOwner = me?.role === 'owner';
+  const [require2fa, setRequire2fa] = useState(null);
+  useEffect(() => {
+    api.settings.get().then((s) => setRequire2fa(!!s.require_2fa)).catch(() => {});
+  }, []);
+  const toggle2fa = async (on) => {
+    setError('');
+    try {
+      setRequire2fa(!!(await api.settings.update({ require_2fa: on })).require_2fa);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   const load = () =>
     api.team
@@ -78,6 +90,7 @@ export default function TeamManager({ me }) {
               <Field label="Rolle">
                 <Select value={role} onChange={(e) => setRole(e.target.value)}>
                   <option value="editor">Redaktør</option>
+                  <option value="viewer">Leser</option>
                   <option value="owner">Eier</option>
                 </Select>
               </Field>
@@ -87,13 +100,27 @@ export default function TeamManager({ me }) {
               </Button>
             </form>
             <p className="mt-3 text-xs text-muted">
-              Redaktører kan endre alt innhold og alle skjermer. Eiere kan i tillegg administrere teamet.
+              Lesere kan se alt, men ikke endre noe. Redaktører kan endre alt innhold og alle skjermer. Eiere kan i tillegg administrere teamet og godkjenne.
             </p>
             {notice && <p className="mt-3 text-sm font-medium text-brand">{notice}</p>}
           </Card>
         )}
 
         <ErrorText>{error}</ErrorText>
+
+        {isOwner && require2fa !== null && (
+          <Card title="Sikkerhet">
+            <label className="flex items-start gap-3 text-sm">
+              <input type="checkbox" className="mt-1" checked={require2fa} onChange={(e) => toggle2fa(e.target.checked)} />
+              <span>
+                <span className="font-semibold text-ink">Krev tofaktor for alle i teamet</span>
+                <span className="block text-muted">
+                  Alle må bruke en autentiseringsapp i tillegg til passordet. De som ikke har slått det på, blir bedt om å gjøre det før de kommer inn. Du må ha det på selv først.
+                </span>
+              </span>
+            </label>
+          </Card>
+        )}
 
         <GroupCard label={`Medlemmer · ${members.length}`} icon="home">
           {members.map((m) => {
@@ -127,6 +154,7 @@ export default function TeamManager({ me }) {
                         aria-label="Rolle"
                       >
                         <option value="editor">Redaktør</option>
+                        <option value="viewer">Leser</option>
                         <option value="owner">Eier</option>
                       </Select>
                       <IconButton name="x" label="Fjern fra teamet" tone="danger" onClick={() => remove(m)} />
