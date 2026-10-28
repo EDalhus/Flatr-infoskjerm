@@ -1,6 +1,8 @@
 // Venstre: lysbildene i presentasjonen. Dra for å endre rekkefølge. Avatarene
 // viser hvem som jobber på hvilket lysbilde.
 
+import { useEffect, useState } from 'react';
+import { api } from '../../../lib/api.js';
 import { useListDnd } from '../../../hooks/useListDnd.js';
 import { Icon } from '../ui.jsx';
 import SlideThumb from '../deck/SlideThumb.jsx';
@@ -14,8 +16,28 @@ const initials = (name = '') =>
     .join('')
     .toUpperCase() || '?';
 
-export default function SlideRail({ slides, orientation, selectedId, peers, onSelect, onAdd, onDuplicate, onDelete, onMove }) {
+/** Merke for dato-begrensning: «Utløpt», «Til 3. nov», «Fra 5. nov». */
+function period(s) {
+  const today = new Date().toISOString().slice(0, 10);
+  const fmt = (d) => new Date(`${d}T12:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', '');
+  if (s.active_to_date && s.active_to_date < today) return { text: 'Utløpt', tone: 'bg-danger-tint text-danger' };
+  if (s.active_from_date && s.active_from_date > today) return { text: `Fra ${fmt(s.active_from_date)}`, tone: 'bg-zone text-muted' };
+  if (s.active_to_date) return { text: `Til ${fmt(s.active_to_date)}`, tone: 'bg-warn/15 text-warn' };
+  return null;
+}
+
+export default function SlideRail({ slides, orientation, selectedId, peers, onSelect, onAdd, onDuplicate, onDelete, onMove, onCopyTo, playlistId }) {
   const { rowProps } = useListDnd((from, to) => onMove(from, to));
+  // «Kopier til …»: de andre presentasjonene, hentet når menyen åpnes.
+  const [copyFor, setCopyFor] = useState(null);
+  const [others, setOthers] = useState(null);
+  useEffect(() => {
+    if (!copyFor || others) return;
+    api.playlists
+      .list()
+      .then((rows) => setOthers((rows || []).filter((p) => String(p.id) !== String(playlistId))))
+      .catch(() => setOthers([]));
+  }, [copyFor, others, playlistId]);
 
   return (
     <nav aria-label="Lysbilder" className="flex h-full w-56 shrink-0 flex-col border-r border-line bg-card">
@@ -68,6 +90,9 @@ export default function SlideRail({ slides, orientation, selectedId, peers, onSe
                   <span className="min-w-0 flex-1 truncate text-ink">{s.name || 'Lysbilde'}</span>
                   <span className="shrink-0 tabular-nums text-muted">{s.duration_seconds}s</span>
                 </div>
+                {period(s) && (
+                  <div className={`mx-0.5 mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${period(s).tone}`}>{period(s).text}</div>
+                )}
               </button>
               <div className="absolute right-2.5 top-2.5 flex gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                 <button
@@ -79,6 +104,17 @@ export default function SlideRail({ slides, orientation, selectedId, peers, onSe
                 >
                   <Icon name="copy" className="h-3.5 w-3.5" />
                 </button>
+                {onCopyTo && (
+                  <button
+                    type="button"
+                    onClick={() => setCopyFor(copyFor === s.id ? null : s.id)}
+                    className="grid h-6 w-6 place-items-center rounded-md bg-card/90 text-ink shadow-card hover:bg-card"
+                    aria-label="Kopier til en annen presentasjon"
+                    title="Kopier til en annen presentasjon"
+                  >
+                    <Icon name="share" className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => onDelete(s.id)}
@@ -89,6 +125,26 @@ export default function SlideRail({ slides, orientation, selectedId, peers, onSe
                   <Icon name="trash" className="h-3.5 w-3.5" />
                 </button>
               </div>
+              {copyFor === s.id && (
+                <div className="absolute left-2 right-2 top-9 z-20 max-h-64 overflow-y-auto rounded-xl border border-line bg-card p-1 shadow-pop">
+                  <div className="px-2 py-1.5 text-[11px] font-semibold text-muted">Kopier til …</div>
+                  {!others && <div className="px-2 py-1.5 text-xs text-muted">Laster …</div>}
+                  {others?.length === 0 && <div className="px-2 py-1.5 text-xs text-muted">Ingen andre presentasjoner.</div>}
+                  {others?.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setCopyFor(null);
+                        onCopyTo(s.id, p);
+                      }}
+                      className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-sm text-ink hover:bg-zone"
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </li>
           );
         })}

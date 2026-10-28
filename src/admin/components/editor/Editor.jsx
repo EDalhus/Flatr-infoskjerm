@@ -896,6 +896,15 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onDuplicate={dupSlide}
           onDelete={deleteSlide}
           onMove={moveSlide}
+          playlistId={playlistId}
+          onCopyTo={async (sid, target) => {
+            try {
+              await api.deck.slide.copyTo(sid, target.id);
+              say(`Kopiert til «${target.name}»`);
+            } catch (e) {
+              setErr(e.message);
+            }
+          }}
         />
 
         <main className="relative min-w-0 flex-1">

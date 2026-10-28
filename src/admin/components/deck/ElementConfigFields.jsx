@@ -382,6 +382,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [] })
         <Field label="Tekst">
           <Textarea rows={3} value={c.text || ''} onChange={(e) => set({ text: e.target.value })} />
         </Field>
+        <Check label="Krymp teksten så den får plass i boksen" checked={c.autoFit !== false} onChange={(v) => set({ autoFit: v })} />
 
         <Field label="Font">
           <Select value={c.font || ''} onChange={(e) => set({ font: e.target.value })}>

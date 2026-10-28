@@ -125,6 +125,38 @@ function ElementDesign({ el, orientation, categories, onPatch, onConfig, onLayer
         <AlignRow onAlign={onAlign} hint="Justerer mot lerretet." />
       </Section>
 
+      <Section title="Animasjon">
+        <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2">
+          <select
+            value={el.config?.anim || 'none'}
+            onChange={(e) => onConfig({ anim: e.target.value })}
+            className="h-8 rounded-lg border border-line bg-paper px-2 text-sm text-ink"
+            aria-label="Animasjon inn"
+          >
+            {ANIMS.map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+          <select
+            value={String(el.config?.animDelay ?? 0)}
+            onChange={(e) => onConfig({ animDelay: Number(e.target.value) })}
+            disabled={!el.config?.anim || el.config.anim === 'none'}
+            className="h-8 rounded-lg border border-line bg-paper px-2 text-sm text-ink disabled:opacity-50"
+            aria-label="Forsinkelse"
+            title="Forsinkelse"
+          >
+            {[0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3].map((d) => (
+              <option key={d} value={String(d)}>
+                {d === 0 ? 'Straks' : `+${String(d).replace('.', ',')} s`}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="m-0 mt-1.5 text-[11px] text-muted">Spilles når lysbildet vises på skjermen. Gi elementene litt ulik forsinkelse for en fin rekkefølge.</p>
+      </Section>
+
       <section className="px-4 py-4">
         <ElementConfigFields kind={el.kind} cfg={el.config} set={onConfig} categories={categories} />
       </section>
@@ -276,6 +308,14 @@ function GroupRow({ group, members, apps, selection, locks, onSelect, onHide, on
     </li>
   );
 }
+
+const ANIMS = [
+  ['none', 'Ingen'],
+  ['fade', 'Ton inn'],
+  ['up', 'Glid opp'],
+  ['left', 'Glid inn fra venstre'],
+  ['zoom', 'Zoom inn']
+];
 
 function LayerList({ elements, selection, locks, onSelect, onPatch, onGroup }) {
   const [apps, setApps] = useState(null);

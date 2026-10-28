@@ -233,3 +233,13 @@ body {
     transform: translate(5%, -6%) scale(1.12);
   }
 }
+
+/* Animasjon per element (inngang når lysbildet vises) – samme navn som config.anim */
+@keyframes flatr-in-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes flatr-in-up { from { opacity: 0; transform: translateY(8%); } to { opacity: 1; transform: none; } }
+@keyframes flatr-in-left { from { opacity: 0; transform: translateX(-8%); } to { opacity: 1; transform: none; } }
+@keyframes flatr-in-zoom { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+.flatr-anim-fade { animation: flatr-in-fade 0.8s ease-out both; }
+.flatr-anim-up { animation: flatr-in-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.flatr-anim-left { animation: flatr-in-left 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.flatr-anim-zoom { animation: flatr-in-zoom 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }

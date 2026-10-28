@@ -147,7 +147,8 @@ export const api = {
       create: (body) => req('/deck-slides', { method: 'POST', body }),
       update: (id, body) => req(`/deck-slides?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
       remove: (id) => req(`/deck-slides?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
-      duplicate: (id) => req('/deck-slides', { method: 'POST', body: { duplicate_of: id } })
+      duplicate: (id) => req('/deck-slides', { method: 'POST', body: { duplicate_of: id } }),
+      copyTo: (id, playlistId) => req('/deck-slides', { method: 'POST', body: { duplicate_of: id, playlist_id: playlistId } })
     },
     element: {
       create: (body) => req('/deck-elements', { method: 'POST', body }),

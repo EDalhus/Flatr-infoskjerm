@@ -80,10 +80,17 @@ export async function onRequestPost(context) {
   if (cloneId) {
     const src = await env.DB.prepare('SELECT * FROM deck_slides WHERE id = ?').bind(cloneId).first();
     if (!src) return notFound('Lysbilde finnes ikke');
-    await env.DB
-      .prepare('UPDATE deck_slides SET position = position + 1 WHERE playlist_id = ? AND position > ?')
-      .bind(src.playlist_id, src.position)
-      .run();
+    // { duplicate_of, playlist_id }: kopi til en annen presentasjon (sist i den).
+    const target = toIntOrNull(b?.playlist_id) ?? src.playlist_id;
+    const elsewhere = target !== src.playlist_id;
+    if (elsewhere && !(await env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(target).first())) return notFound('Presentasjonen finnes ikke');
+    const last = elsewhere ? await env.DB.prepare('SELECT COALESCE(MAX(position), -1) AS m FROM deck_slides WHERE playlist_id = ?').bind(target).first() : null;
+    if (!elsewhere) {
+      await env.DB
+        .prepare('UPDATE deck_slides SET position = position + 1 WHERE playlist_id = ? AND position > ?')
+        .bind(src.playlist_id, src.position)
+        .run();
+    }
     const copy = await env.DB
       .prepare(
         `INSERT INTO deck_slides
@@ -91,9 +98,9 @@ export async function onRequestPost(context) {
          VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING *`
       )
       .bind(
-        src.playlist_id,
-        src.position + 1,
-        src.name ? `${src.name} (kopi)` : null,
+        target,
+        elsewhere ? (last?.m ?? -1) + 1 : src.position + 1,
+        src.name ? (elsewhere ? src.name : `${src.name} (kopi)`) : null,
         src.duration_seconds,
         src.transition,
         src.transition_ms,

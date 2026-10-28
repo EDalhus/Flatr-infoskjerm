@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import ClockSlide from './slides/ClockSlide.jsx';
 import CountdownSlide from './slides/CountdownSlide.jsx';
 import ProgramSlide from './slides/ProgramSlide.jsx';
@@ -11,8 +12,55 @@ import CalendarSlide from './slides/CalendarSlide.jsx';
 import CarouselSlide from './slides/CarouselSlide.jsx';
 import AppSlide from './slides/AppSlide.jsx';
 
+/**
+ * Krymper teksten (ned til 40 %, som på Apple TV) når den ikke får plass i
+ * boksen. Måles på nytt når teksten, boksen eller skriftene endrer seg.
+ */
+function useFitText(outerRef, innerRef, deps, enabled) {
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const outer = outerRef.current;
+    const inner = innerRef.current;
+    if (!outer || !inner) return undefined;
+    if (!enabled) {
+      setScale(1);
+      return undefined;
+    }
+    const fits = (s) => {
+      inner.style.fontSize = `${s * 100}%`;
+      return inner.scrollHeight <= outer.clientHeight + 1 && inner.scrollWidth <= outer.clientWidth + 1;
+    };
+    const measure = () => {
+      if (!outer.clientHeight || !outer.clientWidth) return;
+      let best = 1;
+      if (!fits(1)) {
+        let lo = 0.4;
+        let hi = 1;
+        for (let i = 0; i < 7; i++) {
+          const mid = (lo + hi) / 2;
+          if (fits(mid)) lo = mid;
+          else hi = mid;
+        }
+        best = lo;
+      }
+      inner.style.fontSize = '';
+      setScale((s) => (Math.abs(s - best) > 0.005 ? best : s));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(outer);
+    document.fonts?.ready?.then(measure).catch(() => {});
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...deps, enabled]);
+  return scale;
+}
+
 function TextEl({ config }) {
   const c = config || {};
+  const outerRef = useRef(null);
+  const innerRef = useRef(null);
+  const fit = useFitText(outerRef, innerRef, [c.text, c.size, c.font, c.weight, c.lineHeight, c.tracking], c.autoFit !== false);
   const alignItems =
     c.valign === 'middle' ? 'center' : c.valign === 'bottom' ? 'flex-end' : 'flex-start';
   const decoration = [c.underline && 'underline', c.strike && 'line-through']
@@ -21,7 +69,7 @@ function TextEl({ config }) {
 
   const style = {
     fontFamily: c.font || undefined,
-    fontSize: c.size ?? 64,
+    fontSize: (c.size ?? 64) * fit,
     fontWeight: c.weight ?? 700,
     fontStyle: c.italic ? 'italic' : 'normal',
     textAlign: c.align || 'left',
@@ -44,9 +92,11 @@ function TextEl({ config }) {
   }
 
   return (
-    <div className="flex h-full w-full" style={{ alignItems }}>
+    <div ref={outerRef} className="flex h-full w-full overflow-hidden" style={{ alignItems }}>
       <div className="w-full whitespace-pre-wrap break-words" style={style}>
-        {c.text ?? ''}
+        <span ref={innerRef} className="block">
+          {c.text ?? ''}
+        </span>
       </div>
     </div>
   );

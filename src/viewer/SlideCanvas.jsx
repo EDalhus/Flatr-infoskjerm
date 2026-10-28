@@ -24,7 +24,14 @@ export default function SlideCanvas({ slide, ctx, onNext }) {
             transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined
           }}
         >
-          <ElementView element={el} ctx={ctx} onNext={onNext} />
+          {el.config?.anim && el.config.anim !== 'none' ? (
+            // Inngang når lysbildet vises (egen boks, så rotasjonen over ikke overstyres).
+            <div className={`h-full w-full flatr-anim-${el.config.anim}`} style={{ animationDelay: `${Number(el.config.animDelay) || 0}s` }}>
+              <ElementView element={el} ctx={ctx} onNext={onNext} />
+            </div>
+          ) : (
+            <ElementView element={el} ctx={ctx} onNext={onNext} />
+          )}
         </div>
       ))}
     </div>
