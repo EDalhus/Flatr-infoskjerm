@@ -4,6 +4,9 @@ import FleetMap from '../components/FleetMap.jsx';
 import CustomAppView from './CustomAppView.jsx';
 import BirthdayView, { inWindow } from './BirthdayView.jsx';
 import CakeRain from './CakeRain.jsx';
+import MenuView from './MenuView.jsx';
+import TidesView from './TidesView.jsx';
+import FootballView from './FootballView.jsx';
 import { statusLabel, etaTo, etaText, ago, hasPosition, isMoving, vesselColor } from '../../lib/ais.js';
 import { currentCalls, cargoLine, callTimeText, callDate, hasClock } from '../../lib/portCalls.js';
 
@@ -250,6 +253,18 @@ export default function AppSlide({ slide, chromeless }) {
           <div className="mb-[2%] shrink-0 text-center text-[min(5cqh,4cqw)] font-semibold opacity-60">Skjules på skjermen nå – ingen i perioden</div>
         )}
         <BirthdayView items={data.items || []} days={days} valign={c.valign || 'top'} count={Number(c.count) || 3} title={c.title ?? 'Bursdager'} />
+      </div>
+    );
+  }
+
+  // Dagens meny, tidevann og fotball: ferdige visninger med kort/ramme som standard.
+  if (['menu', 'tides', 'football'].includes(data.app?.kind)) {
+    const card = c.frame === false ? 'flex h-full w-full flex-col overflow-hidden' : 'flex h-full w-full flex-col overflow-hidden rounded-xl bg-black/30 p-[4%]';
+    return (
+      <div className={card} style={style}>
+        {data.app.kind === 'menu' && <MenuView data={data} view={c.menuView || 'today'} title={c.title} showPrice={c.showPrice !== false} showTags={c.showTags !== false} />}
+        {data.app.kind === 'tides' && <TidesView place={data.places?.[c.placeId] || Object.values(data.places || {})[0]} view={c.tideView || 'both'} title={c.title} now={now} />}
+        {data.app.kind === 'football' && <FootballView data={data} view={c.footballView || 'next'} teamId={c.teamId} leagueId={c.leagueId} title={c.title} max={c.max} />}
       </div>
     );
   }

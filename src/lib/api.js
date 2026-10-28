@@ -267,6 +267,7 @@ export const api = {
     live: (id) => req(`/apps?id=${encodeURIComponent(id)}&live=1`),
     searchPhotos: (id, q, orientation) => req(`/apps?id=${encodeURIComponent(id)}&photos=${encodeURIComponent(q)}${orientation ? `&orientation=${orientation}` : ''}`),
     importPhoto: (photoId) => req(`/apps?import_photo=${encodeURIComponent(photoId)}`, { method: 'POST', body: {} }),
+    searchFootball: (id, kind, q) => req(`/apps?id=${encodeURIComponent(id)}&football=${kind}&q=${encodeURIComponent(q)}`),
     searchVessels: (id, q) => req(`/apps?id=${encodeURIComponent(id)}&search=${encodeURIComponent(q)}`),
     create: (body) => req('/apps', { method: 'POST', body }),
     update: (id, body) => req(`/apps?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),

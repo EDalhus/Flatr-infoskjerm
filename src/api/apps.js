@@ -5,6 +5,8 @@ import { normBirthdate, upcomingBirthdays, todayIn } from '../lib/birthdays.js';
 import { AGENTS } from './agents/index.js';
 import { cleanCalls } from '../lib/portCalls.js';
 import { verifyUnsplashKey, searchPhotos, importPhoto } from './photos.js';
+import { tidesData, footballData, verifyFootballKey, searchFootball } from './datasources.js';
+import { cleanMenu, weekdayIn } from '../lib/menu.js';
 
 // Flatr Apps – aktiverte apper for kunden. En rad = én aktivert app fra
 // markedsplassen: offisiell (kind = ais | weather | rss | calendar) eller egen
@@ -110,6 +112,34 @@ function cleanBirthdaysConfig(c) {
     if (people.length >= 1000) break;
   }
   return { people, showAge: c?.showAge !== false };
+}
+
+/** Tidevann: steder med navn og koordinater (maks 10). */
+function cleanTidesConfig(c) {
+  const places = (Array.isArray(c?.places) ? c.places : [])
+    .map((p) => ({ id: str(p?.id, 40) || crypto.randomUUID().slice(0, 8), name: str(p?.name, 80) || 'Sted', lat: coord(p?.lat, 90), lon: coord(p?.lon, 180) }))
+    .filter((p) => p.lat != null && p.lon != null)
+    .slice(0, 10);
+  return { places };
+}
+
+/** Fotball: lag og ligaer (fra søket i appen). */
+function cleanFootballConfig(c) {
+  const teams = (Array.isArray(c?.teams) ? c.teams : [])
+    .filter((t) => Number.isInteger(Number(t?.id)))
+    .map((t) => ({ id: Number(t.id), name: str(t.name, 80), logo: /^https:\/\//.test(t.logo || '') ? str(t.logo, 300) : null }))
+    .slice(0, 4);
+  const leagues = (Array.isArray(c?.leagues) ? c.leagues : [])
+    .filter((l) => Number.isInteger(Number(l?.id)) && Number.isInteger(Number(l?.season)))
+    .map((l) => ({ id: Number(l.id), season: Number(l.season), name: str(l.name, 80), logo: /^https:\/\//.test(l.logo || '') ? str(l.logo, 300) : null }))
+    .slice(0, 3);
+  return { teams, leagues, key_hint: str(c?.key_hint, 10) || undefined };
+}
+
+/** Dagens meny: hele uka og hvilken dag det er i dag (kundens tidssone). */
+async function menuData(env, row) {
+  const c = cleanMenu(safeJson(row.config, {}));
+  return { week: c.week, note: c.note, today: weekdayIn(await getTimezone(env)), fetched_at: new Date().toISOString() };
 }
 
 /** Bare det skjermene trenger: neste bursdager uten fødselsår. */
@@ -299,7 +329,15 @@ export async function appData(env, appId) {
   if (!row) throw Object.assign(new Error('Appen finnes ikke'), { status: 404 });
   const key = `${env.TENANT?.slug ?? ''}:${row.id}:${row.updated_at}`;
   const hit = dataCache.get(key);
-  const ttl = row.kind === 'custom' ? (customDef(env, row)?.source?.refreshMinutes ?? 5) * 60_000 : DATA_TTL_MS;
+  // Tidevann endrer seg sakte; fotball har få forespørsler per dag (oftere under kamp).
+  const ttl =
+    row.kind === 'custom'
+      ? (customDef(env, row)?.source?.refreshMinutes ?? 5) * 60_000
+      : row.kind === 'tides'
+        ? 30 * 60_000
+        : row.kind === 'football'
+          ? (hit?.data?.live ? 10 : 120) * 60_000
+          : DATA_TTL_MS;
   if (hit && Date.now() - hit.at < ttl) return hit.data;
   try {
     const data =
@@ -309,7 +347,13 @@ export async function appData(env, appId) {
           ? await fetchCustom(env, row)
           : row.kind === 'birthdays'
             ? await birthdaysData(env, row)
-            : {};
+            : row.kind === 'menu'
+              ? await menuData(env, row)
+              : row.kind === 'tides'
+                ? await tidesData(safeJson(row.config, {}))
+                : row.kind === 'football'
+                  ? await footballData((await readSecrets(env, row)).api_key, safeJson(row.config, {}))
+                  : {};
     const out = { app: { id: row.id, name: row.name, kind: row.kind }, ...data };
     dataCache.set(key, { at: Date.now(), data: out });
     if (dataCache.size > 300) dataCache.delete(dataCache.keys().next().value);
@@ -332,6 +376,18 @@ export async function onRequestGet(context) {
   if (!id) {
     const { results } = await env.DB.prepare('SELECT * FROM apps ORDER BY name COLLATE NOCASE, id').all();
     return json((results ?? []).map((r) => publicApp(env, r)));
+  }
+  // ?football=team|league&q=: søk i API-Football (fotball-appen).
+  if (params.has('football')) {
+    const row = await env.DB.prepare('SELECT * FROM apps WHERE id = ?').bind(id).first();
+    if (!row || row.kind !== 'football') return notFound('Appen finnes ikke');
+    const { api_key: key } = await readSecrets(env, row);
+    if (!key) return json({ error: 'Legg inn API-Football-nøkkelen først' }, { status: 400 });
+    try {
+      return json(await searchFootball(key, params.get('football') === 'league' ? 'league' : 'team', params.get('q')));
+    } catch (err) {
+      return json({ error: err.message }, { status: 502 });
+    }
   }
   // ?photos=: søk i Unsplash (bildebank-appen).
   if (params.has('photos')) {
@@ -401,6 +457,9 @@ export async function onRequestPost(context) {
     if (kind === 'birthdays') config = cleanBirthdaysConfig({});
     if (AGENTS[kind]) config = { effort: 'medium' };
     if (kind === 'unsplash') config = {};
+    if (kind === 'menu') config = cleanMenu({});
+    if (kind === 'tides') config = cleanTidesConfig({});
+    if (kind === 'football') config = cleanFootballConfig({});
   }
 
   const exists = await env.DB.prepare('SELECT id FROM apps WHERE kind = ? AND COALESCE(app_ref, 0) = ?').bind(kind, ref ?? 0).first();
@@ -446,6 +505,21 @@ export async function onRequestPut(context) {
         await AGENTS[row.kind].verifyKey(apiKey);
         secrets = { api_key: apiKey };
         config.key_hint = `…${apiKey.slice(-4)}`;
+      } else if (b.api_key === null) {
+        secrets = {};
+        delete config.key_hint;
+      }
+    } else if (row.kind === 'menu') {
+      if (b.config !== undefined) config = cleanMenu({ ...prevConfig, ...b.config });
+    } else if (row.kind === 'tides') {
+      if (b.config !== undefined) config = cleanTidesConfig({ ...prevConfig, ...b.config });
+    } else if (row.kind === 'football') {
+      if (b.config !== undefined) config = cleanFootballConfig({ ...prevConfig, ...b.config });
+      if (typeof b.api_key === 'string' && b.api_key.trim()) {
+        const key = b.api_key.trim().slice(0, 100);
+        await verifyFootballKey(key);
+        secrets = { api_key: key };
+        config.key_hint = `…${key.slice(-4)}`;
       } else if (b.api_key === null) {
         secrets = {};
         delete config.key_hint;

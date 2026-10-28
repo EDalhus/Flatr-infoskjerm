@@ -21,12 +21,13 @@ function AppFields({ c, set }) {
   useEffect(() => {
     api.apps
       .list()
-      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays'].includes(a.kind))))
+      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football'].includes(a.kind))))
       .catch(() => setApps([]));
   }, []);
   const app = (apps || []).find((a) => a.id === c.appId);
   const isCustom = app?.kind === 'custom';
   const isBirthdays = app?.kind === 'birthdays';
+  const isOther = ['menu', 'tides', 'football'].includes(app?.kind);
   const fleet = app?.config?.fleet || [];
   const quays = app?.config?.quays || [];
   const picked = new Set((c.mmsi || []).map(String));
@@ -149,7 +150,77 @@ function AppFields({ c, set }) {
           <p className="m-0 text-xs text-muted">Personer og fødselsdatoer legger du inn under Flatr Apps → Bursdager.</p>
         </>
       )}
-      {app && !isCustom && !isBirthdays && (
+      {app?.kind === 'menu' && (
+        <>
+          <Field label="Visning">
+            <Segmented value={c.menuView || 'today'} onChange={(v) => set({ menuView: v })} options={[{ value: 'today', label: 'Dagens meny' }, { value: 'week', label: 'Hele uka' }]} />
+          </Field>
+          <Field label="Overskrift">
+            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} placeholder={c.menuView === 'week' ? 'Ukens meny' : 'Dagens meny'} />
+          </Field>
+          <Check label="Vis priser" checked={c.showPrice !== false} onChange={(v) => set({ showPrice: v })} />
+          <Check label="Vis merking (allergener, vegetar …)" checked={c.showTags !== false} onChange={(v) => set({ showTags: v })} />
+        </>
+      )}
+      {app?.kind === 'tides' && (
+        <>
+          <Field label="Sted" hint={(app.config?.places || []).length ? null : 'Legg inn steder under Flatr Apps → Tidevann og sjø.'}>
+            <Select value={c.placeId || ''} onChange={(e) => set({ placeId: e.target.value })}>
+              {(app.config?.places || []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Vis">
+            <Segmented value={c.tideView || 'both'} onChange={(v) => set({ tideView: v })} options={[{ value: 'tide', label: 'Tidevann' }, { value: 'sea', label: 'Sjø' }, { value: 'both', label: 'Begge' }]} />
+          </Field>
+        </>
+      )}
+      {app?.kind === 'football' && (
+        <>
+          <Field label="Visning">
+            <Segmented value={c.footballView || 'next'} onChange={(v) => set({ footballView: v })} options={[{ value: 'next', label: 'Neste' }, { value: 'last', label: 'Resultater' }, { value: 'table', label: 'Tabell' }]} />
+          </Field>
+          {(c.footballView || 'next') === 'table' ? (
+            <Field label="Liga" hint={(app.config?.leagues || []).length ? null : 'Legg til ligaer under Flatr Apps → Fotball.'}>
+              <Select value={c.leagueId || ''} onChange={(e) => set({ leagueId: Number(e.target.value) })}>
+                {(app.config?.leagues || []).map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <Field label="Lag" hint={(app.config?.teams || []).length ? null : 'Legg til lag under Flatr Apps → Fotball.'}>
+              <Select value={c.teamId || ''} onChange={(e) => set({ teamId: Number(e.target.value) })}>
+                {(app.config?.teams || []).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          <Field label="Antall">
+            <Input type="number" min={3} max={20} value={c.max ?? ((c.footballView || 'next') === 'table' ? 16 : 5)} onChange={(e) => set({ max: Number(e.target.value) || undefined })} />
+          </Field>
+          <Field label="Overskrift (valgfritt)">
+            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
+          </Field>
+        </>
+      )}
+      {isOther && (
+        <>
+          <Field label="Tekstfarge">
+            <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
+          </Field>
+          <Check label="Vis ramme" checked={c.frame !== false} onChange={(v) => set({ frame: v })} />
+        </>
+      )}
+      {app && !isCustom && !isBirthdays && !isOther && (
         <>
           <Field label="Visning">
             <Select value={view} onChange={(e) => set({ view: e.target.value })}>

@@ -10,6 +10,8 @@ export const CATEGORIES = [
   { id: 'people', label: 'Ansatte og arbeidsplass' },
   { id: 'data', label: 'Data og API' },
   { id: 'ai', label: 'AI-assistenter' },
+  { id: 'food', label: 'Kantine og mat' },
+  { id: 'sport', label: 'Sport' },
   { id: 'other', label: 'Annet' }
 ];
 export const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
@@ -123,6 +125,54 @@ export const OFFICIAL_APPS = [
       ],
       troubleshooting:
         'Sier Flatr at nøkkelen ikke godtas? Sjekk at du kopierte hele nøkkelen, og at kontoen hos Anthropic har kreditt eller betalingskort. Står det «for mange forespørsler», er grensen for kontoen nådd – vent litt eller øk den i Console.'
+    }
+  },
+  {
+    key: 'menu',
+    name: 'Dagens meny',
+    tagline: 'Kantinemenyen på skjermene – dagens retter med pris og allergener.',
+    description:
+      'Legg inn ukemenyen dag for dag (eller lim inn hele menyen og la Claude AI sortere den), så viser skjermene dagens retter automatisk. Hver rett kan ha beskrivelse, pris og merking som vegetar, glutenfri eller allergener.\n\nVelg mellom «Dagens meny» og «Hele uka» på skjermen.',
+    category: 'food',
+    icon: 'calendar',
+    color: '#f76b15',
+    element: 'app',
+    views: ['Dagens meny', 'Hele uka']
+  },
+  {
+    key: 'tides',
+    name: 'Tidevann og sjø',
+    tagline: 'Høyvann og lavvann fra Kartverket, bølgehøyde og sjøtemperatur fra MET.',
+    description:
+      'Velg ett eller flere steder langs kysten, så viser skjermene neste høyvann og lavvann (Kartverket) og bølgehøyde, sjøtemperatur og strøm (MET Norway). Ingen nøkkel trengs. Data oppdateres hver halvtime.',
+    category: 'weather',
+    icon: 'sun',
+    color: '#0e7490',
+    element: 'app',
+    views: ['Tidevann', 'Sjø (bølger og temperatur)', 'Begge']
+  },
+  {
+    key: 'football',
+    name: 'Fotball',
+    tagline: 'Kamper, resultater og tabell for lagene dere holder med.',
+    description:
+      'Følg lag og ligaer fra hele verden: neste kamper, siste resultater og tabellen – live under kampene. Data fra API-Football; hver konto bruker sin egen nøkkel (gratisplanen holder for et par lag).',
+    category: 'sport',
+    icon: 'chart',
+    color: '#15803d',
+    element: 'app',
+    views: ['Neste kamper', 'Siste resultater', 'Tabell'],
+    requires: 'API-Football-nøkkel (gratis)',
+    guide: {
+      title: 'Slik får du en API-Football-nøkkel',
+      intro: 'Gratisplanen gir 100 forespørsler i døgnet. Flatr henter data hver annen time (hvert tiende minutt under kamp), så det holder for to–tre lag og en tabell.',
+      steps: [
+        { title: 'Registrer deg hos API-Football', body: 'Lag en gratis konto på dashboardet til API-Sports.', link: { href: 'https://dashboard.api-football.com/register', label: 'Åpne dashboard.api-football.com' } },
+        { title: 'Kopier nøkkelen', body: 'Under «Account» → «My Access» finner du API-nøkkelen. Kopier den.' },
+        { title: 'Lim den inn i Flatr', body: 'Aktiver Fotball, gå til Oppsett og lim inn nøkkelen. Søk så opp lagene og ligaene dere vil følge.' },
+        { title: 'Vis det på skjermene', body: 'Åpne en presentasjon og velg Widgeter → Fotball. Velg neste kamper, siste resultater eller tabell.' }
+      ],
+      troubleshooting: 'Står det at grensen er nådd? Gratisplanen tillater 100 forespørsler i døgnet – følg færre lag, eller oppgrader hos API-Football.'
     }
   },
   {

@@ -704,7 +704,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const appGated = new Set(['weather', 'rss', 'calendar', 'app']);
   const activeKinds = new Set(installedApps.map((a) => a.kind));
   const others = ELEMENT_KINDS.filter((k) => !PRIMARY.includes(k.kind) && (!appGated.has(k.kind) || (k.kind !== 'app' && activeKinds.has(k.kind))));
-  const dataApps = installedApps.filter((a) => ['ais', 'custom', 'birthdays'].includes(a.kind));
+  const dataApps = installedApps.filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football'].includes(a.kind));
   // AI-fanen finnes når en assistent-app (Claude AI) er aktivert.
   const aiEnabled = installedApps.some((a) => AI_APP_KINDS.includes(a.kind)) || panelTab === 'ai';
 
@@ -768,7 +768,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
                     onClick={() => insert('app', a.kind === 'birthdays' ? { appId: a.id, days: 7 } : { appId: a.id })}
                     className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-ink hover:bg-zone"
                   >
-                    <Icon name={a.definition?.icon || { ais: 'pin', birthdays: 'users' }[a.kind] || 'sparkle'} className="h-4 w-4 text-muted" />
+                    <Icon name={a.definition?.icon || { ais: 'pin', birthdays: 'users', menu: 'calendar', tides: 'sun', football: 'chart' }[a.kind] || 'sparkle'} className="h-4 w-4 text-muted" />
                     <span className="truncate">{a.name}</span>
                   </button>
                 ))}
