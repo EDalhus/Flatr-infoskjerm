@@ -559,7 +559,7 @@ function AppsTeaser() {
           </Link>
         </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {OFFICIAL_APPS.slice(0, 3).map((a) => (
+          {['ais', 'weather', 'claude'].map((k) => OFFICIAL_APPS.find((a) => a.key === k)).filter(Boolean).map((a) => (
             <AppTile key={a.key} app={a} image={icons[a.key]} tagline={false} />
           ))}
         </div>

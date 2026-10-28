@@ -282,7 +282,9 @@ const MIGRATIONS = [
     PRIMARY KEY (day, screen_id, playlist_id, slide_id, sponsor_id)
   );
   CREATE INDEX IF NOT EXISTS play_stats_day ON play_stats (day);
-  `
+  `,
+  // 15: Vær-appen heter nå bare «Yr» (aktiverte apper beholder ellers navnet sitt).
+  `UPDATE apps SET name = 'Yr' WHERE kind = 'weather' AND name = 'Vær (Yr)';`
 ];
 
 export const TENANT_SCHEMA_VERSION = MIGRATIONS.length;

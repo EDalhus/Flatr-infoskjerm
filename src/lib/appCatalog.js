@@ -252,7 +252,7 @@ export const OFFICIAL_APPS = [
   },
   {
     key: 'weather',
-    name: 'Vær (Yr)',
+    name: 'Yr',
     tagline: 'Været nå, de neste timene eller de neste dagene.',
     description: 'Værmelding fra MET Norway (yr.no) for et sted du velger. Ingen nøkkel trengs.',
     category: 'weather',

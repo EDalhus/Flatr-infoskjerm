@@ -11,7 +11,7 @@ export const ELEMENT_KINDS = [
   { kind: 'video', label: 'Video', icon: 'play' },
   { kind: 'web', label: 'Nettside', icon: 'external' },
   { kind: 'carousel', label: 'Bildekarusell', icon: 'layers' },
-  { kind: 'weather', label: 'Vær (Yr)', icon: 'sun' },
+  { kind: 'weather', label: 'Yr', icon: 'sun' },
   { kind: 'rss', label: 'Nyheter (RSS)', icon: 'megaphone' },
   { kind: 'calendar', label: 'Kalender', icon: 'calendar' },
   { kind: 'app', label: 'Flatr App', icon: 'sparkle' },
