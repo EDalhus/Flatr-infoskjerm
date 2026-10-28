@@ -376,8 +376,31 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
     alerts: alerts.results ?? [],
     serverTime: new Date().toISOString()
   };
+  if (env.CDN_MEDIA) await cdnMediaUrls(env, state);
   state.version = signature(state);
   return state;
+}
+
+// Filendelser Cloudflare mellomlagrer som standard (resten blir .bin, som også lagres).
+const CDN_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/avif': 'avif', 'image/svg+xml': 'svg', 'video/mp4': 'mp4', 'video/webm': 'webm', 'audio/mpeg': 'mp3', 'application/pdf': 'pdf' };
+
+/**
+ * Mediefiler får adressen /m/<id>.<endelse> i stedet for /api/media?id=…&raw=1.
+ * Da lagrer Cloudflare dem, og serveren sender hver fil omtrent én gang i
+ * stedet for til hver skjerm. Innholdet bak en id endres aldri.
+ */
+async function cdnMediaUrls(env, state) {
+  const re = /\/api\/media\?id=(\d+)&raw=1/g;
+  const text = JSON.stringify({ deck: state.deck, sponsors: state.sponsors });
+  const ids = [...new Set([...text.matchAll(re)].map((m) => Number(m[1])))];
+  if (!ids.length) return;
+  const { results } = await env.DB.prepare(`SELECT id, content_type FROM media WHERE id IN (${ids.map(() => '?').join(',')})`)
+    .bind(...ids)
+    .all();
+  const ext = Object.fromEntries((results ?? []).map((r) => [r.id, CDN_EXT[String(r.content_type || '').toLowerCase()] || 'bin']));
+  const next = JSON.parse(text.replace(re, (m, id) => (ext[id] ? `/m/${id}.${ext[id]}` : m)));
+  state.deck = next.deck;
+  state.sponsors = next.sponsors;
 }
 
 const youtubeId = (url) =>
@@ -450,7 +473,18 @@ async function withBirthdays(env, deck) {
 
 const DEVICE_WIDGETS = ['weather', 'rss', 'calendar', 'app'];
 // Nøkkelen skjermbildet er lagret under (se server/snapshots.js).
-const snapshotKey = (e) => (e.kind === 'web' ? e.config?.url : DEVICE_WIDGETS.includes(e.kind) ? `widget:${e.id}` : null);
+/**
+ * Skjermbildet av en widget hører til innstillingene og størrelsen den har:
+ * endres de, trengs et nytt bilde med en gang (ikke ved neste faste runde).
+ */
+export function widgetSnapshotKey(id, config, w, h) {
+  const text = `${JSON.stringify(config || {})}|${Math.round(Number(w) * 10)}|${Math.round(Number(h) * 10)}`;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
+  return `widget:${id}:${(hash >>> 0).toString(36)}`;
+}
+
+const snapshotKey = (e) => (e.kind === 'web' ? e.config?.url : DEVICE_WIDGETS.includes(e.kind) ? widgetSnapshotKey(e.id, e.config, e.w, e.h) : null);
 
 async function adaptForDevices(env, deck) {
   const urls = new Set();
@@ -463,11 +497,17 @@ async function adaptForDevices(env, deck) {
       const { results } = await env.DB
         .prepare(
           `SELECT id, url, taken_at FROM web_snapshots
-            WHERE r2_key IS NOT NULL AND url IN (${list.map(() => '?').join(',')})`
+            WHERE r2_key IS NOT NULL AND (url IN (${list.map(() => '?').join(',')}) OR url LIKE 'widget:%')
+            ORDER BY taken_at`
         )
         .bind(...list)
         .all();
-      for (const r of results ?? []) shots[r.url] = r;
+      for (const r of results ?? []) {
+        shots[r.url] = r;
+        // Nyeste bilde per widget: vises mens bildet for nye innstillinger tegnes.
+        const w = /^widget:(\d+):/.exec(r.url);
+        if (w) shots[`widget:${w[1]}`] = r;
+      }
     } catch {
       /* tabellen finnes ikke (Worker) – behold nettside-elementene */
     }
@@ -515,12 +555,10 @@ async function adaptForDevices(env, deck) {
         return [{ ...e, config: { ...e.config, data_url: `/api/feeds?element=${e.id}` } }];
       }
       const key = snapshotKey(e);
-      if (key && !shots[key] && e.kind !== 'web') {
-        missing = true;
-        return [];
-      }
-      if (key && shots[key]) {
-        const shot = shots[key];
+      if (key && !shots[key] && e.kind !== 'web') missing = true;
+      const shot = key && (shots[key] || (e.kind !== 'web' && shots[`widget:${e.id}`]));
+      if (key && !shot && e.kind !== 'web') return [];
+      if (shot) {
         const v = encodeURIComponent(shot.taken_at || '');
         return {
           ...e,

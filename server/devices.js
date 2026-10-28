@@ -31,22 +31,24 @@ const bearer = (request) => (request.headers.get('Authorization') || '').replace
 function absolutize(response, origin) {
   const type = response.headers.get('content-type') || '';
   if (!response.body || !/json|event-stream/.test(type)) return response;
-  const from = '"/api/';
-  const to = `"${origin}/api/`;
+  // "/api/… og "/m/… (mediefiler) blir fulle adresser til kundens subdomene.
+  const pattern = /"\/(api|m)\//g;
+  const fix = (text) => text.replace(pattern, `"${origin}/$1/`);
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let carry = '';
   const body = response.body.pipeThrough(
     new TransformStream({
       transform(chunk, controller) {
-        // Hold igjen de siste tegnene i tilfelle mønsteret deles mellom to biter.
+        // Hold igjen en mulig påbegynt adresse på slutten (mønsteret kan deles mellom to biter).
         const text = carry + decoder.decode(chunk, { stream: true });
-        const cut = Math.max(0, text.length - (from.length - 1));
+        const quote = text.lastIndexOf('"');
+        const cut = quote >= 0 && text.length - quote < 6 ? quote : text.length;
         carry = text.slice(cut);
-        controller.enqueue(encoder.encode(text.slice(0, cut).replaceAll(from, to)));
+        controller.enqueue(encoder.encode(fix(text.slice(0, cut))));
       },
       flush(controller) {
-        controller.enqueue(encoder.encode((carry + decoder.decode()).replaceAll(from, to)));
+        controller.enqueue(encoder.encode(fix(carry + decoder.decode())));
       }
     })
   );

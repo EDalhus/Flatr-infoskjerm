@@ -64,6 +64,9 @@ export async function onRequestGet({ request, env }) {
       ...(/pdf/i.test(type) ? {} : { 'Content-Security-Policy': "sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'" }),
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'public, max-age=31536000, immutable',
+      // Cloudflare deler ut filene (se /m/ i server/index.js), men en slettet fil
+      // skal ikke ligge der i et år.
+      'Cloudflare-CDN-Cache-Control': 'public, max-age=604800',
       'Accept-Ranges': 'bytes',
       ...corsHeaders
     };

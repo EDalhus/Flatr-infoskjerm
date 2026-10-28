@@ -31,6 +31,7 @@ import { startSnapshots, requestRefresh } from './snapshots.js';
 import { startMonitor } from './monitor.js';
 import { startNotices } from './notices.js';
 import { afterWrite, beforeWrite } from '../src/api/activity.js';
+import { notifyChange, waitForChange } from './changes.js';
 import { notifier, teamMembers } from './notify.js';
 
 const PORT = Number(process.env.PORT || 8787);
@@ -66,6 +67,9 @@ function tenantEnv(tenant, user) {
     ...tenantResources(tenant.slug),
     ASSETS,
     SSE_POLL_MS,
+    CDN_MEDIA: true,
+    // Skjermstrømmene venter på endringer i stedet for å spørre hvert par sekund.
+    WAIT_CHANGE: (ms) => waitForChange(tenant.slug, ms),
     SESSION_USER: user ?? null,
     TENANT: { slug: tenant.slug, name: tenant.name },
     LIMITS: tenantLimits(tenant),
@@ -177,7 +181,19 @@ function crossSiteWrite(request) {
   }
 }
 
+// Skriving som ikke endrer det skjermene viser – vekker ikke skjermstrømmene
+// (pulsen fra hver skjerm ville ellers fått alle de andre til å hente på nytt).
+const QUIET_WRITES = /^\/api\/(heartbeat|comments|prefs|ai|agents|activity|pairing\/screenshot|pairing\/request)/;
+
 async function handleTenant(request, tenant) {
+  // Mediefiler på en adresse Cloudflare mellomlagrer (se cdnMediaUrls i src/api/_shared.js).
+  const cdn = /^\/m\/(\d+)\.[a-z0-9]+$/.exec(new URL(request.url).pathname);
+  if (cdn && ['GET', 'HEAD'].includes(request.method)) {
+    const u = new URL(request.url);
+    u.pathname = '/api/media';
+    u.search = `?id=${cdn[1]}&raw=1`;
+    request = new Request(u, { method: request.method, headers: request.headers });
+  }
   const url = new URL(request.url);
   if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/') && crossSiteWrite(request)) {
     return jsonError(403, 'Forespørselen kom fra en annen adresse.');
@@ -255,13 +271,14 @@ async function handleTenant(request, tenant) {
   }
   // Aktivitetslogg og versjonshistorikk: beskriv vellykkede endringer.
   const write = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
-  env.AFTER_WRITE = (info) => afterWrite(env, user, info);
+  env.AFTER_WRITE = (info) => (notifyChange(tenant.slug), afterWrite(env, user, info));
   const before = write ? await beforeWrite(env, request.method, key, url).catch(() => null) : null;
   const isJson = /json/i.test(request.headers.get('content-type') || '');
   const body = write && isJson ? await request.clone().json().catch(() => null) : null;
 
   const res = await routeApi(request, env);
   if (isPairingWrite) await syncRoutes(tenant, env);
+  if (write && res.ok && !QUIET_WRITES.test(key)) notifyChange(tenant.slug);
   if (write && res.ok && user) {
     const result = /json/i.test(res.headers.get('content-type') || '') ? await res.clone().json().catch(() => null) : null;
     afterWrite(env, user, { method: request.method, key, url, body, result, before });

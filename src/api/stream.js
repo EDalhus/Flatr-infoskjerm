@@ -4,7 +4,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // GET /api/stream?screen=1
 // Server-Sent Events. Sender 'snapshot' ved tilkobling og 'update' når data endres.
-// Cloudflare Functions er tilstandsløse, så vi poller D1 og differ på en signatur.
+// På egen server (env.WAIT_CHANGE) venter vi til noe endres hos kunden, og ser
+// i tillegg etter hvert 15. sekund (tidsplaner, åpningstider). Ellers poller
+// vi D1 og differ på en signatur.
 // EventSource i klienten kobler seg til igjen automatisk når vi lukker strømmen.
 export async function onRequestGet({ request, env }) {
   const { screenId, playlistId, denied } = await viewerTarget(request, env);
@@ -26,7 +28,6 @@ export async function onRequestGet({ request, env }) {
       controller.enqueue(encoder.encode('retry: 5000\n\n'));
 
       let lastVersion = null;
-      let ticks = 0;
 
       try {
         await touchScreen(env, screenId);
@@ -35,11 +36,17 @@ export async function onRequestGet({ request, env }) {
         send('snapshot', initial);
 
         // Maks ~10 min per tilkobling, deretter lar vi klienten koble til på nytt.
-        const maxTicks = Math.ceil((10 * 60 * 1000) / pollMs);
+        const deadline = Date.now() + 10 * 60 * 1000;
+        let lastSent = Date.now();
 
-        while (!cancelled && ticks < maxTicks) {
-          await sleep(pollMs);
-          ticks++;
+        while (!cancelled && Date.now() < deadline) {
+          if (env.WAIT_CHANGE) {
+            // Samle endringer som kommer tett (f.eks. flere felt som lagres etter hverandre).
+            if (await env.WAIT_CHANGE(Math.min(15_000, deadline - Date.now()))) await sleep(250);
+          } else {
+            await sleep(pollMs);
+          }
+          if (cancelled) break;
 
           let state;
           try {
@@ -52,8 +59,10 @@ export async function onRequestGet({ request, env }) {
           if (state.version !== lastVersion) {
             lastVersion = state.version;
             send('update', state);
-          } else if (ticks % 5 === 0) {
+            lastSent = Date.now();
+          } else if (Date.now() - lastSent >= 15_000) {
             comment(`keep-alive ${Date.now()}`);
+            lastSent = Date.now();
           }
         }
       } catch (err) {

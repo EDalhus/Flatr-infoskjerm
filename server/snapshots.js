@@ -9,6 +9,8 @@
 import { randomUUID } from 'node:crypto';
 import { platformDb, tenantResources } from './platform.js';
 import { screenshotUrl } from './convert.js';
+import { notifyChange } from './changes.js';
+import { widgetSnapshotKey } from '../src/api/_shared.js';
 
 const TICK_MS = 2 * 60_000;
 const MIN_MINUTES = 10;
@@ -68,7 +70,7 @@ async function webTargets(env, slug) {
       const w = pxW * scale;
       const h = Math.max(40, pxH * scale);
       const zoom = Math.max(1, Math.min(2, Math.sqrt(8_000_000 / (w * h))));
-      targets.set(`widget:${r.id}`, {
+      targets.set(widgetSnapshotKey(r.id, cfg, r.w, r.h), {
         fetchUrl: `${origin(slug)}/widget/${r.id}?scale=${zoom.toFixed(2)}`,
         minutes: WIDGET_MINUTES[r.kind],
         width: Math.round(w * zoom),
@@ -118,6 +120,7 @@ export async function refreshTenant(slug) {
         .bind(url, key, type, t.width, t.height, now, now)
         .run();
       if (row?.r2_key) await env.MEDIA.delete(row.r2_key).catch(() => {});
+      notifyChange(slug);
     } catch (err) {
       console.warn(`[snapshot] ${slug} ${url}: ${err.message}`);
       await env.DB.prepare(
@@ -127,6 +130,15 @@ export async function refreshTenant(slug) {
         .bind(url, now, String(err.message).slice(0, 300))
         .run();
     }
+  }
+
+  // Widgetbilder for innstillinger som ikke lenger brukes (etter at de nye er laget,
+  // så TV-ene viser det gamle bildet mens det nye tegnes).
+  const { results: stale } = await env.DB.prepare(`SELECT url, r2_key FROM web_snapshots WHERE url LIKE 'widget:%'`).all();
+  for (const r of stale ?? []) {
+    if (targets.has(r.url)) continue;
+    if (r.r2_key) await env.MEDIA.delete(r.r2_key).catch(() => {});
+    await env.DB.prepare('DELETE FROM web_snapshots WHERE url = ?').bind(r.url).run();
   }
 }
 
@@ -154,7 +166,8 @@ export function requestRefresh(slug) {
   pending.add(slug);
   setTimeout(async () => {
     pending.delete(slug);
-    if (running) return; // den faste runden tar det
+    // En runde pågår allerede: prøv igjen like etter, så endringen ikke venter på neste faste runde.
+    if (running) return void setTimeout(() => requestRefresh(slug), 3000).unref();
     running = true;
     try {
       await refreshTenant(slug);
