@@ -106,6 +106,9 @@ for (const sql of [
   `ALTER TABLE users ADD COLUMN terms_accepted_at TEXT`,
   // Video er med i Pro; kan slås på per konto i superadmin.
   `ALTER TABLE tenants ADD COLUMN allow_video INTEGER`,
+  // Henvisningsprogrammet: egen kode per organisasjon, og hvem som henviste.
+  `ALTER TABLE tenants ADD COLUMN ref_code TEXT`,
+  `ALTER TABLE tenants ADD COLUMN referred_by INTEGER`,
   `CREATE TABLE IF NOT EXISTS admin_sessions (
      id_hash TEXT PRIMARY KEY,
      email TEXT NOT NULL,
@@ -128,13 +131,52 @@ const envInt = (name, fallback) => Number.parseInt(process.env[name], 10) || fal
 // Kan overstyres per konto i superadmin (NULL = standard). En skjerm er en TV
 // (eller nettleser), så TV-grensen følger alltid skjermgrensen.
 export function tenantLimits(tenant) {
-  const screens = tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 1);
+  // + én skjerm per aktiv henvisning (maks REFERRAL_MAX), se referralStats.
+  const screens = (tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 1)) + referralStats(tenant.id).bonus;
   return {
     storageBytes: (tenant.max_storage_mb ?? envInt('BETA_STORAGE_MB', 2048)) * 1024 * 1024,
     devices: screens,
     screens,
     video: tenant.allow_video === 1 || process.env.FREE_ALLOW_VIDEO === 'true'
   };
+}
+
+/* ---------------------------- henvisninger ----------------------------- */
+
+// En henvisning er «aktiv» når den nye organisasjonen har koblet til en TV.
+export const REFERRAL_MAX = 5;
+
+/** Henvisningskoden til en organisasjon (lages første gang). */
+export function referralCode(tenantId) {
+  const row = platformDb.prepare('SELECT ref_code FROM tenants WHERE id = ?').bind(tenantId).firstSync();
+  if (row?.ref_code) return row.ref_code;
+  const code = randomBytes(6).toString('base64url').replace(/[-_]/g, 'x').slice(0, 8).toLowerCase();
+  platformDb.prepare('UPDATE tenants SET ref_code = ? WHERE id = ?').bind(code, tenantId).runSync();
+  return code;
+}
+
+/** { referred, active, bonus } for en organisasjon. */
+export function referralStats(tenantId) {
+  const referred = platformDb.prepare('SELECT COUNT(*) AS c FROM tenants WHERE referred_by = ?').bind(tenantId).firstSync('c') || 0;
+  if (!referred) return { referred: 0, active: 0, bonus: 0 };
+  const active =
+    platformDb
+      .prepare(
+        `SELECT COUNT(DISTINCT t.id) AS c FROM tenants t JOIN device_routes r ON r.tenant_id = t.id
+          WHERE t.referred_by = ? AND r.auth_token IS NOT NULL`
+      )
+      .bind(tenantId)
+      .firstSync('c') || 0;
+  return { referred, active, bonus: Math.min(REFERRAL_MAX, active) };
+}
+
+/** Kobler en ny organisasjon til den som henviste (ugyldig/egen kode ignoreres). */
+export function applyReferral(tenantId, code) {
+  const c = String(code || '').trim().toLowerCase();
+  if (!/^[a-z0-9]{6,12}$/.test(c)) return;
+  const from = platformDb.prepare('SELECT id FROM tenants WHERE ref_code = ?').bind(c).firstSync();
+  if (!from || from.id === tenantId) return;
+  platformDb.prepare('UPDATE tenants SET referred_by = ? WHERE id = ? AND referred_by IS NULL').bind(from.id, tenantId).runSync();
 }
 
 /* ------------------------------ hjelpere ------------------------------ */

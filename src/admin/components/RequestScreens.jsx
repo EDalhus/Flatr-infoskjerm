@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Field, Select, Textarea, Button, ErrorText } from './ui.jsx';
+import ReferralCard from './ReferralCard.jsx';
 
 // «Be om flere skjermer»: sender en e-post til Flatr (plattformeierne) med
 // svar-til deg. Grensen økes i superadmin – gratis i betaperioden.
@@ -56,7 +57,8 @@ export default function RequestScreens({ plan, onClose }) {
                 betaperioden er det gratis.
               </p>
             </div>
-            <Field label="Hvor mange skjermer til?">
+            <ReferralCard compact />
+            <Field label="Eller: hvor mange skjermer til trenger dere?">
               <Select value={extra} onChange={(e) => setExtra(Number(e.target.value))}>
                 {[1, 2, 3, 4, 5, 10].map((n) => (
                   <option key={n} value={n}>

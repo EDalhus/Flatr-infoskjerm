@@ -297,6 +297,7 @@ export const api = {
     removeIcon: (key) => req(`/app-market/icon?key=${encodeURIComponent(key)}`, { method: 'DELETE' })
   },
   // Planen (bruk/grenser) og «be om flere skjermer».
+  referral: () => req('/referral'),
   plan: {
     get: () => req('/plan'),
     request: (extra, message) => req('/plan/request', { method: 'POST', body: { extra, message } })

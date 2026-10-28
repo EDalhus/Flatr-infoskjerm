@@ -40,6 +40,11 @@ export const authClient = {
   },
   verifyTotp: (code, trustDevice = false) => call('/two-factor/verify-totp', { code, trustDevice }),
   verifyBackupCode: (code) => call('/two-factor/verify-backup-code', { code }),
+  /** Google / Microsoft: sender nettleseren videre til leverandøren. */
+  social: async (provider, callbackURL) => {
+    const data = await call('/sign-in/social', { provider, callbackURL, errorCallbackURL: callbackURL });
+    if (data?.url) window.location.href = data.url;
+  },
   signOut: () => call('/sign-out', {}),
   session: () => call('/get-session', null, 'GET'),
   requestReset: (email) => call('/request-password-reset', { email, redirectTo: `${window.location.origin}/reset-password` }),

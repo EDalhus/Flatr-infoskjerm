@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { authClient } from '../lib/authClient.js';
-import LoginForm from './LoginForm.jsx';
+import LoginForm, { SocialButtons } from './LoginForm.jsx';
 import { LogoLockup } from '../admin/components/Logo.jsx';
 import { Button, ErrorText, Field, Icon, Input } from '../admin/components/ui.jsx';
 
@@ -75,6 +75,15 @@ const slugify = (s) =>
     .slice(0, 32)
     .replace(/-+$/, '');
 
+/** Henvisningskoden fra flatr.no/?ref=… (lagret i nettleseren). */
+const storedRef = () => {
+  try {
+    return localStorage.getItem('flatr.ref') || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 export function Signup({ baseDomain }) {
   const [params] = useSearchParams();
   const [org, setOrg] = useState('');
@@ -121,11 +130,11 @@ export function Signup({ baseDomain }) {
     setBusy(true);
     try {
       if (me) {
-        const r = await api.platform.createOrg({ org_name: org, slug, accept_terms: accept });
+        const r = await api.platform.createOrg({ org_name: org, slug, accept_terms: accept, ref: storedRef() });
         window.location.href = r.url;
         return;
       }
-      await api.platform.signup({ org_name: org, slug, email, name, password, accept_terms: accept });
+      await api.platform.signup({ org_name: org, slug, email, name, password, accept_terms: accept, ref: storedRef() });
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -158,6 +167,12 @@ export function Signup({ baseDomain }) {
         </>
       }
     >
+      {/* Ny bruker: registrer med Google/Microsoft, så trengs bare organisasjonen her etterpå. */}
+      {me === null && (
+        <div className="mb-4">
+          <SocialButtons callbackURL={`${window.location.origin}/signup`} divider="eller med e-post og passord" />
+        </div>
+      )}
       <form onSubmit={submit} className="space-y-4">
         <Field label="Organisasjon">
           <Input

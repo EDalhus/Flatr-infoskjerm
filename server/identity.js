@@ -21,6 +21,24 @@ const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
 const BASE_HOST = BASE_DOMAIN.split(':')[0];
 const ORIGIN = `${PROTOCOL}://${BASE_DOMAIN}`;
 
+// Innlogging med Google og Microsoft – slås på når nøklene ligger i .env.
+// Tilbakekall-adressene er på hoveddomenet (registreres hos Google/Microsoft):
+//   ${ORIGIN}/api/auth/callback/google  og  ${ORIGIN}/api/auth/callback/microsoft
+const socialProviders = {};
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  socialProviders.google = { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET, prompt: 'select_account' };
+}
+if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
+  socialProviders.microsoft = {
+    clientId: process.env.MICROSOFT_CLIENT_ID,
+    clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+    tenantId: process.env.MICROSOFT_TENANT_ID || 'common',
+    prompt: 'select_account'
+  };
+}
+/** Hvilke av Google/Microsoft som er satt opp (til innloggingssidene). */
+export const SOCIAL_PROVIDERS = Object.keys(socialProviders);
+
 // Hooks som resten av serveren kobler seg på (unngår sirkulære importer).
 const hooks = { afterEmailVerification: null };
 export const onEmailVerified = (fn) => (hooks.afterEmailVerification = fn);
@@ -36,7 +54,9 @@ const options = {
   // Egne tabellnavn, så de ikke blandes med Flatrs users/sessions.
   user: { modelName: 'auth_user' },
   session: { modelName: 'auth_session', expiresIn: 30 * 24 * 3600, updateAge: 24 * 3600 },
-  account: { modelName: 'auth_account' },
+  // Samme e-post fra Google/Microsoft kobles til den eksisterende kontoen.
+  account: { modelName: 'auth_account', accountLinking: { enabled: true, trustedProviders: ['google', 'microsoft'] } },
+  socialProviders,
   verification: { modelName: 'auth_verification' },
 
   emailAndPassword: {

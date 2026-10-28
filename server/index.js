@@ -18,7 +18,7 @@ import { checkLimit } from '../src/api/_shared.js';
 import { createAssets } from './assets.js';
 import { handleCollabUpgrade } from './collab.js';
 import { getTenantBySlug, tenantResources, memberByEmail, sweepPlatform, tenantLimits, updatePrefs, platformDb } from './platform.js';
-import { auth, authSession, migrateExistingUsers } from './identity.js';
+import { auth, authSession, migrateExistingUsers, SOCIAL_PROVIDERS } from './identity.js';
 import { userColorPalette } from '../src/api/_access.js';
 import { handlePlatformRoute, handleTenantAuthRoute } from './auth.js';
 import { handleApexDevice, claimFromHub, syncRoutes } from './devices.js';
@@ -183,6 +183,7 @@ async function handleTenant(request, tenant) {
       base_domain: BASE_DOMAIN,
       tenant: { slug: tenant.slug, name: tenant.name },
       signed_in: !!user,
+      social: SOCIAL_PROVIDERS,
       // Kontoen krever tofaktor, og brukeren har det ikke: admin viser oppsettet.
       needs_2fa: !!user && !user.two_factor && (await requires2fa(tenant)),
       // Innlogget i Flatr, men ikke medlem her – login-siden sier «ingen tilgang».
@@ -261,7 +262,7 @@ async function handlePlatform(request) {
 
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
     const key = apiKey(url.pathname);
-    if (key === '/api/context') return json({ mode: 'platform', base_domain: BASE_DOMAIN });
+    if (key === '/api/context') return json({ mode: 'platform', base_domain: BASE_DOMAIN, social: SOCIAL_PROVIDERS });
     if (key === '/api/platform/apps' && request.method === 'GET') return json(publicCatalog());
     if (key === '/api/health') return json({ ok: true, time: new Date().toISOString() });
     return jsonError(404, 'Ukjent endepunkt');

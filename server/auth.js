@@ -28,7 +28,11 @@ import {
   upsertUser,
   updatePrefs,
   normEmail,
-  validEmail
+  validEmail,
+  referralCode,
+  referralStats,
+  applyReferral,
+  REFERRAL_MAX
 } from './platform.js';
 import { sendMail, buttonMail, escapeHtml } from './mail.js';
 import { usage } from '../src/api/_shared.js';
@@ -115,7 +119,8 @@ onEmailVerified(async (user) => {
   platformDb.prepare('UPDATE login_tokens SET used_at = ? WHERE token_hash = ?').bind(new Date().toISOString(), row.token_hash).runSync();
   const p = JSON.parse(row.payload || '{}');
   try {
-    const { user: member } = createTenant({ slug: p.slug, name: p.org_name, ownerEmail: user.email, ownerName: p.name });
+    const { tenant, user: member } = createTenant({ slug: p.slug, name: p.org_name, ownerEmail: user.email, ownerName: p.name });
+    if (p.ref) applyReferral(tenant.id, p.ref);
     platformDb
       .prepare('UPDATE users SET terms_accepted_at = COALESCE(terms_accepted_at, ?) WHERE id = ?')
       .bind(p.terms_accepted_at || new Date().toISOString(), member.id)
@@ -171,7 +176,7 @@ export async function handlePlatformRoute(request, ctx) {
     createLoginToken({
       purpose: 'signup',
       email,
-      payload: { org_name: orgName, slug, name, terms_accepted_at: new Date().toISOString() },
+      payload: { org_name: orgName, slug, name, terms_accepted_at: new Date().toISOString(), ref: String(b.ref || '').slice(0, 20) || null },
       ttlMs: 24 * 3600_000
     });
     try {
@@ -199,6 +204,7 @@ export async function handlePlatformRoute(request, ctx) {
     if (tooMany(request, s.user.email)) return json({ error: 'For mange forsøk. Prøv igjen senere.' }, 429);
     try {
       const { tenant } = createTenant({ slug, name: orgName, ownerEmail: s.user.email, ownerName: s.user.name });
+      if (b.ref) applyReferral(tenant.id, b.ref);
       return json({ ok: true, url: `${ctx.origin(tenant.slug)}/admin?welcome=1` }, 201);
     } catch (err) {
       return json({ error: err.message }, err.status || 500);
@@ -330,6 +336,13 @@ export async function handleTenantAuthRoute(request, ctx) {
   }
 
   if (p === '/api/team') return handleTeam(request, ctx);
+
+  // Henvisningsprogrammet: lenken og hvor mange ekstra skjermer den har gitt.
+  if (p === '/api/referral' && request.method === 'GET') {
+    if (!ctx.user) return json({ error: 'Ikke innlogget' }, 401);
+    const stats = referralStats(ctx.tenant.id);
+    return json({ url: `${ctx.origin(null)}/?ref=${referralCode(ctx.tenant.id)}`, ...stats, max: REFERRAL_MAX });
+  }
 
   // PUT /api/prefs { theme } – personlige innstillinger, følger brukeren mellom enheter.
   if (p === '/api/prefs' && request.method === 'PUT') {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Field, Input, Select, Button, IconButton, Card, GroupCard, Row, PageHeader, ErrorText } from './ui.jsx';
+import ReferralCard from './ReferralCard.jsx';
 
 const ROLE_LABEL = { owner: 'Eier', editor: 'Redaktør', viewer: 'Leser' };
 
@@ -187,6 +188,8 @@ export default function TeamManager({ me }) {
             );
           })}
         </GroupCard>
+
+        <ReferralCard />
       </div>
     </>
   );

@@ -90,6 +90,14 @@ function App() {
   return <RouterProvider router={router} />;
 }
 
+// Henvisningsprogrammet: flatr.no/?ref=<kode> huskes til registreringen.
+try {
+  const ref = new URLSearchParams(window.location.search).get('ref');
+  if (ref && /^[a-z0-9]{6,12}$/i.test(ref)) localStorage.setItem('flatr.ref', ref.toLowerCase());
+} catch {
+  /* privat modus e.l. */
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
