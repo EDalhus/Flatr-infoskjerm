@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
+import AiCommand from './components/AiCommand.jsx';
 import { Icon } from './components/ui.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ProgramManager from './components/ProgramManager.jsx';
@@ -11,8 +12,10 @@ import TimetableManager from './components/TimetableManager.jsx';
 import ReportsManager from './components/ReportsManager.jsx';
 import RecentlyDeletedManager from './components/RecentlyDeletedManager.jsx';
 import TeamManager from './components/TeamManager.jsx';
+import AppsManager from './components/AppsManager.jsx';
+import AccountManager from './components/AccountManager.jsx';
 import Login from './Login.jsx';
-import ThemePicker, { useTheme } from './components/ThemePicker.jsx';
+import { useTheme } from './components/ThemePicker.jsx';
 import OnlineBar from './components/OnlineBar.jsx';
 import { LogoMark, LogoLockup } from './components/Logo.jsx';
 import { useCollab } from '../hooks/useCollab.js';
@@ -27,8 +30,10 @@ const NAV = [
   { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
   { id: 'templates', label: 'Maler', icon: 'copy', group: 'content', Component: TemplatesManager },
+  { id: 'apps', label: 'Flatr Apps', icon: 'sparkle', group: 'content', Component: AppsManager },
   { id: 'reports', label: 'Rapporter', icon: 'chart', group: 'content', Component: ReportsManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
+  { id: 'account', label: 'Konto og sikkerhet', icon: 'lock', group: 'account', Component: AccountManager, tenantOnly: true },
   { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
   { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager }
 ];
@@ -74,7 +79,7 @@ function useDismiss(open, setOpen) {
 // `context` kommer fra /api/context (Node-serveren). Mangler den, kjører vi
 // som Worker uten e-postinnlogging, og admin vises som før.
 export default function Admin({ context }) {
-  if (context?.mode === 'tenant' && !context.signed_in) return <Login tenant={context.tenant} />;
+  if (context?.mode === 'tenant' && !context.signed_in) return <Login tenant={context.tenant} account={context.account} />;
   return <AdminShell context={context} />;
 }
 
@@ -116,17 +121,33 @@ function AdminShell({ context }) {
   const lobby = useCollab('lobby', { where: current.label });
 
   // `params` legges i adressen (f.eks. { edit: 3 } åpner presentasjon 3 i editoren).
+  // Hvert sidebytte blir et steg i historikken, så Tilbake/Frem virker.
   const go = (id, params = {}) => {
     if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
+      const url = new URL(window.location.origin + window.location.pathname);
       url.searchParams.set('view', id);
-      url.searchParams.delete('edit');
       for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-      window.history.replaceState(null, '', url);
+      if (url.href !== window.location.href) window.history.pushState(null, '', url);
     }
     setTab(id);
     setNavKey((k) => k + 1);
   };
+
+  // Tilbake/Frem: bytter side når ?view= endres. Endringer innenfor en side
+  // (åpen presentasjon, app, skjerm) håndterer sidene selv (useUrlParam).
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  useEffect(() => {
+    const onPop = () => {
+      const next = initialTab();
+      if (next !== tabRef.current) {
+        setTab(next);
+        setNavKey((k) => k + 1);
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const logout = async () => {
     await api.auth.logout().catch(() => {});
@@ -143,39 +164,83 @@ function AdminShell({ context }) {
   // navKey remonterer siden ved hver navigasjon, så den leser adressen på nytt.
   const content = <Active key={navKey} onChange={bump} onNavigate={go} me={me} theme={theme} />;
 
-  return theme === 'presis' ? <RailShell {...shared}>{content}</RailShell> : <TopShell {...shared}>{content}</TopShell>;
+  return (
+    <>
+      <RailShell {...shared}>{content}</RailShell>
+      <AiCommand go={go} me={me} />
+    </>
+  );
 }
 
 /* ------------------------------ Presis ------------------------------ */
 
+const NAV_WIDE_KEY = 'flatr.navWide';
+
 function RailShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout, lobby, current, children }) {
   const mainItems = nav.filter((n) => n.group !== 'account');
+  // Sidemenyen er åpen (full bredde med navn) som standard; lukker du den,
+  // huskes det i nettleseren til du åpner den igjen.
+  const [wide, setWide] = useState(() => {
+    try {
+      return localStorage.getItem(NAV_WIDE_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const toggleWide = () =>
+    setWide((w) => {
+      try {
+        localStorage.setItem(NAV_WIDE_KEY, w ? '0' : '1');
+      } catch {
+        /* privat modus e.l. */
+      }
+      return !w;
+    });
+
   return (
     <div className="flex h-screen overflow-hidden bg-paper font-sans text-ink">
-      <aside className="flex w-16 shrink-0 flex-col items-center gap-1 border-r border-line py-4">
-        <LogoMark className="mb-4 h-6 w-6" />
+      <aside
+        className={`flex shrink-0 flex-col gap-1 border-r border-line py-4 transition-[width] duration-200 ${
+          wide ? 'w-56 px-3' : 'w-16 items-center'
+        }`}
+      >
+        {/* Logo + pil som åpner/lukker menyen */}
+        <div className={`mb-4 flex items-center ${wide ? 'h-9 justify-between pl-2' : 'flex-col gap-2'}`}>
+          {wide ? <LogoLockup className="h-6 w-auto text-ink" /> : <LogoMark className="h-6 w-6" />}
+          <button
+            type="button"
+            onClick={toggleWide}
+            title={wide ? 'Lukk menyen' : 'Åpne menyen'}
+            aria-label={wide ? 'Lukk menyen' : 'Åpne menyen'}
+            aria-expanded={wide}
+            className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-hair hover:text-ink"
+          >
+            <Icon name="chevron" className={`h-4 w-4 transition-transform ${wide ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
         {mainItems.map((n, i) => {
           const active = n.id === tab;
           const divider = i > 0 && mainItems[i - 1].group !== n.group;
           return (
-            <div key={n.id} className="flex flex-col items-center">
-              {divider && <span className="my-2 h-px w-6 bg-line" aria-hidden="true" />}
+            <div key={n.id} className={`flex flex-col ${wide ? '' : 'items-center'}`}>
+              {divider && <span className={`my-2 h-px bg-line ${wide ? 'mx-2' : 'w-6'}`} aria-hidden="true" />}
               <button
                 type="button"
                 onClick={() => go(n.id)}
-                title={n.label}
+                title={wide ? undefined : n.label}
                 aria-label={n.label}
                 aria-current={active ? 'page' : undefined}
-                className={`grid h-10 w-10 place-items-center rounded-lg transition-colors ${
-                  active ? 'bg-brand-tint text-brand' : 'text-muted hover:bg-hair hover:text-ink'
-                }`}
+                className={`flex h-10 items-center rounded-lg transition-colors ${
+                  wide ? 'w-full gap-3 px-3 text-left text-sm font-medium' : 'w-10 justify-center'
+                } ${active ? 'bg-brand-tint text-brand' : 'text-muted hover:bg-hair hover:text-ink'}`}
               >
-                <Icon name={n.icon} className="h-5 w-5" />
+                <Icon name={n.icon} className="h-5 w-5 shrink-0" />
+                {wide && <span className="truncate">{n.label}</span>}
               </button>
             </div>
           );
         })}
-        <div className="mt-auto">
+        <div className={`mt-auto flex flex-col ${wide ? '' : 'items-center'}`}>
           <UserMenu
             me={me}
             nav={nav}
@@ -186,6 +251,7 @@ function RailShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout
             logout={logout}
             tenant={tenant}
             placement="right"
+            expanded={wide}
           />
         </div>
       </aside>
@@ -211,105 +277,6 @@ function RailShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout
 
 /* ------------------------------- Varm ------------------------------- */
 
-function TopShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout, lobby, screenCount, children }) {
-  const mainItems = nav.filter((n) => n.group === 'main');
-  const contentItems = nav.filter((n) => n.group === 'content');
-  const contentActive = contentItems.some((n) => n.id === tab);
-
-  const pill = (active) =>
-    `inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition-colors ${
-      active ? 'bg-brand-tint text-brand-dark' : 'text-muted hover:bg-zone hover:text-ink'
-    }`;
-
-  return (
-    <div className="flex h-screen flex-col overflow-hidden bg-paper font-sans text-ink">
-      <header className="flex shrink-0 items-center gap-3 border-b border-line bg-card px-4 py-3 sm:px-6">
-        <LogoLockup className="h-6 w-auto shrink-0 text-ink" />
-        <nav className="ml-2 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-          {mainItems.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              onClick={() => go(n.id)}
-              aria-current={n.id === tab ? 'page' : undefined}
-              className={pill(n.id === tab)}
-            >
-              {n.label}
-              {n.id === 'screens' && screenCount != null && (
-                <span className="rounded-full bg-badge px-1.5 text-xs font-bold text-badge-ink">{screenCount}</span>
-              )}
-            </button>
-          ))}
-          <MenuButton label="Innhold" active={contentActive} className={pill(contentActive)}>
-            {(close) =>
-              contentItems.map((n) => (
-                <MenuItem
-                  key={n.id}
-                  icon={n.icon}
-                  active={n.id === tab}
-                  onClick={() => {
-                    go(n.id);
-                    close();
-                  }}
-                >
-                  {n.label}
-                </MenuItem>
-              ))
-            }
-          </MenuButton>
-        </nav>
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="hidden md:block">
-            <OnlineBar peers={lobby.peers} selfId={lobby.selfId} connected={lobby.connected} />
-          </div>
-          <UserMenu
-            me={me}
-            nav={nav}
-            go={go}
-            theme={theme}
-            setTheme={setTheme}
-            setColor={setColor}
-            logout={logout}
-            tenant={tenant}
-            placement="down"
-            showTenant
-          />
-        </div>
-      </header>
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</main>
-    </div>
-  );
-}
-
-/* ------------------------------- Felles ------------------------------ */
-
-function MenuButton({ label, active, className, children }) {
-  const [open, setOpen] = useState(false);
-  const ref = useDismiss(open, setOpen);
-  return (
-    <div ref={ref} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className={className}
-      >
-        {label}
-        <Icon name="down" className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div
-          role="menu"
-          className="absolute left-0 top-full z-30 mt-2 w-56 rounded-2xl border border-line bg-card p-1.5 shadow-pop"
-        >
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function MenuItem({ icon, active, onClick, children }) {
   return (
     <button
@@ -328,7 +295,7 @@ function MenuItem({ icon, active, onClick, children }) {
 
 const ROLE_LABEL = { owner: 'Eier', editor: 'Redaktør' };
 
-function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, placement, showTenant }) {
+function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, placement, showTenant, expanded }) {
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, setOpen);
   const accountItems = nav.filter((n) => n.group === 'account');
@@ -344,8 +311,8 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label="Brukermeny"
-        className={`flex items-center gap-2 rounded-full transition-colors ${
-          showTenant ? 'bg-zone py-1 pl-1 pr-3 hover:bg-hair' : ''
+        className={`flex items-center gap-2 transition-colors ${
+          expanded ? 'w-full rounded-lg p-1 text-left hover:bg-hair' : showTenant ? 'rounded-full bg-zone py-1 pl-1 pr-3 hover:bg-hair' : 'rounded-full'
         }`}
       >
         <span
@@ -357,6 +324,12 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
         </span>
         {showTenant && tenant && (
           <span className="hidden max-w-[10rem] truncate text-sm font-semibold sm:inline">{tenant.name}</span>
+        )}
+        {expanded && (
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-ink">{name}</span>
+            {tenant && <span className="block truncate text-xs text-muted">{tenant.name}</span>}
+          </span>
         )}
       </button>
 
@@ -371,10 +344,6 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
                 {me?.role && ` · ${ROLE_LABEL[me.role] ?? me.role}`}
               </div>
             )}
-          </div>
-
-          <div className="border-t border-line px-1 py-3">
-            <ThemePicker theme={theme} onChange={setTheme} />
           </div>
 
           {me?.palette && (

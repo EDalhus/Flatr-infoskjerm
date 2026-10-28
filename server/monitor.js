@@ -12,6 +12,7 @@ import { platformDb, tenantResources } from './platform.js';
 import { resolveScreenContent, getTimezone } from '../src/api/_shared.js';
 import { localParts } from '../src/lib/timeslots.js';
 import { sendMail, buttonMail } from './mail.js';
+import { sendWebhook } from '../src/lib/webhook.js';
 
 const TICK_MS = 60_000;
 const ONLINE_MS = 90_000;
@@ -84,7 +85,7 @@ export async function monitorTenant(t) {
       `INSERT INTO play_log (hour, device_id, screen_id, playlist_id, off, minutes) VALUES (?, ?, ?, ?, ?, 1)
        ON CONFLICT(hour, device_id, playlist_id, off) DO UPDATE SET minutes = minutes + 1, screen_id = excluded.screen_id`
     )
-      .bind(hour, d.device_id, d.screen_id, content.playlistId, content.off ? 1 : 0)
+      .bind(hour, d.device_id, d.screen_id, content.off ? null : content.playlistId, content.off ? 1 : 0)
       .run();
   }
 
@@ -106,7 +107,6 @@ export async function monitorTenant(t) {
   if (!wentOffline.length && !cameBack.length) return;
 
   const to = ownerEmails(t.id);
-  if (!to.length) return;
   const describe = (d) => `${deviceName(d)}${d.screen_name ? ` (${d.screen_name})` : ''}`;
   const url = `${ORIGIN()}${t.slug}.${BASE()}/admin?view=screens`;
   const subject = wentOffline.length
@@ -116,7 +116,7 @@ export async function monitorTenant(t) {
     ...wentOffline.map((d) => `Frakoblet: ${describe(d)}`),
     ...cameBack.map((d) => `Tilbake: ${describe(d)}`)
   ];
-  await sendMail({
+  if (to.length) await sendMail({
     to,
     subject,
     ...buttonMail({
@@ -124,9 +124,17 @@ export async function monitorTenant(t) {
       intro: lines.join(' · '),
       button: 'Se enhetene',
       url,
-      outro: 'Varslingen kan slås av under Enheter i Flatr.'
+      outro: 'Varslingen kan slås av under Skjermer i Flatr.'
     })
   }).catch((err) => console.error('[monitor] e-post feilet:', err.message));
+
+  // Også til Slack/Teams hvis kunden har lagt inn en webhook.
+  const hook = await setting(env, 'webhook_url', '');
+  if (hook) {
+    await sendWebhook(hook, { title: subject, lines, link: { url, label: 'Åpne skjermene i Flatr' } }).catch((err) =>
+      console.error(`[monitor] webhook feilet (${t.slug}):`, err.message)
+    );
+  }
 }
 
 let running = false;

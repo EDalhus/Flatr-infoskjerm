@@ -14,7 +14,7 @@ export default function SlideThumb({ slide, orientation }) {
       className="relative w-full overflow-hidden rounded border border-hair"
       style={{ aspectRatio: ratio, containerType: 'inline-size', ...backgroundStyle(slide.background) }}
     >
-      {(slide.elements || []).map((el, i) => {
+      {(slide.elements || []).filter((el) => el.config?.hidden !== true).map((el, i) => {
         const c = el.config || {};
         const st = { left: `${el.x}%`, top: `${el.y}%`, width: `${el.w}%`, height: `${el.h}%` };
         return (

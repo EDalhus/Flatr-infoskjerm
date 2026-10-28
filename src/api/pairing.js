@@ -42,12 +42,40 @@ const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LEN = 6;
 const CODE_TTL_MIN = 15; // koden er gyldig i 15 minutter
 const POLL_SECONDS = 4; // anbefalt polleintervall før paring
-const PAIRED_POLL_SECONDS = 30; // roligere poll etter paring (henter også kommandoer)
+// Etter paring holder status-kallet seg åpent til en kommando kommer (maks
+// COMMAND_WAIT_MS, under TV-appens timeout på 15 s), og TV-en spør igjen
+// rett etterpå. Da når «Identifiser» o.l. fram med en gang i stedet for
+// ved neste poll.
+const PAIRED_POLL_SECONDS = 2;
+const COMMAND_WAIT_MS = 10_000;
 
 // Fjernkommandoer admin kan kø. TV-en henter uleverte i status-pollen.
 const COMMANDS = ['identify', 'reload', 'clear_cache', 'reboot', 'screenshot'];
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 const screenshotKey = (deviceId) => `screenshots/${deviceId}.jpg`;
+
+// device_id -> ventende status-kall som vekkes når en kommando køes.
+// Én Node-prosess, så et vanlig Map holder.
+const commandWaiters = new Map();
+
+function waitForCommand(deviceId, ms) {
+  return new Promise((resolve) => {
+    const set = commandWaiters.get(deviceId) ?? new Set();
+    commandWaiters.set(deviceId, set);
+    const done = () => {
+      clearTimeout(timer);
+      set.delete(done);
+      if (!set.size) commandWaiters.delete(deviceId);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    set.add(done);
+  });
+}
+
+function wakeCommandWaiters(deviceId) {
+  for (const done of [...(commandWaiters.get(deviceId) ?? [])]) done();
+}
 
 // Hvitliste for klient-info fra TV-en (alt annet forkastes; verdier trimmes).
 const CLIENT_INFO_KEYS = [
@@ -480,6 +508,7 @@ async function queueCommand(env, deviceId, command, payload) {
     .prepare(`INSERT INTO pairing_commands (device_id, command, payload) VALUES (?, ?, ?)`)
     .bind(deviceId, command, payload ? JSON.stringify(payload) : null)
     .run();
+  wakeCommandWaiters(deviceId);
 }
 
 // POST /api/pairing/unpair  { device_id | screen_id }  – admin opphever en paring.
@@ -566,6 +595,11 @@ async function handleStatus({ request, env }, deviceId) {
     // Hent uleverte fjernkommandoer og marker dem levert (leveres nøyaktig én gang).
     let commands = [];
     try {
+      const pending = await env.DB
+        .prepare('SELECT 1 FROM pairing_commands WHERE device_id = ? AND delivered_at IS NULL LIMIT 1')
+        .bind(deviceId)
+        .first();
+      if (!pending) await waitForCommand(deviceId, COMMAND_WAIT_MS);
       const { results } = await env.DB
         .prepare(
           `SELECT id, command, payload FROM pairing_commands

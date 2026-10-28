@@ -1,5 +1,7 @@
 // Delte hjelpere for alle API-Functions. Filnavn med _ rutes ikke av Pages.
 
+import { isOpen } from '../lib/hours.js';
+import { upcomingBirthdays, todayIn } from '../lib/birthdays.js';
 import { getUser } from './_access.js';
 import { activeSlot, DEFAULT_TZ } from '../lib/timeslots.js';
 
@@ -113,10 +115,31 @@ const pickDaypart = (row) => {
  * spilleliste (uten kanal) krever innlogging på Node-serveren, siden
  * spillelister kan være utkast. Returnerer { screenId, playlistId } eller en 401.
  */
-export function viewerTarget(request, env) {
+/* Kortlivet, signert tilgang til forhåndsvisningen av én presentasjon
+   (?rt=), så AI-assistentens skjermbilder virker uten innloggingscookies. */
+const previewSecret = (env) => env.APPS_SECRET_KEY || globalThis.process?.env?.APPS_SECRET_KEY || globalThis.process?.env?.BETTER_AUTH_SECRET || '';
+
+async function previewSig(env, playlistId, exp) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(`preview:${previewSecret(env)}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${env.TENANT?.slug || ''}:${playlistId}:${exp}`));
+  return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export async function previewToken(env, playlistId, ttlSeconds = 600) {
+  const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
+  return `${exp}.${await previewSig(env, playlistId, exp)}`;
+}
+
+async function previewTokenOk(env, playlistId, token) {
+  const [exp, sig] = String(token || '').split('.');
+  if (!previewSecret(env) || !sig || !(Number(exp) > Date.now() / 1000)) return false;
+  return sig === (await previewSig(env, playlistId, Number(exp)));
+}
+
+export async function viewerTarget(request, env) {
   const params = new URL(request.url).searchParams;
   const playlistId = toIntOrNull(params.get('playlist'));
-  if (playlistId && 'SESSION_USER' in env && !env.SESSION_USER) {
+  if (playlistId && 'SESSION_USER' in env && !env.SESSION_USER && !(await previewTokenOk(env, playlistId, params.get('rt')))) {
     return { denied: json({ error: 'Ikke innlogget' }, { status: 401 }) };
   }
   return { screenId: playlistId ? null : params.get('screen'), playlistId };
@@ -145,15 +168,23 @@ export async function checkLimit(env, kind, extraBytes = 0) {
   const L = env.LIMITS;
   if (kind === 'storage' && u.storageBytes + extraBytes > L.storageBytes) {
     return json(
-      { error: `Lagringsplassen er full (${fmtGb(u.storageBytes)} av ${fmtGb(L.storageBytes)}). Slett filer i biblioteket, eller kontakt oss for mer plass.` },
+      {
+        error:
+          u.storageBytes >= L.storageBytes * 0.95
+            ? `Lagringsplassen er full (${fmtGb(u.storageBytes)} av ${fmtGb(L.storageBytes)} i planen din). Slett filer i biblioteket, eller kontakt oss for mer plass.`
+            : `Filen er for stor for plassen som er igjen (${fmtGb(L.storageBytes - u.storageBytes)} ledig av ${fmtGb(L.storageBytes)} i planen din).`
+      },
       { status: 413 }
     );
   }
   if (kind === 'devices' && u.devices >= L.devices) {
-    return json({ error: `Kontoen kan ha ${L.devices} TV-er i betaen. Kontakt oss om du trenger flere.` }, { status: 403 });
+    return json({ error: `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. Trenger du flere? Be om det under Skjermer.` }, { status: 403 });
   }
   if (kind === 'screens' && u.screens >= L.screens) {
-    return json({ error: `Kontoen kan ha ${L.screens} skjermer i betaen. Kontakt oss om du trenger flere.` }, { status: 403 });
+    return json({ error: `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. Trenger du flere? Be om det under Skjermer.` }, { status: 403 });
+  }
+  if (kind === 'video' && !L.video) {
+    return json({ error: 'Video er med i Pro. Gratisplanen har plass til bilder.' }, { status: 403 });
   }
   return null;
 }
@@ -181,8 +212,16 @@ export async function resolveScreenContent(env, screen, when = new Date()) {
   } catch {
     slots = []; // ingen tidsplan-tabell (Worker)
   }
-  const slot = slots?.length ? activeSlot(slots, when, await getTimezone(env)) : null;
-  if (!slot) return { playlistId: screen.playlist_id ?? null, off: false, slot: null };
+  const tz = await getTimezone(env);
+  const slot = slots?.length ? activeSlot(slots, when, tz) : null;
+  if (!slot) {
+    // Utenfor åpningstid er skjermen av – med mindre tidsplanen sier noe annet.
+    // Presentasjonen sendes likevel med, så en TV uten nett kan slå seg på selv
+    // når åpningstiden starter.
+    const hours = safeJson(screen.hours, null);
+    if (hours?.enabled && !isOpen(hours, when, tz)) return { playlistId: screen.playlist_id ?? null, off: true, slot: null, closed: true };
+    return { playlistId: screen.playlist_id ?? null, off: false, slot: null };
+  }
   if (slot.kind === 'off') return { playlistId: null, off: true, slot };
   return { playlistId: slot.playlist_id, off: false, slot };
 }
@@ -227,7 +266,11 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
       screen = {
         ...screen,
         power: now.off ? 'off' : 'on',
-        active_slot: now.slot ? { id: now.slot.id, title: now.slot.title || null } : null
+        active_slot: now.slot ? { id: now.slot.id, title: now.slot.title || null } : null,
+        // Åpningstidene og tidssonen sendes med, så TV-appen kan slå av selv når den er uten nett.
+        hours: safeJson(screen.hours, null),
+        timezone: await getTimezone(env),
+        closed: !!now.closed
       };
     }
     if (screen && playlistId) {
@@ -252,13 +295,15 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
     env.DB.prepare('SELECT * FROM sponsors ORDER BY id ASC').all(),
     env.DB
       .prepare(
-        `SELECT * FROM alerts
-           WHERE active = 1 AND (target_screen_id IS NULL OR target_screen_id = ?)
-           ORDER BY created_at DESC, id DESC`
+        `SELECT * FROM alerts WHERE active = 1 ORDER BY created_at DESC, id DESC`
       )
-      .bind(id)
       .all()
   ]);
+  // Varsler til alle, til denne skjermen, eller til en gruppe (tagg) skjermen er med i.
+  const screenTags = String(screen?.tags || '').split(',').map((t) => t.trim()).filter(Boolean);
+  alerts.results = (alerts.results ?? []).filter((a) =>
+    a.target_tag ? screenTags.includes(a.target_tag) : !a.target_screen_id || a.target_screen_id === id
+  );
 
   const scheduleRows = (schedule.results ?? []).map((row) => ({
     ...row,
@@ -277,8 +322,11 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
       )
       .bind(...slideIds)
       .all();
-    for (const e of els ?? [])
-      (elsBySlide[e.slide_id] ||= []).push({ ...e, config: safeJson(e.config, {}) });
+    for (const e of els ?? []) {
+      const config = safeJson(e.config, {});
+      if (config.hidden === true) continue; // skjult lag i editoren
+      (elsBySlide[e.slide_id] ||= []).push({ ...e, config });
+    }
   }
   const deck = rawSlides.map((s) => ({
     ...s,
@@ -286,6 +334,7 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
     elements: elsBySlide[s.id] ?? []
   }));
   await withCarouselImages(env, deck);
+  await withBirthdays(env, deck);
 
   const state = {
     screen: screen || null,
@@ -305,7 +354,7 @@ const youtubeId = (url) =>
 
 /**
  * Apple TV har ingen nettleser. For TV-appen (env.DEVICE_MODE) byttes
- * nettside-elementer og widgetene vær/nyheter/kalender ut med siste
+ * nettside-elementer og widgetene vær/nyheter/kalender/Flatr Apps ut med siste
  * skjermbilde (tas av server/snapshots.js), og YouTube med forsidebildet.
  */
 /** Bildene i en mappe i mediebiblioteket (til bildekarusellen), sortert på navn. */
@@ -334,7 +383,41 @@ async function withCarouselImages(env, deck) {
       if (e.kind === 'carousel') e.config = { ...e.config, images: byFolder[e.config?.folder] || [] };
 }
 
-const DEVICE_WIDGETS = ['weather', 'rss', 'calendar'];
+/**
+ * Bursdager: bokser med «skjul når ingen i perioden» og kakeregn uten
+ * bursdag i dag tas ut av tilstanden, så de forsvinner på alle skjermer
+ * (også Apple TV) og kommer tilbake av seg selv.
+ */
+async function withBirthdays(env, deck) {
+  const ids = new Set();
+  for (const s of deck) for (const e of s.elements) if (e.kind === 'app' && e.config?.appId) ids.add(Number(e.config.appId));
+  if (!ids.size) return;
+  let rows = [];
+  try {
+    ({ results: rows } = await env.DB.prepare(`SELECT id, config FROM apps WHERE kind = 'birthdays' AND id IN (${[...ids].map(() => '?').join(',')})`)
+      .bind(...ids)
+      .all());
+  } catch {
+    return; // ingen apps-tabell
+  }
+  if (!rows?.length) return;
+  const today = todayIn(await getTimezone(env));
+  const soonest = {}; // app-id -> dager til neste bursdag
+  for (const r of rows) {
+    const next = upcomingBirthdays(safeJson(r.config, {}).people, today, { max: 1 })[0];
+    soonest[r.id] = next ? next.days : Infinity;
+  }
+  for (const s of deck)
+    s.elements = s.elements.filter((e) => {
+      const next = e.kind === 'app' ? soonest[Number(e.config?.appId)] : undefined;
+      if (next === undefined) return true;
+      if (e.config?.effect === 'rain') return next === 0;
+      if (e.config?.days == null || e.config?.autoHide === false) return true;
+      return next <= Math.min(7, Math.max(1, Number(e.config.days) || 7));
+    });
+}
+
+const DEVICE_WIDGETS = ['weather', 'rss', 'calendar', 'app'];
 // Nøkkelen skjermbildet er lagret under (se server/snapshots.js).
 const snapshotKey = (e) => (e.kind === 'web' ? e.config?.url : DEVICE_WIDGETS.includes(e.kind) ? `widget:${e.id}` : null);
 
@@ -359,10 +442,44 @@ async function adaptForDevices(env, deck) {
     }
   }
 
-  return deck.map((s) => ({
+  // TV-apper som tegner AIS selv (hodet X-Flatr-Features: app) får elementet
+  // med en datalenke i stedet for skjermbilde – live, ikke et bilde hvert 2. min.
+  const nativeAis = new Set();
+  const features = String(env.DEVICE_FEATURES || '').split(',').map((f) => f.trim());
+  if (features.includes('app')) {
+    const ids = [...new Set(deck.flatMap((s) => s.elements.filter((e) => e.kind === 'app').map((e) => Number(e.config?.appId))))].filter(Boolean);
+    if (ids.length) {
+      try {
+        // Bare visningene TV-appen kan tegne selv; anløpsplanen o.l. blir skjermbilde.
+        const { results } = await env.DB.prepare(`SELECT id FROM apps WHERE kind = 'ais' AND id IN (${ids.map(() => '?').join(',')})`)
+          .bind(...ids)
+          .all();
+        for (const r of results ?? []) nativeAis.add(r.id);
+      } catch {
+        /* ingen apps-tabell */
+      }
+    }
+  }
+
+  // Widgeter uten skjermbilde ennå: TV-appen kjenner ikke typen og ville blitt
+  // stående og laste. Hopp over dem nå, og be serveren lage skjermbildet med en gang.
+  let missing = false;
+  const adapted = deck.map((s) => ({
     ...s,
-    elements: s.elements.map((e) => {
+    elements: s.elements.flatMap((e) => {
+      // Kakeregn er en animasjon: TV-apper som kan tegne effekter selv (hodet
+      // X-Flatr-Features: effects) får det som eget element, de andre hopper over.
+      if (e.kind === 'app' && e.config?.effect === 'rain') {
+        return features.includes('effects') ? [{ ...e, kind: 'effect', config: { type: 'rain', amount: e.config.amount || 'normal', opacity: Math.min(1, Math.max(0.1, Number(e.config.opacity) || 1)) } }] : [];
+      }
+      if (e.kind === 'app' && nativeAis.has(Number(e.config?.appId)) && ['map', 'cards', 'arrivals'].includes(e.config?.view || 'map')) {
+        return [{ ...e, config: { ...e.config, data_url: `/api/feeds?element=${e.id}` } }];
+      }
       const key = snapshotKey(e);
+      if (key && !shots[key] && e.kind !== 'web') {
+        missing = true;
+        return [];
+      }
       if (key && shots[key]) {
         const shot = shots[key];
         const v = encodeURIComponent(shot.taken_at || '');
@@ -383,6 +500,8 @@ async function adaptForDevices(env, deck) {
       return e;
     })
   }));
+  if (missing) env.REQUEST_SNAPSHOTS?.();
+  return adapted;
 }
 
 /** Lettvekts endrings-signatur (djb2) over innhold – uten serverTime.

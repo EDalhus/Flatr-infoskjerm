@@ -168,7 +168,51 @@ const MIGRATIONS = [
       UPDATE screens SET tags = (SELECT p.tags FROM pairings p WHERE p.screen_id = screens.id AND p.status = 'paired' AND p.tags IS NOT NULL LIMIT 1);
       DELETE FROM pairings WHERE status = 'paired' AND (screen_id IS NULL OR screen_id NOT IN (SELECT id FROM screens));
     `);
-  }
+  },
+
+  // 7: Flatr Apps – egne datakilder (først: skipstrafikk fra AIS) som
+  //    elementet «Flatr App» viser. config er JSON (flåte, kaier, client id),
+  //    secret er kryptert (se src/api/apps.js) og sendes aldri til nettleseren.
+  `
+  CREATE TABLE IF NOT EXISTS apps (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    kind        TEXT NOT NULL,
+    config      TEXT NOT NULL DEFAULT '{}',
+    secret      TEXT,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  `,
+
+  // 8: Flatr Apps blir en markedsplass. En rad i apps er nå en aktivert app:
+  //    kind = offisiell nøkkel (ais, weather, rss, calendar) eller 'custom',
+  //    og app_ref peker på den egne appen i platform.db (custom_apps.id).
+  `ALTER TABLE apps ADD COLUMN app_ref INTEGER;`,
+
+  // 9: AIS-appen heter nå «NAIS (Norsk AIS-tjeneste)». Installasjoner som
+  //    fortsatt har standardnavnet, får det nye (egne navn beholdes).
+  `UPDATE apps SET name = 'NAIS (Norsk AIS-tjeneste)' WHERE kind = 'ais' AND name = 'Skipstrafikk (AIS)';`,
+
+  // 10: Åpningstider per skjerm (JSON, se src/lib/hours.js) og varsler til en
+  //     gruppe skjermer (tagg) i stedet for én skjerm eller alle.
+  `
+  ALTER TABLE screens ADD COLUMN hours TEXT;
+  ALTER TABLE alerts ADD COLUMN target_tag TEXT;
+  `,
+  // 11: AI-assistenten i editoren: samtalen per presentasjon, med alle
+  //     innholdsblokkene fra Claude (tenking, tekst, verktøykall og -svar).
+  `
+  CREATE TABLE IF NOT EXISTS ai_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    playlist_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    author TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE INDEX IF NOT EXISTS ai_messages_playlist ON ai_messages (playlist_id, id);
+  `
 ];
 
 export const TENANT_SCHEMA_VERSION = MIGRATIONS.length;

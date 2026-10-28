@@ -24,8 +24,8 @@ export async function onRequestGet({ request, env }) {
   return json(results);
 }
 
-// POST /api/alerts  { message, target_screen_id? }
-// target_screen_id = null/utelatt  -> vises på ALLE skjermer
+// POST /api/alerts  { message, target_screen_id?, target_tag? }
+// Begge utelatt -> ALLE skjermer; target_tag -> alle skjermer i gruppen (taggen)
 export async function onRequestPost(context) {
   const denied = await requireAdmin(context);
   if (denied) return denied;
@@ -35,13 +35,14 @@ export async function onRequestPost(context) {
     return badRequest('message er påkrevd');
   }
 
-  const target = toIntOrNull(b.target_screen_id);
+  const tag = b.target_tag ? String(b.target_tag).trim().slice(0, 40) || null : null;
+  const target = tag ? null : toIntOrNull(b.target_screen_id);
 
   const row = await context.env.DB
     .prepare(
-      'INSERT INTO alerts (message, target_screen_id, active) VALUES (?, ?, 1) RETURNING *'
+      'INSERT INTO alerts (message, target_screen_id, target_tag, active) VALUES (?, ?, ?, 1) RETURNING *'
     )
-    .bind(String(b.message).trim(), target)
+    .bind(String(b.message).trim(), target, tag)
     .first();
 
   return json(row, { status: 201 });

@@ -1,6 +1,8 @@
 // flatr.no/superadmin – plattformeierens oversikt over alle kontoer.
 import { useEffect, useMemo, useState } from 'react';
-import { AuthShell, CheckEmail } from './AuthPages.jsx';
+import { AuthShell } from './AuthPages.jsx';
+import LoginForm from './LoginForm.jsx';
+import { authClient } from '../lib/authClient.js';
 import { Button, ErrorText, Field, Icon, Input } from '../admin/components/ui.jsx';
 import { LogoLockup } from '../admin/components/Logo.jsx';
 
@@ -30,36 +32,11 @@ const ago = (iso) => {
 };
 const date = (iso) => (iso ? new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }) : '–');
 
-function Login({ expired }) {
-  const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState(expired ? 'Lenken er utløpt eller brukt. Be om en ny.' : '');
-  const submit = async (e) => {
-    e.preventDefault();
-    try {
-      await call('/login', { method: 'POST', body: { email } });
-      setSent(true);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+// Vanlig Flatr-innlogging (passord + ev. tofaktor); e-posten må stå i SUPERADMIN_EMAILS.
+function Login() {
   return (
-    <AuthShell title={sent ? 'Sjekk e-posten din' : 'Superadmin'} subtitle={sent ? null : 'Bare for plattformens eiere.'}>
-      {sent ? (
-        <CheckEmail email={email} onBack={() => setSent(false)}>
-          Har adressen superadmin-tilgang, finner du en innloggingslenke der.
-        </CheckEmail>
-      ) : (
-        <form onSubmit={submit} className="space-y-4">
-          <Field label="E-post">
-            <Input type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
-          </Field>
-          <ErrorText>{error}</ErrorText>
-          <Button type="submit" className="w-full py-3">
-            Send innloggingslenke
-          </Button>
-        </form>
-      )}
+    <AuthShell title="Superadmin" subtitle="Bare for plattformens eiere.">
+      <LoginForm onDone={() => window.location.reload()} />
     </AuthShell>
   );
 }
@@ -67,8 +44,8 @@ function Login({ expired }) {
 function QuotaEditor({ t, onSaved, onClose }) {
   const [f, setF] = useState({
     max_storage_mb: t.overrides.max_storage_mb ?? '',
-    max_devices: t.overrides.max_devices ?? '',
-    max_screens: t.overrides.max_screens ?? ''
+    max_screens: t.overrides.max_screens ?? '',
+    allow_video: !!t.overrides.allow_video
   });
   const [error, setError] = useState('');
   const save = async (e) => {
@@ -91,17 +68,20 @@ function QuotaEditor({ t, onSaved, onClose }) {
     </Field>
   );
   return (
-    <form onSubmit={save} className="grid gap-3 border-t border-hair bg-zone p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+    <form onSubmit={save} className="grid gap-3 border-t border-hair bg-zone p-4 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
       {field('max_storage_mb', 'Lagring (MB)', Math.round(t.limits.storageBytes / 1024 / 1024))}
-      {field('max_devices', 'TV-er (enheter)', t.limits.devices)}
       {field('max_screens', 'Skjermer', t.limits.screens)}
+      <label className="flex items-center gap-2 pb-2 text-sm text-ink">
+        <input type="checkbox" checked={f.allow_video} onChange={(e) => setF({ ...f, allow_video: e.target.checked })} className="h-4 w-4" />
+        Video
+      </label>
       <div className="flex gap-2">
         <Button type="submit">Lagre</Button>
         <Button type="button" variant="outline" onClick={onClose}>
           Lukk
         </Button>
       </div>
-      <p className="m-0 text-xs text-muted sm:col-span-4">Tomt felt = standardkvoten for betaen.</p>
+      <p className="m-0 text-xs text-muted sm:col-span-4">Tomt felt = gratisplanen (1 skjerm, 2 GB, ingen video). En skjerm = én TV eller nettleser.</p>
       {error && (
         <div className="sm:col-span-4">
           <ErrorText>{error}</ErrorText>
@@ -152,10 +132,10 @@ export default function SuperAdmin() {
   );
 
   if (me === undefined) return <div className="h-full bg-paper" />;
-  if (me === null) return <Login expired={expired} />;
+  if (me === null) return <Login />;
 
   const logout = async () => {
-    await call('/logout', { method: 'POST' }).catch(() => {});
+    await authClient.signOut().catch(() => {});
     window.location.reload();
   };
 
@@ -235,7 +215,7 @@ export default function SuperAdmin() {
                       <td className="px-4 py-3 text-muted">{ago(t.last_login)}</td>
                       <td className="px-4 py-3">
                         <span className="tabular-nums">
-                          {t.devices ?? 0} / {t.limits.devices}
+                          {t.devices ?? 0}
                         </span>
                         <div className="text-xs text-muted">
                           {t.online ? `${t.online} online` : t.lastSeen ? `sist ${ago(t.lastSeen)}` : 'ingen'}
@@ -284,6 +264,7 @@ export default function SuperAdmin() {
           {tenants && shown.length === 0 && <p className="m-0 p-6 text-center text-muted">Ingen kontoer.</p>}
         </div>
 
+        <AppsAdmin />
         <MarketAdmin />
       </main>
     </div>
@@ -344,6 +325,114 @@ function MarketAdmin() {
           </tbody>
         </table>
         {items && items.length === 0 && <p className="m-0 p-6 text-center text-muted">Ingen maler er delt ennå.</p>}
+      </div>
+    </section>
+  );
+}
+
+const REVIEW_LABEL = { none: 'Privat', pending: 'Venter', approved: 'Godkjent', rejected: 'Avvist' };
+
+/**
+ * Flatr Apps: egne apper kunder har laget. Innsendte apper må godkjennes før
+ * andre kunder ser dem. Sjekk særlig hvilken adresse appen sender data og
+ * nøkler til – det er den som blir godkjent.
+ */
+function AppsAdmin() {
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState('');
+  const [open, setOpen] = useState(null);
+  const load = () => call('/apps').then(setItems).catch((e) => setError(e.message));
+  useEffect(() => {
+    load();
+  }, []);
+  const act = async (a, action) => {
+    let note;
+    if (action === 'reject') {
+      note = prompt('Hvorfor avvises appen? (vises for utvikleren)');
+      if (note === null) return;
+    }
+    try {
+      await call(`/apps?id=${a.id}`, { method: 'PUT', body: { action, note } });
+      load();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const host = (m) => {
+    try {
+      return new URL(String(m?.source?.url || '').replace(/\{\{[^}]*\}\}/g, 'x')).hostname;
+    } catch {
+      return '–';
+    }
+  };
+  return (
+    <section className="space-y-3">
+      <h2 className="m-0 text-xl font-bold">Flatr Apps</h2>
+      <ErrorText>{error}</ErrorText>
+      <div className="overflow-x-auto rounded-2xl border border-line bg-card">
+        <table className="w-full min-w-[820px] border-collapse text-sm">
+          <thead>
+            <tr className="bg-zone text-left text-xs text-muted">
+              <th className="px-4 py-2.5 font-medium">App</th>
+              <th className="px-4 py-2.5 font-medium">Laget av</th>
+              <th className="px-4 py-2.5 font-medium">Sender data til</th>
+              <th className="px-4 py-2.5 font-medium">Status</th>
+              <th className="px-4 py-2.5 font-medium">Aktivert</th>
+              <th className="px-4 py-2.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {(items || []).map((a) => {
+              const changedHost = a.manifest && host(a.manifest) !== host(a.draft);
+              return (
+                <FragmentRow key={a.id}>
+                  <tr className={`border-t border-hair ${a.hidden ? 'opacity-50' : ''}`}>
+                    <td className="px-4 py-2.5">
+                      <button type="button" className="font-semibold hover:underline" onClick={() => setOpen(open === a.id ? null : a.id)}>
+                        {a.draft?.name}
+                      </button>
+                    </td>
+                    <td className="px-4 py-2.5 text-muted">{a.author || a.tenant}</td>
+                    <td className="px-4 py-2.5">
+                      {host(a.draft)}
+                      {changedHost && <span className="ml-1 font-semibold text-danger">(endret fra {host(a.manifest)})</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-muted">
+                      {REVIEW_LABEL[a.review_status] || a.review_status}
+                      {a.manifest && a.review_status !== 'approved' ? ' · eldre versjon publisert' : ''}
+                    </td>
+                    <td className="px-4 py-2.5 tabular-nums">{a.installs}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <div className="flex justify-end gap-1.5">
+                        {a.review_status === 'pending' && (
+                          <>
+                            <Button size="sm" onClick={() => act(a, 'approve')}>
+                              Godkjenn
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => act(a, 'reject')}>
+                              Avvis
+                            </Button>
+                          </>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => act(a, a.hidden ? 'show' : 'hide')}>
+                          {a.hidden ? 'Vis igjen' : 'Skjul'}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                  {open === a.id && (
+                    <tr className="border-t border-hair bg-zone">
+                      <td colSpan={6} className="px-4 py-3">
+                        <pre className="m-0 max-h-80 overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(a.draft, null, 2)}</pre>
+                      </td>
+                    </tr>
+                  )}
+                </FragmentRow>
+              );
+            })}
+          </tbody>
+        </table>
+        {items && items.length === 0 && <p className="m-0 p-6 text-center text-muted">Ingen egne apper er laget ennå.</p>}
       </div>
     </section>
   );

@@ -143,6 +143,10 @@ export async function onRequestPost(context) {
   const folder = url.searchParams.get('folder') || null;
 
   if (!context.request.body) return badRequest('mangler fil-innhold');
+  if (/^video\//i.test(type) || /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(name)) {
+    const noVideo = await checkLimit(context.env, 'video');
+    if (noVideo) return noVideo;
+  }
   const full = await checkLimit(context.env, 'storage', Number(context.request.headers.get('content-length')) || 0);
   if (full) return full;
 

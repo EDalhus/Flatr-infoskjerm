@@ -21,9 +21,9 @@ body {
    og lagres pr. bruker på serveren.
    Verdier er "R G B"-tripler for rgb(var(--c-x) / <alpha>).
    Temaene styrer mer enn farger: skrift (--font-*), hjørner (--r-*) og
-   skygger. Admin-skallet velger i tillegg navigasjon ut fra temaet
-   (Varm: toppmeny, Presis: ikon-sidemeny).
-   :root = Varm (også det offentlige programmet /s/:id og innlogging).
+   skygger. Admin, innlogging og flatr.no bruker alltid «Presis»
+   (satt i src/main.jsx); valget av tema er fjernet.
+   :root = Varm – brukes bare av det offentlige programmet /s/:id.
    ============================================================ */
 :root,
 [data-theme='varm'] {

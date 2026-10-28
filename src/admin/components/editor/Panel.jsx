@@ -1,10 +1,12 @@
 // Høyre panel i editoren: «Design» (det som er valgt – eller lysbildet) og
 // «Lag» (alle elementer på lysbildet, øverst = fremst).
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../../../lib/api.js';
 import { BASE_SIZE, ELEMENT_LABEL, ELEMENT_ICON } from '../../../lib/deck.js';
 import { Icon, Button } from '../ui.jsx';
 import ElementConfigFields from '../deck/ElementConfigFields.jsx';
+import AiPanel from './AiPanel.jsx';
 import { SlideInspector } from '../deck/Inspector.jsx';
 
 function Section({ title, children, action }) {
@@ -130,46 +132,237 @@ function ElementDesign({ el, orientation, categories, onPatch, onConfig, onLayer
   );
 }
 
-function LayerList({ elements, selection, locks, onSelect }) {
+const APP_VIEW = { map: ['Kart', 'pin'], cards: ['Båtkort', 'square'], arrivals: ['Ankomsttavle', 'clock'] };
+
+/** Navn og undertekst i laglisten: hva slags widget, og fra hvilken app. */
+function describe(el, apps) {
+  const c = el.config || {};
+  if (el.kind === 'text') return { title: (c.text || 'Tekst').split('\n')[0].slice(0, 40) || 'Tekst', sub: 'Tekst', icon: 'text' };
+  if (el.kind === 'app') {
+    const app = apps?.find((a) => a.id === c.appId);
+    const from = app ? `fra ${app.name}` : c.appId ? 'App som ikke er aktivert' : 'Ingen app valgt';
+    if (app?.kind === 'birthdays') return { title: c.effect === 'rain' ? 'Kakeregn' : 'Bursdager', sub: from, icon: c.effect === 'rain' ? 'sparkle' : 'calendar' };
+    if (app?.kind === 'custom') return { title: 'Egen visning', sub: from, icon: 'sparkle' };
+    const [title, icon] = APP_VIEW[c.view || 'map'] || ['Widget', 'sparkle'];
+    return { title: app ? title : 'Flatr App', sub: from, icon: app ? icon : 'sparkle' };
+  }
+  return { title: ELEMENT_LABEL[el.kind] || el.kind, sub: null, icon: ELEMENT_ICON[el.kind] || 'square' };
+}
+
+function EyeBtn({ hidden, onClick, label }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={`grid h-7 w-7 shrink-0 place-items-center rounded-md hover:bg-zone hover:text-ink ${hidden ? 'text-muted' : 'text-muted opacity-0 group-hover:opacity-100 focus:opacity-100'}`}
+      aria-label={hidden ? `Vis ${label}` : `Skjul ${label}`}
+      title={hidden ? 'Vis' : 'Skjul'}
+    >
+      {hidden ? (
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+        </svg>
+      ) : (
+        <Icon name="eye" className="h-4 w-4" />
+      )}
+    </button>
+  );
+}
+
+function LayerRow({ el, apps, selection, locks, onSelect, onHide, indent }) {
+  const lock = locks.get(el.id);
+  const d = describe(el, apps);
+  const hidden = el.config?.hidden === true;
+  const active = selection.includes(el.id);
+  return (
+    <li>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={(e) => onSelect(e.shiftKey || e.metaKey ? [...new Set([...selection, el.id])] : [el.id])}
+        onKeyDown={(e) => e.key === 'Enter' && onSelect([el.id])}
+        className={`group flex w-full cursor-pointer items-center gap-2 rounded-lg py-1.5 pr-1 text-left text-sm ${indent ? 'pl-7' : 'pl-2'} ${
+          active ? 'bg-brand-tint text-brand-dark' : 'text-ink hover:bg-zone'
+        }`}
+      >
+        <Icon name={d.icon} className={`h-4 w-4 shrink-0 ${active ? '' : 'text-muted'}`} />
+        <span className={`min-w-0 flex-1 ${hidden ? 'opacity-50' : ''}`}>
+          <span className="block truncate">{d.title}</span>
+          {d.sub && <span className={`block truncate text-[11px] ${active ? 'opacity-80' : 'text-muted'}`}>{d.sub}</span>}
+        </span>
+        {lock && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: lock.color }} title={`${lock.name} jobber her`} />}
+        <EyeBtn hidden={hidden} label={d.title} onClick={() => onHide([el], !hidden)} />
+      </div>
+    </li>
+  );
+}
+
+function GroupRow({ group, members, apps, selection, locks, onSelect, onHide, onRename, onUngroup }) {
+  const [open, setOpen] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const ids = members.map((m) => m.id);
+  const allHidden = members.every((m) => m.config?.hidden === true);
+  const active = ids.every((id) => selection.includes(id));
+  const name = members[0].config?.groupName || 'Gruppe';
+  return (
+    <li>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onSelect(ids)}
+        onDoubleClick={() => setEditing(true)}
+        className={`group flex w-full cursor-pointer items-center gap-1.5 rounded-lg py-1.5 pl-1 pr-1 text-sm ${
+          active ? 'bg-brand-tint text-brand-dark' : 'text-ink hover:bg-zone'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((o) => !o);
+          }}
+          className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted hover:text-ink"
+          aria-label={open ? 'Lukk gruppen' : 'Åpne gruppen'}
+          aria-expanded={open}
+        >
+          <Icon name="chevron" className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-90' : ''}`} />
+        </button>
+        <Icon name="layers" className={`h-4 w-4 shrink-0 ${active ? '' : 'text-muted'}`} />
+        {editing ? (
+          <input
+            autoFocus
+            defaultValue={name}
+            onClick={(e) => e.stopPropagation()}
+            onBlur={(e) => {
+              setEditing(false);
+              const v = e.target.value.trim();
+              if (v && v !== name) onRename(group, v);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.target.blur();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+            className="h-7 min-w-0 flex-1 rounded-md border border-focus bg-paper px-1.5 text-sm text-ink outline-none"
+            aria-label="Navn på gruppen"
+          />
+        ) : (
+          <span className={`min-w-0 flex-1 truncate font-semibold ${allHidden ? 'opacity-50' : ''}`} title="Dobbeltklikk for å gi nytt navn">
+            {name} <span className="font-normal text-muted">({members.length})</span>
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onUngroup(group);
+          }}
+          className="h-7 shrink-0 rounded-md px-1.5 text-[11px] font-semibold text-muted opacity-0 hover:bg-zone hover:text-ink focus:opacity-100 group-hover:opacity-100"
+          title="Løs opp gruppen"
+        >
+          Løs opp
+        </button>
+        <EyeBtn hidden={allHidden} label={name} onClick={() => onHide(members, !allHidden)} />
+      </div>
+      {open && (
+        <ul className="m-0 list-none p-0">
+          {members.map((el) => (
+            <LayerRow key={el.id} el={el} apps={apps} selection={selection} locks={locks} onSelect={onSelect} onHide={onHide} indent />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+function LayerList({ elements, selection, locks, onSelect, onPatch, onGroup }) {
+  const [apps, setApps] = useState(null);
+  useEffect(() => {
+    if (!elements.some((e) => e.kind === 'app')) return;
+    api.apps.list().then(setApps).catch(() => setApps([]));
+  }, [elements.some((e) => e.kind === 'app')]);
+
   const list = [...elements].sort((a, b) => b.z - a.z || b.id - a.id);
   if (!list.length) return <p className="m-0 p-4 text-sm text-muted">Lysbildet er tomt. Sett inn noe fra verktøylinjen.</p>;
+
+  const onHide = (els, hidden) => onPatch(els.map((el) => ({ id: el.id, patch: { config: { ...el.config, hidden } } })));
+  const membersOf = (g) => list.filter((e) => e.config?.group === g);
+  const onRename = (g, groupName) => onPatch(membersOf(g).map((el) => ({ id: el.id, patch: { config: { ...el.config, groupName } } })));
+  const onUngroup = (g) =>
+    onPatch(
+      membersOf(g).map((el) => {
+        const { group, groupName, ...config } = el.config || {};
+        return { id: el.id, patch: { config } };
+      })
+    );
+
+  // Grupper vises der det fremste medlemmet ligger.
+  const seen = new Set();
+  const rows = [];
+  for (const el of list) {
+    const g = el.config?.group;
+    if (!g) rows.push({ el });
+    else if (!seen.has(g)) {
+      seen.add(g);
+      rows.push({ group: g, members: membersOf(g) });
+    }
+  }
+  const canGroup = selection.length > 1;
+
   return (
-    <ul className="m-0 list-none p-2">
-      {list.map((el) => {
-        const lock = locks.get(el.id);
-        const label = el.kind === 'text' ? (el.config?.text || 'Tekst').split('\n')[0].slice(0, 40) : ELEMENT_LABEL[el.kind];
-        return (
-          <li key={el.id}>
-            <button
-              type="button"
-              onClick={(e) => onSelect(e.shiftKey ? [...new Set([...selection, el.id])] : [el.id])}
-              className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${
-                selection.includes(el.id) ? 'bg-brand-tint text-brand-dark' : 'text-ink hover:bg-zone'
-              }`}
-            >
-              <Icon name={ELEMENT_ICON[el.kind] || 'square'} className="h-4 w-4 shrink-0 text-muted" />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
-              {lock && (
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: lock.color }} title={`${lock.name} jobber her`} />
-              )}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="p-2">
+      <ul className="m-0 list-none p-0">
+        {rows.map((r) =>
+          r.group ? (
+            <GroupRow
+              key={`g-${r.group}`}
+              group={r.group}
+              members={r.members}
+              apps={apps}
+              selection={selection}
+              locks={locks}
+              onSelect={onSelect}
+              onHide={onHide}
+              onRename={onRename}
+              onUngroup={onUngroup}
+            />
+          ) : (
+            <LayerRow key={r.el.id} el={r.el} apps={apps} selection={selection} locks={locks} onSelect={onSelect} onHide={onHide} />
+          )
+        )}
+      </ul>
+      <div className="mt-2 flex items-center justify-between gap-2 border-t border-line px-2 pt-3 text-[11px] text-muted">
+        <span>{canGroup ? `${selection.length} valgt` : 'Shift-klikk for å velge flere'}</span>
+        <button
+          type="button"
+          disabled={!canGroup}
+          onClick={onGroup}
+          className="rounded-md px-2 py-1 font-semibold text-brand hover:bg-zone disabled:cursor-not-allowed disabled:text-muted disabled:hover:bg-transparent"
+          title={`Grupper (${navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl+'}G)`}
+        >
+          Grupper
+        </button>
+      </div>
+    </div>
   );
 }
 
 export default function Panel(props) {
   const { slide, selected, orientation, categories, locks, selection } = props;
-  const [tab, setTab] = useState('design');
+  // Fanen styres av editoren (⌘K åpner AI-fanen), ellers av panelet selv.
+  const [ownTab, setOwnTab] = useState('design');
+  const tab = props.tab ?? ownTab;
+  const setTab = props.onTab ?? setOwnTab;
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-line bg-card">
+    <aside className={`flex h-full shrink-0 flex-col border-l border-line bg-card ${tab === 'ai' ? 'w-[400px]' : 'w-80'}`}>
       <div className="flex gap-1 border-b border-line p-2" role="tablist">
         {[
           ['design', 'Design'],
-          ['layers', `Lag${slide ? ` (${slide.elements.length})` : ''}`]
+          ['layers', `Lag${slide ? ` (${slide.elements.length})` : ''}`],
+          ...(props.aiEnabled ? [['ai', '✦ AI']] : [])
         ].map(([id, label]) => (
           <button
             key={id}
@@ -184,9 +377,16 @@ export default function Panel(props) {
         ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* AI-fanen holdes montert, så samtalen fortsetter når du bytter fane. */}
+      {props.aiEnabled && (
+        <div className={`min-h-0 flex-1 ${tab === 'ai' ? '' : 'hidden'}`}>
+          <AiPanel playlistId={props.playlistId} onChanged={props.onAiChanged} pending={props.aiPending} onPendingUsed={props.onAiPendingUsed} />
+        </div>
+      )}
+
+      <div className={`min-h-0 flex-1 overflow-y-auto ${tab === 'ai' ? 'hidden' : ''}`}>
         {tab === 'layers' && slide ? (
-          <LayerList elements={slide.elements} selection={selection} locks={locks} onSelect={props.onSelect} />
+          <LayerList elements={slide.elements} selection={selection} locks={locks} onSelect={props.onSelect} onPatch={props.onPatch} onGroup={props.onGroup} />
         ) : selected.length === 1 ? (
           <ElementDesign
             el={selected[0]}

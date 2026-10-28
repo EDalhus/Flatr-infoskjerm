@@ -34,6 +34,11 @@ for dir in data/tenants/*/; do
   [ -d "$dir/media" ] && rsync -a "$dir/media/" "$OUT/media/$slug/"
 done
 
+# Plattformens egne filer: app-ikoner (Flatr Apps) og bildene i malmarkedet.
+for sub in app-icons market; do
+  [ -d "data/$sub" ] && rsync -a "data/$sub/" "$OUT/media/_platform/$sub/"
+done
+
 # 3. Utenfor serveren, hvis konfigurert
 if rclone listremotes 2>/dev/null | grep -q "^$REMOTE:"; then
   rclone copy "$OUT/db" "$REMOTE:$BUCKET/db" --max-age 48h

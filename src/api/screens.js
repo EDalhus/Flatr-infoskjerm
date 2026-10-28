@@ -13,6 +13,7 @@ import {
   safeJson
 } from './_shared.js';
 import { createPlaylist } from './playlists.js';
+import { cleanHours } from '../lib/hours.js';
 
 const ONLINE_MS = 90_000;
 const normOrientation = (v, f = 'landscape') =>
@@ -31,6 +32,7 @@ function decorate(row) {
   return {
     ...rest,
     tags: splitTags(row.tags),
+    hours: row.hours ? safeJson(row.hours, null) : null,
     // TV-en (Apple TV o.l.) som er koblet til skjermen. Uten TV vises skjermen i en nettleser.
     device: d_device_id
       ? {
@@ -69,6 +71,7 @@ async function withNow(env, rows) {
         now_playlist_id: now.playlistId,
         now_playlist_name: now.playlistId ? (names[now.playlistId] ?? null) : null,
         now_off: now.off,
+        now_closed: !!now.closed,
         now_slot: now.slot ? { id: now.slot.id, title: now.slot.title || null } : null
       };
     })
@@ -148,7 +151,7 @@ export async function onRequestPost(context) {
   return json(decorate(await byId(env, row.id)), { status: 201 });
 }
 
-// PUT /api/screens?id=1  { name?, location?, rotation?, playlist_id?, tags? }
+// PUT /api/screens?id=1  { name?, location?, rotation?, playlist_id?, tags?, hours? }
 export async function onRequestPut(context) {
   const denied = await requireAdmin(context);
   if (denied) return denied;
@@ -179,7 +182,7 @@ export async function onRequestPut(context) {
   }
 
   await env.DB
-    .prepare('UPDATE screens SET name = ?, location = ?, orientation = ?, rotation = ?, playlist_id = ?, tags = ? WHERE id = ?')
+    .prepare('UPDATE screens SET name = ?, location = ?, orientation = ?, rotation = ?, playlist_id = ?, tags = ?, hours = ? WHERE id = ?')
     .bind(
       b.name !== undefined ? String(b.name).trim() : cur.name,
       b.location !== undefined ? (b.location ? String(b.location).trim() : null) : cur.location,
@@ -189,6 +192,7 @@ export async function onRequestPut(context) {
       b.tags !== undefined
         ? [...new Set((Array.isArray(b.tags) ? b.tags : splitTags(b.tags)).map((t) => String(t).trim().slice(0, 40)).filter(Boolean))].join(', ') || null
         : cur.tags,
+      b.hours !== undefined ? (b.hours ? JSON.stringify(cleanHours(b.hours)) : null) : cur.hours,
       id
     )
     .run();

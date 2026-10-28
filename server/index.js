@@ -9,6 +9,7 @@
 //   SSE_POLL_MS=3000  + e-post (se server/mail.js)
 
 import http from 'node:http';
+import { screenshotUrl } from './convert.js';
 import path from 'node:path';
 import { getRequestListener } from '@hono/node-server';
 import { routeApi, apiKey, jsonError } from '../src/router.js';
@@ -16,14 +17,17 @@ import { getUser } from '../src/api/_access.js';
 import { checkLimit } from '../src/api/_shared.js';
 import { createAssets } from './assets.js';
 import { handleCollabUpgrade } from './collab.js';
-import { getTenantBySlug, tenantResources, sessionUser, sweepPlatform, tenantLimits, updatePrefs, platformDb } from './platform.js';
+import { getTenantBySlug, tenantResources, memberByEmail, sweepPlatform, tenantLimits, updatePrefs, platformDb } from './platform.js';
+import { auth, authSession, migrateExistingUsers } from './identity.js';
 import { userColorPalette } from '../src/api/_access.js';
-import { handlePlatformRoute, handleTenantAuthRoute, readCookie, SESSION_COOKIE } from './auth.js';
+import { handlePlatformRoute, handleTenantAuthRoute } from './auth.js';
 import { handleApexDevice, claimFromHub, syncRoutes } from './devices.js';
 import { handleImportRoute } from './imports.js';
 import { handleSuperadminRoute } from './superadmin.js';
 import { handleMarketRoute, serveMarketFile } from './market.js';
-import { startSnapshots } from './snapshots.js';
+import { handleAppMarketRoute, customAppFor, canInstallCustom, countInstall, runCustomApp, publicCatalog } from './appMarket.js';
+import { serveAppIcon } from './appIcons.js';
+import { startSnapshots, requestRefresh } from './snapshots.js';
 import { startMonitor } from './monitor.js';
 
 const PORT = Number(process.env.PORT || 8787);
@@ -61,7 +65,18 @@ function tenantEnv(tenant, user) {
     SSE_POLL_MS,
     SESSION_USER: user ?? null,
     TENANT: { slug: tenant.slug, name: tenant.name },
-    LIMITS: tenantLimits(tenant)
+    LIMITS: tenantLimits(tenant),
+    // TV-er venter på skjermbilder av widgeter – be om dem med en gang.
+    REQUEST_SNAPSHOTS: () => process.env.CONVERTER_URL && requestRefresh(tenant.slug),
+    // Skjermbilde av en side (AI-assistenten ser lysbildene den lager). Bare med konverter.
+    SCREENSHOT: process.env.CONVERTER_URL ? screenshotUrl : null,
+    // Egne Flatr Apps ligger i platform.db; src/api/apps.js når dem herfra.
+    APP_CATALOG: {
+      customAppFor: (id) => customAppFor(id, tenant.id),
+      canInstallCustom: (id) => canInstallCustom(id, tenant.id),
+      countInstall,
+      runCustomApp
+    }
   };
 }
 
@@ -118,9 +133,16 @@ function ensureColor(user, tenant) {
   return { ...user, prefs: JSON.stringify(updatePrefs(user.user_id, { color })) };
 }
 
+/** Innlogget medlem av kunden: Better Auth-økt (bekreftet e-post) + medlemskap. */
+async function currentUser(request, tenant) {
+  const s = await authSession(request);
+  if (!s?.user?.emailVerified) return null;
+  return memberByEmail(tenant.id, s.user.email) ?? null;
+}
+
 async function handleTenant(request, tenant) {
   const url = new URL(request.url);
-  const user = ensureColor(sessionUser(readCookie(request, SESSION_COOKIE), tenant.id), tenant);
+  const user = ensureColor(await currentUser(request, tenant), tenant);
   const ctx = { ...ctxBase, tenant, user };
 
   const auth = await handleTenantAuthRoute(request, ctx);
@@ -140,7 +162,9 @@ async function handleTenant(request, tenant) {
       mode: 'tenant',
       base_domain: BASE_DOMAIN,
       tenant: { slug: tenant.slug, name: tenant.name },
-      signed_in: !!user
+      signed_in: !!user,
+      // Innlogget i Flatr, men ikke medlem her – login-siden sier «ingen tilgang».
+      account: user ? null : (await authSession(request))?.user?.email ?? null
     });
   }
 
@@ -149,6 +173,7 @@ async function handleTenant(request, tenant) {
   const env = tenantEnv(tenant, user);
   if (key === '/api/import') return handleImportRoute(request, ctx, env);
   if (key === '/api/market' || key === '/api/market/install') return handleMarketRoute(request, ctx, env);
+  if (key === '/api/app-market' || key.startsWith('/api/app-market/')) return handleAppMarketRoute(request, { ...ctx, tenant });
 
   const isPairingWrite =
     request.method === 'POST' &&
@@ -192,6 +217,7 @@ async function handlePlatform(request) {
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
     const key = apiKey(url.pathname);
     if (key === '/api/context') return json({ mode: 'platform', base_domain: BASE_DOMAIN });
+    if (key === '/api/platform/apps' && request.method === 'GET') return json(publicCatalog());
     if (key === '/api/health') return json({ ok: true, time: new Date().toISOString() });
     return jsonError(404, 'Ukjent endepunkt');
   }
@@ -201,6 +227,11 @@ async function handlePlatform(request) {
 async function app(request) {
   const where = resolveHost(request.headers.get('host'));
   try {
+    // App-ikoner er åpne (vises i katalogen og på skjermene).
+    const icon = serveAppIcon(request);
+    if (icon) return icon;
+    // Better Auth (innlogging, passord, tofaktor) – samme endepunkter på alle adresser.
+    if (new URL(request.url).pathname.startsWith('/api/auth/') && where.kind !== 'unknown') return await auth.handler(request);
     if (where.kind === 'tenant') return await handleTenant(request, where.tenant);
     if (where.kind === 'unknown') {
       return new Response(
@@ -214,6 +245,9 @@ async function app(request) {
     return jsonError(500, 'Intern feil');
   }
 }
+
+// Eksisterende brukere får en Better Auth-bruker (passord settes via «Glemt passord»).
+await migrateExistingUsers().catch((err) => console.error('[identity] migrering:', err));
 
 const server = http.createServer(getRequestListener(app));
 
@@ -230,7 +264,7 @@ server.on('upgrade', async (req, socket, head) => {
     if (!m || where.kind !== 'tenant') return reject(404, 'Not Found');
 
     const request = new Request(`http://${req.headers.host}${req.url}`, { headers: req.headers });
-    const sess = sessionUser(readCookie(request, SESSION_COOKIE), where.tenant.id);
+    const sess = await currentUser(request, where.tenant);
     const user = sess && (await getUser(request, { SESSION_USER: sess }));
     if (!user) return reject(401, 'Unauthorized');
 

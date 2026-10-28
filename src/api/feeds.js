@@ -1,7 +1,8 @@
 import { json, badRequest, notFound, handleOptions, toIntOrNull, safeJson, getTimezone, folderImages } from './_shared.js';
 import { parseIcs, upcomingEvents } from '../lib/icsParse.js';
+import { appData } from './apps.js';
 
-// Data til widgetene vær, nyheter (RSS) og kalender (iCal).
+// Data til widgetene vær, nyheter (RSS), kalender (iCal) og Flatr Apps.
 //
 //   GET /api/feeds?element=<id>          -> data for et vær-/rss-/kalender-element
 //   GET /api/feeds?type=places&q=Ålesund -> stedssøk (Kartverket) for vær-widgeten
@@ -10,7 +11,7 @@ import { parseIcs, upcomingEvents } from '../lib/icsParse.js';
 // adresse i forespørselen – og mellomlagres, så skjermene ikke belaster kildene.
 
 const UA = 'Flatr-infoskjerm/1.0 (+https://flatr.no)';
-export const WIDGET_KINDS = ['weather', 'rss', 'calendar'];
+export const WIDGET_KINDS = ['weather', 'rss', 'calendar', 'app'];
 const TTL = { weather: 30 * 60_000, rss: 10 * 60_000, calendar: 10 * 60_000, places: 24 * 3600_000 };
 const MAX_BYTES = 3 * 1024 * 1024;
 const cache = new Map(); // key -> { at, data }
@@ -68,6 +69,31 @@ async function fetchText(raw) {
   const text = await res.text();
   if (text.length > MAX_BYTES) throw new Error('Kilden er for stor');
   return text;
+}
+
+/**
+ * JSON fra et eksternt API (egne Flatr Apps). Følger ikke omdirigeringer –
+ * både for å holde SSRF-sperren og så nøkler i hodene ikke sendes videre.
+ */
+export async function fetchPublicJson(raw, headers = {}) {
+  const url = await assertPublicUrl(raw);
+  if (url.protocol !== 'https:') throw new Error('API-adressen må bruke https');
+  const res = await fetch(url, {
+    headers: { 'User-Agent': UA, Accept: 'application/json', ...headers },
+    redirect: 'manual',
+    signal: AbortSignal.timeout(10_000)
+  });
+  if (res.status >= 300 && res.status < 400) throw new Error('API-et svarte med en omdirigering – bruk den endelige adressen');
+  if (!res.ok) throw new Error(`API-et svarte ${res.status}`);
+  const len = Number(res.headers.get('content-length'));
+  if (len > MAX_BYTES) throw new Error('Svaret er for stort');
+  const text = await res.text();
+  if (text.length > MAX_BYTES) throw new Error('Svaret er for stort');
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('API-et svarte ikke med JSON');
+  }
 }
 
 /* --------------------------------- vær ---------------------------------- */
@@ -135,6 +161,37 @@ async function places(q) {
   });
 }
 
+// Navnetyper som passer for en kai – brukes hvis det finnes en innen søkeradiusen.
+const QUAY_TYPES = /^(kai|ferjekai|ferjeleie|ferjested|hamn|havn|småbåthamn|brygge|molo|bukt|vik|våg)$/i;
+
+/** Beste stedsnavn ved et punkt (til kallenavn på nye kaier): nærmeste kai/havn/brygge, ellers nærmeste navn som ikke er en adresse. */
+async function nearestName(lat, lon) {
+  const la = Number(lat).toFixed(5);
+  const lo = Number(lon).toFixed(5);
+  return cached(`n:${la},${lo}`, TTL.places, async () => {
+    const url = `https://ws.geonorge.no/stedsnavn/v1/punkt?nord=${la}&ost=${lo}&koordsys=4258&radius=700&treffPerSide=500&utkoordsys=4258`;
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error('Stedsoppslag utilgjengelig');
+    const data = await res.json();
+    let quay = null;
+    let other = null;
+    for (const n of data?.navn ?? []) {
+      const type = String(n.navneobjekttype || '').trim(); // Kartverket har iblant mellomrom på slutten
+      const name = n.stedsnavn?.[0]?.['skrivemåte'];
+      if (!name || type === 'Adressenavn') continue;
+      const m = Number(n.meterFraPunkt) || 0;
+      const hit = { m, name, type };
+      if (QUAY_TYPES.test(type)) {
+        if (!quay || m < quay.m) quay = hit;
+      } else if (!other || m < other.m) {
+        other = hit;
+      }
+    }
+    const best = quay || other;
+    return best ? { name: best.name, type: best.type } : { name: null };
+  });
+}
+
 /* --------------------------------- RSS ---------------------------------- */
 
 const decode = (s) =>
@@ -183,6 +240,18 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
+  // ?type=nearest&lat=&lon= – stedsnavnet nærmest et punkt (kallenavn på kaier)
+  if (params.get('type') === 'nearest') {
+    const lat = Number(params.get('lat'));
+    const lon = Number(params.get('lon'));
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return badRequest('lat og lon er påkrevd');
+    try {
+      return json(await nearestName(lat, lon));
+    } catch (err) {
+      return json({ error: err.message }, { status: 502 });
+    }
+  }
+
   const id = toIntOrNull(params.get('element'));
   if (!id) return badRequest('element er påkrevd');
   const el = await env.DB.prepare(
@@ -207,6 +276,18 @@ export async function onRequestGet({ request, env }) {
     if (el.kind === 'rss') {
       if (!c.url) return badRequest('Mangler adresse');
       return json(await cached(`r:${c.url}`, TTL.rss, async () => parseFeed(await fetchText(c.url))));
+    }
+    if (el.kind === 'app') {
+      if (!toIntOrNull(c.appId)) return badRequest('Velg en app');
+      try {
+        const data = await appData(env, toIntOrNull(c.appId));
+        // Valgte grupper (f.eks. rederi) på elementet: bare de båtene. '' = uten gruppe.
+        const groups = Array.isArray(c.groups) && c.groups.length ? new Set(c.groups.map(String)) : null;
+        if (groups && Array.isArray(data.vessels)) return json({ ...data, vessels: data.vessels.filter((v) => groups.has(v.group || '')) });
+        return json(data);
+      } catch (err) {
+        return json({ error: err.message || 'Kunne ikke hente data' }, { status: err.status || 502 });
+      }
     }
     if (el.kind === 'calendar') {
       if (!c.url) return badRequest('Mangler kalenderadresse');

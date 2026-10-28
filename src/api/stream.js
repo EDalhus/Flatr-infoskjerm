@@ -7,7 +7,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // Cloudflare Functions er tilstandsløse, så vi poller D1 og differ på en signatur.
 // EventSource i klienten kobler seg til igjen automatisk når vi lukker strømmen.
 export async function onRequestGet({ request, env }) {
-  const { screenId, playlistId, denied } = viewerTarget(request, env);
+  const { screenId, playlistId, denied } = await viewerTarget(request, env);
   if (denied) return denied;
   const pollMs = Math.max(1000, Number.parseInt(env.SSE_POLL_MS ?? '3000', 10) || 3000);
 

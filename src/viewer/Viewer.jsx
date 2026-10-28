@@ -19,7 +19,10 @@ export default function Viewer() {
   const [params] = useSearchParams();
   // ?preview=1 – innebygd i admin-panelet: ikke meld heartbeat / hold skjermen våken.
   const preview = params.get('preview') === '1' || !!playlistId;
-  const target = useMemo(() => (playlistId ? { playlist: playlistId } : screenId), [playlistId, screenId]);
+  // ?slide=ID – bare ett lysbilde (AI-assistenten tar skjermbilde av det den lager).
+  const onlySlide = params.get('slide');
+  const rt = params.get('rt'); // signert tilgang (AI-assistentens skjermbilder)
+  const target = useMemo(() => (playlistId ? { playlist: playlistId, rt } : screenId), [playlistId, screenId, rt]);
   const now = useNow(1000);
   useWakeLock(!preview);
   useHeartbeat(preview || playlistId ? null : screenId);
@@ -58,7 +61,13 @@ export default function Viewer() {
   const rad = (rotation * Math.PI) / 180;
   const boxW = Math.abs(base.w * Math.cos(rad)) + Math.abs(base.h * Math.sin(rad));
   const boxH = Math.abs(base.w * Math.sin(rad)) + Math.abs(base.h * Math.cos(rad));
-  const { containerRef, scale } = useFitScale(boxW, boxH);
+  const measured = useFitScale(boxW, boxH);
+  const containerRef = measured.containerRef;
+  // ?vw=&vh= – fast visningsstørrelse (skjermbilder tatt av serveren, der vinduet
+  // måles før det får sin endelige størrelse).
+  const fixedW = Number(params.get('vw')) || 0;
+  const fixedH = Number(params.get('vh')) || 0;
+  const scale = fixedW && fixedH ? Math.min(fixedW / boxW, fixedH / boxH) : measured.scale;
 
   const ctx = useMemo(
     () => ({
@@ -75,6 +84,7 @@ export default function Viewer() {
     <div
       ref={containerRef}
       className="viewer-root relative h-screen w-screen overflow-hidden bg-black text-ink"
+      style={fixedW && fixedH ? { width: fixedW, height: fixedH } : undefined}
     >
       <div
         className="absolute left-1/2 top-1/2 origin-center"
@@ -97,7 +107,7 @@ export default function Viewer() {
             </p>
           </div>
         ) : (
-          <DeckPlayer deck={state.deck} ctx={ctx} />
+          <DeckPlayer deck={onlySlide ? state.deck.filter((s) => String(s.id) === onlySlide) : state.deck} ctx={ctx} />
         )}
       </div>
 

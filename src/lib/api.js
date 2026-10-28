@@ -69,7 +69,8 @@ function xhrUpload(url, file, onProgress) {
 }
 
 const viewerQuery = (target) => {
-  if (target && typeof target === 'object') return `?playlist=${encodeURIComponent(target.playlist)}`;
+  if (target && typeof target === 'object')
+    return `?playlist=${encodeURIComponent(target.playlist)}${target.rt ? `&rt=${encodeURIComponent(target.rt)}` : ''}`;
   return target ? `?screen=${encodeURIComponent(target)}` : '';
 };
 
@@ -97,7 +98,39 @@ export const api = {
   reports: (from, to) => req(`/reports?${new URLSearchParams({ from, to })}`),
   settings: {
     get: () => req('/settings'),
-    update: (body) => req('/settings', { method: 'PUT', body })
+    update: (body) => req('/settings', { method: 'PUT', body }),
+    testWebhook: () => req('/settings?test=webhook', { method: 'POST', body: {} })
+  },
+  // AI-assistenten (src/api/ai.js). send() gir rå Response (SSE) til AiPanel.
+  ai: {
+    app: () => req('/ai'),
+    // Fast kontekst (merkevare o.l.). Alle returnerer oppdatert app.
+    addLink: (url, title) => req('/ai?context=link', { method: 'POST', body: { url, title } }),
+    addText: (text, title) => req('/ai?context=text', { method: 'POST', body: { text, title } }),
+    addPdf: async (file) => {
+      const headers = { 'Content-Type': 'application/pdf' };
+      const token = getToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${BASE}/ai?context=pdf&name=${encodeURIComponent(file.name)}`, { method: 'POST', headers, body: file });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`);
+      return data;
+    },
+    removeContext: (id) => req(`/ai?context=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    history: (playlistId) => req(`/ai?playlist=${encodeURIComponent(playlistId)}`),
+    clear: (playlistId) => req(`/ai?playlist=${encodeURIComponent(playlistId)}`, { method: 'DELETE' }),
+    stop: (playlistId) => req(`/ai?stop=1&playlist=${encodeURIComponent(playlistId)}`, { method: 'POST', body: {} }),
+    send: async (playlistId, message) => {
+      const headers = { 'Content-Type': 'application/json' };
+      const token = getToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${BASE}/ai`, { method: 'POST', headers, body: JSON.stringify({ playlist_id: playlistId, message }) });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw Object.assign(new Error(data?.error || `${res.status} ${res.statusText}`), { status: res.status, code: data?.code });
+      }
+      return res;
+    }
   },
   playlists: {
     list: () => req('/playlists'),
@@ -204,10 +237,51 @@ export const api = {
   // Plattform (Node-serveren): hvilken del av Flatr vi er på + innlogging.
   context: () => req('/context'),
   auth: {
-    request: (email) => req('/auth/request', { method: 'POST', body: { email } }),
-    logout: () => req('/auth/logout', { method: 'POST' })
+    logout: () => req('/auth/sign-out', { method: 'POST', body: {} })
   },
   prefs: (patch) => req('/prefs', { method: 'PUT', body: patch }),
+  // Flatr Apps (egne datakilder, f.eks. skipstrafikk fra AIS).
+  apps: {
+    list: () => req('/apps'),
+    get: (id) => req(`/apps?id=${encodeURIComponent(id)}`),
+    live: (id) => req(`/apps?id=${encodeURIComponent(id)}&live=1`),
+    searchVessels: (id, q) => req(`/apps?id=${encodeURIComponent(id)}&search=${encodeURIComponent(q)}`),
+    create: (body) => req('/apps', { method: 'POST', body }),
+    update: (id, body) => req(`/apps?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+    remove: (id) => req(`/apps?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+  // Egne apper i markedsplassen (appbyggeren).
+  appMarket: {
+    list: () => req('/app-market'),
+    create: (manifest) => req('/app-market', { method: 'POST', body: { manifest } }),
+    update: (id, manifest) => req(`/app-market?id=${encodeURIComponent(id)}`, { method: 'PUT', body: { manifest } }),
+    submit: (id) => req(`/app-market/submit?id=${encodeURIComponent(id)}`, { method: 'POST' }),
+    remove: (id) => req(`/app-market?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    test: (manifest, settings) => req('/app-market/test', { method: 'POST', body: { manifest, settings } }),
+    // Ikon: last opp bilde og/eller velg bakgrunn (transparent | white | black).
+    setIcon: async (key, { file, bg } = {}) => {
+      const q = new URLSearchParams({ key, ...(bg ? { bg } : {}) });
+      const res = await fetch(`${BASE}/app-market/icon?${q}`, {
+        method: 'PUT',
+        headers: file ? { 'Content-Type': file.type || 'application/octet-stream' } : {},
+        body: file || undefined,
+        credentials: 'include'
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `${res.status}`);
+      return data.icon;
+    },
+    removeIcon: (key) => req(`/app-market/icon?key=${encodeURIComponent(key)}`, { method: 'DELETE' })
+  },
+  // Planen (bruk/grenser) og «be om flere skjermer».
+  plan: {
+    get: () => req('/plan'),
+    request: (extra, message) => req('/plan/request', { method: 'POST', body: { extra, message } })
+  },
+  invite: {
+    get: (token) => req(`/invite?token=${encodeURIComponent(token)}`),
+    accept: (body) => req('/invite/accept', { method: 'POST', body })
+  },
   team: {
     list: () => req('/team'),
     invite: (email, role) => req('/team', { method: 'POST', body: { email, role } }),
@@ -218,7 +292,9 @@ export const api = {
   platform: {
     slug: (slug) => req(`/platform/slug?slug=${encodeURIComponent(slug)}`),
     signup: (body) => req('/platform/signup', { method: 'POST', body }),
-    login: (email) => req('/platform/login', { method: 'POST', body: { email } })
+    createOrg: (body) => req('/platform/orgs', { method: 'POST', body }),
+    contact: (body) => req('/platform/contact', { method: 'POST', body }),
+    me: () => req('/platform/me')
   },
   heartbeat: (screenId) =>
     req(`/heartbeat?screen=${encodeURIComponent(screenId)}`, { method: 'POST' }),

@@ -104,6 +104,8 @@ for (const sql of [
   `ALTER TABLE tenants ADD COLUMN max_devices INTEGER`,
   `ALTER TABLE tenants ADD COLUMN max_screens INTEGER`,
   `ALTER TABLE users ADD COLUMN terms_accepted_at TEXT`,
+  // Video er med i Pro; kan slås på per konto i superadmin.
+  `ALTER TABLE tenants ADD COLUMN allow_video INTEGER`,
   `CREATE TABLE IF NOT EXISTS admin_sessions (
      id_hash TEXT PRIMARY KEY,
      email TEXT NOT NULL,
@@ -122,11 +124,16 @@ for (const sql of [
 const envInt = (name, fallback) => Number.parseInt(process.env[name], 10) || fallback;
 
 /** Kvotene for en kunde: egne verdier på kunden, ellers standard (beta). */
+// Gratisplanen (det som står på flatr.no): 1 skjerm, 2 GB, ingen video.
+// Kan overstyres per konto i superadmin (NULL = standard). En skjerm er en TV
+// (eller nettleser), så TV-grensen følger alltid skjermgrensen.
 export function tenantLimits(tenant) {
+  const screens = tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 1);
   return {
-    storageBytes: (tenant.max_storage_mb ?? envInt('BETA_STORAGE_MB', 5120)) * 1024 * 1024,
-    devices: tenant.max_devices ?? envInt('BETA_MAX_DEVICES', 10),
-    screens: tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 20)
+    storageBytes: (tenant.max_storage_mb ?? envInt('BETA_STORAGE_MB', 2048)) * 1024 * 1024,
+    devices: screens,
+    screens,
+    video: tenant.allow_video === 1 || process.env.FREE_ALLOW_VIDEO === 'true'
   };
 }
 
@@ -283,6 +290,28 @@ export function createLoginToken({ purpose, email, tenantId = null, payload = nu
     .bind(hashToken(token), purpose, normEmail(email), tenantId, payload ? JSON.stringify(payload) : null, inMs(ttlMs))
     .runSync();
   return token;
+}
+
+/** Leser et token uten å bruke det opp (f.eks. for å vise invitasjonen). */
+export function peekLoginToken(token, purpose) {
+  const row = platformDb
+    .prepare('SELECT * FROM login_tokens WHERE token_hash = ? AND purpose = ?')
+    .bind(hashToken(token), purpose)
+    .firstSync();
+  if (!row || row.used_at || row.expires_at < nowIso()) return null;
+  return { ...row, payload: row.payload ? JSON.parse(row.payload) : null };
+}
+
+/** Medlemmet (med profil) for en e-post i en kunde – som sessionUser, men uten økt. */
+export function memberByEmail(tenantId, email) {
+  return platformDb
+    .prepare(
+      `SELECT u.id AS user_id, u.email, u.name, u.prefs, m.role
+         FROM memberships m JOIN users u ON u.id = m.user_id
+        WHERE m.tenant_id = ? AND u.email = ?`
+    )
+    .bind(tenantId, normEmail(email))
+    .firstSync();
 }
 
 /** Bruker opp et token (én gang). Returnerer raden eller null. */

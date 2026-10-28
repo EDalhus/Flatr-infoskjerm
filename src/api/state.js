@@ -9,7 +9,7 @@ import { json, handleOptions, buildState, touchScreen, corsHeaders, viewerTarget
 // beholder TV-en sin siste gyldige tilstand, og kan fortsette å vise den også
 // når nettet faller (cache siste 200-svar lokalt på enheten).
 export async function onRequestGet({ request, env }) {
-  const { screenId, playlistId, denied } = viewerTarget(request, env);
+  const { screenId, playlistId, denied } = await viewerTarget(request, env);
   if (denied) return denied;
   const [state] = await Promise.all([buildState(env, screenId, { playlistId }), touchScreen(env, screenId)]);
 

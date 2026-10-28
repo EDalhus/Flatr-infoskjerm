@@ -6,6 +6,7 @@ import LiveScreenView from './LiveScreenView.jsx';
 import { CodeInput, CopyLink } from './AddScreen.jsx';
 import { StatusPill } from './screenStatus.jsx';
 import { timeAgo, fmtUptime, aspectOf } from './pairingHelpers.js';
+import HoursEditor from './HoursEditor.jsx';
 
 // Fjernstyrt rotasjon for fysisk montering (grader).
 const ROTATION_OPTIONS = [0, 90, 180, 270];
@@ -148,7 +149,11 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
               <StatusPill s={s} />
             </div>
           )}
-          {d && !d.online && d.last_seen && <p className="m-0 mt-1 truncate text-sm text-muted">Sist sett {timeAgo(d.last_seen)}</p>}
+          {d && !d.online && d.last_seen && (
+            <p className="m-0 mt-1 text-sm text-muted">
+              Sist sett {timeAgo(d.last_seen)} · TV-en viser fortsatt sist lagrede innhold og følger åpningstidene til den får nett igjen.
+            </p>
+          )}
         </div>
         <IconButton name="x" label="Lukk" onClick={onClose} />
       </header>
@@ -189,7 +194,9 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-ink">Tidsplan</span>
                 <span className="block truncate text-xs text-muted">
-                  {s.now_off
+                  {s.now_closed
+                    ? 'Skjermen er av nå – utenfor åpningstid'
+                    : s.now_off
                     ? 'Skjermen er av nå ifølge tidsplanen'
                     : s.now_slot
                       ? `Nå: ${s.now_playlist_name || s.now_slot.title} (overstyrer presentasjonen over)`
@@ -237,7 +244,7 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
               </label>
             </div>
             <label className="block">
-              <Label>Tagger</Label>
+              <Label>Grupper</Label>
               <Input
                 value={tagsDraft}
                 onChange={(e) => setTagsDraft(e.target.value)}
@@ -245,9 +252,13 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                 placeholder="2. etasje, Resepsjon"
               />
-              <span className="mt-1 block text-xs text-muted">Skill med komma. Brukes til å filtrere og endre mange skjermer samtidig.</span>
+              <span className="mt-1 block text-xs text-muted">Skill med komma. Bruk grupper til å sende varsler, velge og endre mange skjermer samtidig.</span>
             </label>
           </div>
+        </Card>
+
+        <Card title="Åpningstider">
+          <HoursEditor value={s.hours} onSave={(hours) => onPatch({ hours }, 'Åpningstidene er lagret.')} />
         </Card>
 
         <Card title="Apple TV">

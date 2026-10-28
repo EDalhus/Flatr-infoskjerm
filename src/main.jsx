@@ -7,9 +7,10 @@ import WidgetView from './viewer/WidgetView.jsx';
 import Admin from './admin/Admin.jsx';
 import Schedule from './public/Schedule.jsx';
 import Landing from './platform/Landing.jsx';
+import AppsPage from './platform/AppsPage.jsx';
 import SuperAdmin from './platform/SuperAdmin.jsx';
 import { Privacy, Terms } from './platform/Legal.jsx';
-import { Signup, PlatformLogin, PlatformAdminRedirect } from './platform/AuthPages.jsx';
+import { Signup, PlatformLogin, PlatformAdminRedirect, ForgotPassword, ResetPassword, InvitePage } from './platform/AuthPages.jsx';
 
 const NotFound = () => (
   <div className="flex h-full items-center justify-center p-8 text-center text-muted">
@@ -27,8 +28,11 @@ const NotFound = () => (
 const platformRouter = (ctx) =>
   createBrowserRouter([
     { path: '/', element: <Landing /> },
+    { path: '/apps', element: <AppsPage /> },
     { path: '/signup', element: <Signup baseDomain={ctx.base_domain} /> },
     { path: '/login', element: <PlatformLogin /> },
+    { path: '/forgot-password', element: <ForgotPassword /> },
+    { path: '/reset-password', element: <ResetPassword /> },
     { path: '/admin', element: <PlatformAdminRedirect baseDomain={ctx.base_domain} /> },
     { path: '/superadmin', element: <SuperAdmin /> },
     { path: '/personvern', element: <Privacy /> },
@@ -41,6 +45,9 @@ const appRouter = (ctx) =>
   createBrowserRouter([
     { path: '/', element: <Navigate to="/admin" replace /> },
     { path: '/admin', element: <Admin context={ctx} /> },
+    { path: '/invite', element: <InvitePage /> },
+    { path: '/forgot-password', element: <ForgotPassword /> },
+    { path: '/reset-password', element: <ResetPassword /> },
     { path: '/display/:screenId', element: <Viewer /> },
     { path: '/preview/:playlistId', element: <Viewer /> },
     { path: '/widget/:elementId', element: <WidgetView /> },
@@ -57,7 +64,11 @@ const isPublicPath = (p) =>
 
 function App() {
   const [router, setRouter] = useState(() => {
-    if (!isPublicPath(window.location.pathname)) return null;
+    // Admin, innlogging og flatr.no bruker alltid det mørke «Presis»-temaet.
+    if (!isPublicPath(window.location.pathname)) {
+      document.documentElement.dataset.theme = 'presis';
+      return null;
+    }
     // Skjermvisning og offentlig program skal ikke arve admin-temaet.
     delete document.documentElement.dataset.theme;
     return appRouter(null);

@@ -30,7 +30,7 @@ function getTransport() {
   return transport;
 }
 
-export async function sendMail({ to, subject, text, html }) {
+export async function sendMail({ to, subject, text, html, replyTo }) {
   const t = getTransport();
   if (!t) {
     console.log(`\n[mail] (ikke konfigurert – logger i stedet)\n  Til: ${to}\n  Emne: ${subject}\n\n${text}\n`);
@@ -42,7 +42,8 @@ export async function sendMail({ to, subject, text, html }) {
       to,
       subject,
       text,
-      html
+      html,
+      ...(replyTo ? { replyTo } : {})
     });
   } catch (err) {
     console.error('[mail] sending feilet', err?.message ?? err);

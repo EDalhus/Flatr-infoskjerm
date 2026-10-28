@@ -1,33 +1,16 @@
 // Superadmin for plattformeieren: oversikt over alle kontoer, bruk og kvoter.
-// Bare på hoveddomenet (flatr.no/superadmin). Tilgang styres av
-// SUPERADMIN_EMAILS (kommaseparert) og magisk lenke på e-post.
+// Bare på hoveddomenet (flatr.no/superadmin). Tilgang: vanlig Flatr-innlogging
+// (Better Auth) med en e-postadresse i SUPERADMIN_EMAILS (kommaseparert).
 //
-//   POST /api/superadmin/login   { email }
-//   GET  /superadmin/verify?token=
-//   POST /api/superadmin/logout
 //   GET  /api/superadmin/me
 //   GET  /api/superadmin/tenants
-//   PUT  /api/superadmin/tenants?id=1   { max_storage_mb?, max_devices?, max_screens? }  (null = standard)
+//   PUT  /api/superadmin/tenants?id=1   { max_storage_mb?, max_screens?, allow_video? }  (null = standard; TV-er følger skjermer)
 
 import { marketAdminList, marketAdminSetHidden } from './market.js';
-import {
-  platformDb,
-  tenantResources,
-  tenantLimits,
-  createLoginToken,
-  consumeLoginToken,
-  hashToken,
-  randomToken,
-  inMs,
-  nowIso,
-  normEmail
-} from './platform.js';
-import { sendMail, buttonMail } from './mail.js';
-import { readCookie } from './auth.js';
+import { appsAdminList, appsAdminReview } from './appMarket.js';
+import { platformDb, tenantResources, tenantLimits, normEmail } from './platform.js';
+import { authSession } from './identity.js';
 import { usage } from '../src/api/_shared.js';
-
-const COOKIE = 'flatr_admin';
-const TTL_MS = 12 * 3600_000;
 
 const admins = () =>
   String(process.env.SUPERADMIN_EMAILS || '')
@@ -41,20 +24,11 @@ const json = (data, status = 200, headers = {}) =>
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers }
   });
 
-const cookie = (value, secure, maxAgeMs) =>
-  [`${COOKIE}=${value}`, 'Path=/', 'HttpOnly', 'SameSite=Lax', secure ? 'Secure' : '', `Max-Age=${Math.floor(maxAgeMs / 1000)}`]
-    .filter(Boolean)
-    .join('; ');
-
-function currentAdmin(request) {
-  const sid = readCookie(request, COOKIE);
-  if (!sid) return null;
-  const row = platformDb
-    .prepare('SELECT email FROM admin_sessions WHERE id_hash = ? AND expires_at > ?')
-    .bind(hashToken(sid), nowIso())
-    .firstSync();
-  // Fjernes adressen fra SUPERADMIN_EMAILS, mister økten tilgang med en gang.
-  return row && admins().includes(row.email) ? row.email : null;
+/** Innlogget superadmin (e-posten må stå i SUPERADMIN_EMAILS – fjernes den, er tilgangen borte med en gang). */
+async function currentAdmin(request) {
+  const s = await authSession(request);
+  const email = s?.user?.emailVerified ? normEmail(s.user.email) : null;
+  return email && admins().includes(email) ? email : null;
 }
 
 async function tenantStats(t) {
@@ -92,7 +66,7 @@ async function tenantStats(t) {
     members: members.length,
     last_login: lastLogin,
     limits: tenantLimits(t),
-    overrides: { max_storage_mb: t.max_storage_mb, max_devices: t.max_devices, max_screens: t.max_screens },
+    overrides: { max_storage_mb: t.max_storage_mb, max_devices: t.max_devices, max_screens: t.max_screens, allow_video: t.allow_video === 1 },
     ...stats
   };
 }
@@ -100,52 +74,9 @@ async function tenantStats(t) {
 export async function handleSuperadminRoute(request, ctx) {
   const url = new URL(request.url);
   const p = url.pathname.replace(/\/+$/, '');
-  if (!p.startsWith('/api/superadmin') && p !== '/superadmin/verify') return null;
+  if (!p.startsWith('/api/superadmin')) return null;
 
-  if (p === '/api/superadmin/login' && request.method === 'POST') {
-    const b = await request.json().catch(() => ({}));
-    const email = normEmail(b?.email);
-    // Svarer alltid ok, så man ikke kan finne ut hvem som er superadmin.
-    if (admins().includes(email)) {
-      const token = createLoginToken({ purpose: 'superadmin', email, ttlMs: 15 * 60_000 });
-      await sendMail({
-        to: email,
-        subject: 'Logg inn som superadmin – Flatr',
-        ...buttonMail({
-          heading: 'Superadmin-innlogging',
-          intro: 'Klikk for å logge inn på oversikten over alle Flatr-kontoer. Lenken virker i 15 minutter.',
-          button: 'Logg inn',
-          url: `${ctx.origin(null)}/superadmin/verify?token=${token}`,
-          outro: 'Har du ikke bedt om dette, kan du se bort fra e-posten.'
-        })
-      }).catch(() => {});
-    }
-    return json({ ok: true });
-  }
-
-  if (p === '/superadmin/verify') {
-    const row = consumeLoginToken(url.searchParams.get('token') || '', 'superadmin');
-    if (!row || !admins().includes(row.email)) {
-      return new Response(null, { status: 302, headers: { Location: '/superadmin?login=expired' } });
-    }
-    const sid = randomToken();
-    platformDb
-      .prepare('INSERT INTO admin_sessions (id_hash, email, expires_at) VALUES (?, ?, ?)')
-      .bind(hashToken(sid), row.email, inMs(TTL_MS))
-      .runSync();
-    return new Response(null, {
-      status: 302,
-      headers: { Location: '/superadmin', 'Set-Cookie': cookie(sid, ctx.secure, TTL_MS), 'Cache-Control': 'no-store' }
-    });
-  }
-
-  if (p === '/api/superadmin/logout' && request.method === 'POST') {
-    const sid = readCookie(request, COOKIE);
-    if (sid) platformDb.prepare('DELETE FROM admin_sessions WHERE id_hash = ?').bind(hashToken(sid)).runSync();
-    return json({ ok: true }, 200, { 'Set-Cookie': cookie('', ctx.secure, 0) });
-  }
-
-  const admin = currentAdmin(request);
+  const admin = await currentAdmin(request);
   if (!admin) return json({ error: 'Ikke innlogget' }, 401);
 
   if (p === '/api/superadmin/me') return json({ email: admin, base_domain: ctx.baseDomain });
@@ -167,8 +98,8 @@ export async function handleSuperadminRoute(request, ctx) {
       return Number.isFinite(n) && n >= 0 ? n : t[k];
     };
     platformDb
-      .prepare('UPDATE tenants SET max_storage_mb = ?, max_devices = ?, max_screens = ? WHERE id = ?')
-      .bind(val('max_storage_mb'), val('max_devices'), val('max_screens'), id)
+      .prepare('UPDATE tenants SET max_storage_mb = ?, max_devices = NULL, max_screens = ?, allow_video = ? WHERE id = ?')
+      .bind(val('max_storage_mb'), val('max_screens'), b.allow_video === undefined ? t.allow_video : b.allow_video ? 1 : null, id)
       .runSync();
     const fresh = platformDb.prepare('SELECT * FROM tenants WHERE id = ?').bind(id).firstSync();
     return json(await tenantStats(fresh));
@@ -179,6 +110,14 @@ export async function handleSuperadminRoute(request, ctx) {
   if (p === '/api/superadmin/market' && request.method === 'PUT') {
     const b = await request.json().catch(() => ({}));
     marketAdminSetHidden(url.searchParams.get('id'), !!b.hidden);
+    return json({ ok: true });
+  }
+
+  // Flatr Apps: egne apper som er sendt inn til markedsplassen.
+  if (p === '/api/superadmin/apps' && request.method === 'GET') return json(appsAdminList());
+  if (p === '/api/superadmin/apps' && request.method === 'PUT') {
+    const b = await request.json().catch(() => ({}));
+    if (!appsAdminReview(url.searchParams.get('id'), b.action, b.note)) return json({ error: 'Ugyldig' }, 400);
     return json({ ok: true });
   }
 

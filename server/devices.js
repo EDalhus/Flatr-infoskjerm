@@ -100,7 +100,8 @@ export async function handleApexDevice(request, { tenantEnv, origin }) {
         headers: { 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
-    const res = await routeApi(request, tenantEnv(tenant));
+    // Hva TV-appen kan tegne selv (f.eks. «app» = live AIS), se adaptForDevices.
+    const res = await routeApi(request, { ...tenantEnv(tenant), DEVICE_FEATURES: request.headers.get('x-flatr-features') || '' });
     return absolutize(res, origin(tenant.slug));
   }
 

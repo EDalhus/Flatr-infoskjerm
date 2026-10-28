@@ -4,7 +4,7 @@ import DynamicBackground from './DynamicBackground.jsx';
 
 /** Ett lysbilde: bakgrunn + posisjonerte elementer (prosent av canvas). */
 export default function SlideCanvas({ slide, ctx, onNext }) {
-  const elements = [...(slide.elements || [])].sort((a, b) => a.z - b.z || a.id - b.id);
+  const elements = [...(slide.elements || [])].filter((e) => e.config?.hidden !== true).sort((a, b) => a.z - b.z || a.id - b.id);
   const dyn = slide.background && slide.background.type === 'dynamic';
   return (
     <div

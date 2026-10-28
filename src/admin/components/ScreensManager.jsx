@@ -8,6 +8,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api.js';
 import ScreenDetail from './ScreenDetail.jsx';
+import { useUrlParam } from '../useUrlParam.js';
+import RequestScreens from './RequestScreens.jsx';
+import HoursEditor from './HoursEditor.jsx';
+import { summarize, defaultHours } from '../../lib/hours.js';
 import LiveScreenView from './LiveScreenView.jsx';
 import { AddScreenForm, AddedScreen, codeFromUrl } from './AddScreen.jsx';
 import { clientSummary, timeAgo } from './pairingHelpers.js';
@@ -49,13 +53,14 @@ function ScreenCard({ s, selected, selecting, onToggle, onOpen }) {
           {showing(s)}
           {st === 'offline' && s.device.last_seen ? ` · sist sett ${timeAgo(s.device.last_seen)}` : ''}
         </span>
-        {(model || s.tags?.length > 0) && (
+        {(model || s.tags?.length > 0 || s.hours?.enabled) && (
           <div className="flex flex-wrap items-center gap-1.5">
             {(s.tags || []).map((t) => (
               <span key={t} className="rounded-full bg-zone px-2 py-0.5 text-[11px] font-medium text-ink/80">
                 {t}
               </span>
             ))}
+            {s.hours?.enabled && <span className="text-[11px] text-muted">{summarize(s.hours)}</span>}
             {model && <span className="text-[11px] text-muted">{model}</span>}
           </div>
         )}
@@ -85,8 +90,21 @@ export default function ScreensManager({ onChange, onNavigate }) {
   const [filter, setFilter] = useState('all'); // all | online | offline | idle | tag:<navn>
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(() => new Set());
-  const [detailId, setDetailId] = useState(null);
+  // Planen: hvor mange skjermer kontoen har plass til (og «be om flere»).
+  const [plan, setPlan] = useState(null);
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    api.plan.get().then(setPlan).catch(() => setPlan(null));
+  }, [screens?.length]);
+  const full = plan && plan.screens.used >= plan.screens.limit;
+
+  // Åpen skjerm bor i adressen (?detail=), så Tilbake lukker panelet.
+  const [detailParam, setDetailParam] = useUrlParam('detail');
+  const detailId = /^\d+$/.test(detailParam) ? Number(detailParam) : null;
+  const setDetailId = (id) => setDetailParam(id ? String(id) : '');
   const [alerts, setAlerts] = useState(null);
+  const [bulkHours, setBulkHours] = useState(null); // åpningstider for flere skjermer
+  const [hookDraft, setHookDraft] = useState('');
   const [flash, setFlash] = useState('');
   const [error, setError] = useState('');
 
@@ -203,12 +221,26 @@ export default function ScreensManager({ onChange, onNavigate }) {
       await Promise.allSettled(chosen.map((s) => api.screens.update(s.id, { playlist_id: Number(pid) })));
     }, `${plural(chosen.length, 'skjerm', 'skjermer')} oppdatert.`);
 
+  const applyHours = (hours) =>
+    act(async () => {
+      await Promise.allSettled(chosen.map((s) => api.screens.update(s.id, { hours })));
+      setBulkHours(null);
+    }, `Åpningstider satt for ${plural(chosen.length, 'skjerm', 'skjermer')}.`);
+
+  const saveHook = () =>
+    act(async () => {
+      setAlerts(await api.settings.update({ webhook_url: hookDraft.trim() }));
+      setHookDraft('');
+    }, hookDraft.trim() ? 'Slack/Teams er koblet til.' : 'Slack/Teams er fjernet.');
+
+  const testHook = () => act(() => api.settings.testWebhook(), 'Testvarsel sendt – sjekk kanalen.');
+
   const addTag = () => {
-    const tag = window.prompt('Tagg å legge til (f.eks. «2. etasje»):')?.trim();
+    const tag = window.prompt('Legg i gruppe (f.eks. «2. etasje»):')?.trim();
     if (!tag) return;
     act(async () => {
       await Promise.allSettled(chosen.map((s) => api.screens.update(s.id, { tags: [...new Set([...(s.tags || []), tag])] })));
-    }, `Tagget med «${tag}».`);
+    }, `Lagt i gruppen «${tag}».`);
   };
 
   const saveAlerts = async (p) => {
@@ -249,7 +281,21 @@ export default function ScreensManager({ onChange, onNavigate }) {
     <>
       <PageHeader
         title="Skjermer"
-        subtitle="TV-ene og skjermene som viser innholdet ditt."
+        subtitle={
+          plan ? (
+            <span className="inline-flex flex-wrap items-center gap-x-2">
+              <span>
+                {plan.screens.used} av {plan.screens.limit} {plan.screens.limit === 1 ? 'skjerm' : 'skjermer'} i bruk
+              </span>
+              <span aria-hidden="true">·</span>
+              <button type="button" onClick={() => setAsking(true)} className="font-semibold text-brand hover:underline">
+                Trenger du flere?
+              </button>
+            </span>
+          ) : (
+            'TV-ene og skjermene som viser innholdet ditt.'
+          )
+        }
         action={
           !showAdd && (
             <Button onClick={() => setAdding(true)}>
@@ -259,6 +305,18 @@ export default function ScreensManager({ onChange, onNavigate }) {
           )
         }
       />
+      {full && (
+        <div className="mx-auto w-full max-w-6xl px-6 sm:px-8">
+          <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand-tint px-4 py-3 text-sm text-ink">
+            <Icon name="monitor" className="h-4 w-4 text-brand" />
+            <span className="flex-1">Du har brukt alle skjermene i planen. Trenger du flere, gir vi deg gjerne en eller to til – gratis i betaperioden.</span>
+            <Button size="sm" onClick={() => setAsking(true)}>
+              Be om flere
+            </Button>
+          </div>
+        </div>
+      )}
+      {asking && plan && <RequestScreens plan={plan} onClose={() => setAsking(false)} />}
 
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-28 pt-4 sm:px-8">
         <ErrorText>{error}</ErrorText>
@@ -322,6 +380,15 @@ export default function ScreensManager({ onChange, onNavigate }) {
             <div className="flex flex-wrap items-center gap-2">
               {chip('all', 'Alle', counts.all)}
               {allTags.map((t) => chip(`tag:${t}`, t))}
+              {filter.startsWith('tag:') && filtered.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set(filtered.map((s) => s.id)))}
+                  className="text-sm font-semibold text-brand hover:underline"
+                >
+                  Velg hele gruppen ({filtered.length})
+                </button>
+              )}
               <label className="ml-auto flex w-64 max-w-full items-center gap-2">
                 <Icon name="search" className="h-4 w-4 shrink-0 text-muted" />
                 <span className="sr-only">Søk</span>
@@ -368,7 +435,57 @@ export default function ScreensManager({ onChange, onNavigate }) {
                   ))}
               </Select>
             </label>
+            <div className="flex w-full flex-wrap items-center gap-2 border-t border-hair pt-3">
+              <span className="text-muted">Også til Slack eller Teams:</span>
+              {alerts.webhook ? (
+                <>
+                  <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-xs font-semibold text-brand">
+                    {alerts.webhook.kind === 'teams' ? 'Teams' : 'Slack'} koblet til {alerts.webhook.hint}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={testHook}>
+                    Send testvarsel
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => act(async () => setAlerts(await api.settings.update({ webhook_url: '' })), 'Slack/Teams er fjernet.')}>
+                    Fjern
+                  </Button>
+                </>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveHook();
+                  }}
+                  className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+                >
+                  <Input
+                    value={hookDraft}
+                    onChange={(e) => setHookDraft(e.target.value)}
+                    placeholder="Lim inn webhook-adressen (https://hooks.slack.com/… eller fra Teams)"
+                    className="!h-8 min-w-[240px] flex-1"
+                  />
+                  <Button type="submit" size="sm" disabled={!hookDraft.trim()}>
+                    Koble til
+                  </Button>
+                </form>
+              )}
+            </div>
           </section>
+        )}
+
+        {bulkHours && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onMouseDown={(e) => e.target === e.currentTarget && setBulkHours(null)}>
+            <div role="dialog" aria-modal="true" aria-label="Åpningstider" className="w-full max-w-md rounded-2xl border border-line bg-card p-5 shadow-pop">
+              <h2 className="m-0 mb-1 text-lg font-bold text-ink">Åpningstider</h2>
+              <p className="m-0 mb-4 text-sm text-muted">For {plural(chosen.length, 'valgt skjerm', 'valgte skjermer')}. Erstatter åpningstidene de har nå.</p>
+              <HoursEditor value={bulkHours} onSave={(h) => setBulkHours(h)} />
+              <div className="mt-5 flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setBulkHours(null)}>
+                  Avbryt
+                </Button>
+                <Button onClick={() => applyHours(bulkHours)}>Bruk på {plural(chosen.length, 'skjerm', 'skjermer')}</Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
@@ -409,7 +526,8 @@ export default function ScreensManager({ onChange, onNavigate }) {
           <span className="mx-1 h-5 w-px bg-paper/20" />
           <BulkBtn onClick={() => runCommand(withTv, 'identify', 'Identifiser')}>Identifiser</BulkBtn>
           <BulkBtn onClick={() => runCommand(withTv, 'reload', 'Last inn')}>Last inn</BulkBtn>
-          <BulkBtn onClick={addTag}>+ Tagg</BulkBtn>
+          <BulkBtn onClick={addTag}>+ Gruppe</BulkBtn>
+          <BulkBtn onClick={() => setBulkHours(defaultHours())}>Åpningstider</BulkBtn>
           <select
             value=""
             onChange={(e) => bulkShow(e.target.value)}

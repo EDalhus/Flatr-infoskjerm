@@ -24,6 +24,7 @@ export function StatusPill({ s }) {
 
 /** «Viser «Velkommen»» / «Tidsplan: Lunsj» / «Av (tidsplan)». */
 export function showing(s) {
+  if (s.now_closed) return 'Av nå (utenfor åpningstid)';
   if (s.now_off) return 'Av nå (tidsplan)';
   if (s.now_slot) return `Tidsplan: ${s.now_playlist_name || s.now_slot.title || 'ingenting'}`;
   return s.playlist_name ? `Viser «${s.playlist_name}»` : 'Viser ingenting';

@@ -24,6 +24,8 @@ import * as timeslots from './api/timeslots.js';
 import * as settings from './api/settings.js';
 import * as reports from './api/reports.js';
 import * as feeds from './api/feeds.js';
+import * as apps from './api/apps.js';
+import * as ai from './api/ai.js';
 
 export { pairing };
 
@@ -49,7 +51,9 @@ const ROUTES = {
   '/api/timeslots': timeslots,
   '/api/settings': settings,
   '/api/reports': reports,
-  '/api/feeds': feeds
+  '/api/feeds': feeds,
+  '/api/apps': apps,
+  '/api/ai': ai
 };
 
 const METHOD_HANDLER = {

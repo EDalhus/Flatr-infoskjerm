@@ -6,6 +6,7 @@ import { api } from '../../lib/api.js';
 import { Icon, Field, Input, Select, Button, IconButton, PageHeader, ErrorText } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
 import Editor from './editor/Editor.jsx';
+import { useUrlParam } from '../useUrlParam.js';
 
 const fmtDuration = (sec) => {
   const s = Math.max(0, Number(sec) || 0);
@@ -13,11 +14,6 @@ const fmtDuration = (sec) => {
   return m ? `${m} min ${s % 60 ? `${s % 60} s` : ''}`.trim() : `${s} s`;
 };
 
-const readEdit = () => {
-  if (typeof window === 'undefined') return null;
-  const v = new URLSearchParams(window.location.search).get('edit');
-  return v && /^\d+$/.test(v) ? Number(v) : null;
-};
 
 function NewPlaylist({ onCreated, onCancel }) {
   const [name, setName] = useState('');
@@ -187,15 +183,9 @@ function PlaylistList({ onEdit, onChange }) {
 }
 
 export default function PlaylistsManager({ onChange, me }) {
-  const [editingId, setEditingId] = useState(readEdit);
-
-  const setEdit = (id) => {
-    setEditingId(id);
-    const url = new URL(window.location.href);
-    if (id) url.searchParams.set('edit', id);
-    else url.searchParams.delete('edit');
-    window.history.replaceState(null, '', url);
-  };
+  // Åpen presentasjon bor i adressen (?edit=), så Tilbake lukker editoren.
+  const [edit, setEdit] = useUrlParam('edit');
+  const editingId = /^\d+$/.test(edit) ? Number(edit) : null;
 
   return editingId ? (
     <Editor playlistId={editingId} onBack={() => setEdit(null)} onChange={onChange} me={me} />

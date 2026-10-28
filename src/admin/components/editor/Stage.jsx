@@ -111,8 +111,10 @@ export default function Stage({
     [left, top, stageW, stageH]
   );
 
-  const elements = useMemo(() => [...(slide?.elements || [])].sort((a, b) => a.z - b.z || a.id - b.id), [slide]);
-  const selected = elements.filter((e) => selection.includes(e.id));
+  const all = useMemo(() => [...(slide?.elements || [])].sort((a, b) => a.z - b.z || a.id - b.id), [slide]);
+  // Skjulte lag tegnes ikke og kan ikke klikkes (de velges fra laglisten).
+  const elements = useMemo(() => all.filter((e) => e.config?.hidden !== true), [all]);
+  const selected = all.filter((e) => selection.includes(e.id));
   const [guides, setGuides] = useState([]);
   const [marquee, setMarquee] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -144,12 +146,15 @@ export default function Stage({
     }
     if (editingId === el.id) return;
     let sel = selection;
+    // Et klikk på et gruppemedlem velger hele gruppen; Alt-klikk velger bare det ene.
+    const g = el.config?.group;
+    const unit = g && !e.altKey ? elements.filter((x) => x.config?.group === g && !locks.has(x.id)).map((x) => x.id) : [el.id];
     if (e.shiftKey || e.metaKey) {
-      sel = selection.includes(el.id) ? selection.filter((id) => id !== el.id) : [...selection, el.id];
+      sel = selection.includes(el.id) ? selection.filter((id) => !unit.includes(id)) : [...new Set([...selection, ...unit])];
       onSelect(sel);
       if (!sel.includes(el.id)) return;
-    } else if (!selection.includes(el.id)) {
-      sel = [el.id];
+    } else if (e.altKey ? !(selection.length === 1 && selection[0] === el.id) : !selection.includes(el.id)) {
+      sel = unit;
       onSelect(sel);
     }
     const movable = elements.filter((x) => sel.includes(x.id) && !locks.has(x.id));

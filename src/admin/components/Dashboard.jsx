@@ -231,7 +231,10 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
     setError('');
     setBusy(true);
     try {
-      await api.alerts.create({ message: message.trim(), target_screen_id: target ? Number(target) : null });
+      const body = { message: message.trim() };
+      if (target.startsWith('tag:')) body.target_tag = target.slice(4);
+      else if (target) body.target_screen_id = Number(target);
+      await api.alerts.create(body);
       setMessage('');
       setSent(true);
       setTimeout(() => {
@@ -306,6 +309,11 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
               <span className="sr-only">Hvilke skjermer</span>
               <Select value={target} onChange={(e) => setTarget(e.target.value)} className="!w-48">
                 <option value="">Alle skjermer</option>
+                {[...new Set(all.flatMap((s) => s.tags || []))].sort().map((t) => (
+                  <option key={`tag:${t}`} value={`tag:${t}`}>
+                    Gruppe: {t}
+                  </option>
+                ))}
                 {all.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -337,7 +345,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold text-ink">{a.message}</span>
                     <span className="block text-xs text-muted">
-                      {a.target_screen_id ? all.find((s) => s.id === a.target_screen_id)?.name || 'Én skjerm' : 'Alle skjermer'}
+                      {a.target_tag ? `Gruppe: ${a.target_tag}` : a.target_screen_id ? all.find((s) => s.id === a.target_screen_id)?.name || 'Én skjerm' : 'Alle skjermer'}
                       {a.created_at ? ` · sendt ${timeAgo(a.created_at)}` : ''}
                     </span>
                   </span>

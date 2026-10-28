@@ -79,14 +79,22 @@ export async function pdfToPngs(pdf, { maxSide = 1920, onPage } = {}) {
 }
 
 /** Skjermbilde av en nettside (JPEG). */
-export async function screenshotUrl(url, { width = 1600, height = 900, waitSeconds = 2 } = {}) {
+export async function screenshotUrl(url, { width = 1600, height = 900, waitSeconds = 2, transparent = false, cookies = null } = {}) {
   const form = new FormData();
   form.append('url', url);
   form.append('width', String(width));
   form.append('height', String(height));
-  form.append('format', 'jpeg');
-  form.append('quality', '85');
+  if (transparent) {
+    // Widgeter: PNG uten bakgrunn, så lysbildet synes bak på TV-en.
+    form.append('format', 'png');
+    form.append('omitBackground', 'true');
+  } else {
+    form.append('format', 'jpeg');
+    form.append('quality', '85');
+  }
   form.append('clip', 'true');
+  // Innloggede sider (AI-assistentens skjermbilde av forhåndsvisningen).
+  if (cookies?.length) form.append('cookies', JSON.stringify(cookies));
   form.append('waitDelay', `${waitSeconds}s`);
   return gotenberg('/forms/chromium/screenshot/url', form, 60_000);
 }

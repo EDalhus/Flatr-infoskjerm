@@ -28,7 +28,8 @@ function tenantsWithDevices() {
     .allSync().results;
 }
 
-const WIDGET_MINUTES = { weather: 30, rss: 10, calendar: 15 };
+// Flatr Apps (AIS) endrer seg hele tiden – så ofte som tikken tillater.
+const WIDGET_MINUTES = { weather: 30, rss: 10, calendar: 15, app: 2 };
 const origin = (slug) => `${process.env.PUBLIC_PROTOCOL || 'https'}://${slug}.${process.env.BASE_DOMAIN || 'flatr.no'}`;
 
 /**
@@ -42,7 +43,7 @@ async function webTargets(env, slug) {
        FROM deck_elements e
        JOIN deck_slides d ON d.id = e.slide_id
        JOIN playlists p ON p.id = d.playlist_id
-      WHERE e.kind IN ('web', 'weather', 'rss', 'calendar') AND d.enabled = 1
+      WHERE e.kind IN ('web', 'weather', 'rss', 'calendar', 'app') AND d.enabled = 1 AND COALESCE(json_extract(e.config, '$.effect'), '') != 'rain'
         AND (p.id IN (SELECT playlist_id FROM screens WHERE playlist_id IS NOT NULL)
           OR p.id IN (SELECT playlist_id FROM timeslots WHERE playlist_id IS NOT NULL AND enabled = 1))`
   ).all();
@@ -60,14 +61,20 @@ async function webTargets(env, slug) {
     const pxH = (Number(r.h) / 100) * bh;
 
     if (r.kind !== 'web') {
-      // Widgeten tegnes i sin faktiske størrelse på lerretet (minst 400 px bred).
+      // Widgeten tegnes i sin faktiske størrelse på lerretet (minst 400 px bred),
+      // og så i dobbel oppløsning (zoom) så den er skarp på 4K-TV-er – men
+      // maks ~8 megapiksler, så store kart ikke blir enorme bilder.
       const scale = Math.max(1, 400 / Math.max(1, pxW));
+      const w = pxW * scale;
+      const h = Math.max(40, pxH * scale);
+      const zoom = Math.max(1, Math.min(2, Math.sqrt(8_000_000 / (w * h))));
       targets.set(`widget:${r.id}`, {
-        fetchUrl: `${origin(slug)}/widget/${r.id}`,
+        fetchUrl: `${origin(slug)}/widget/${r.id}?scale=${zoom.toFixed(2)}`,
         minutes: WIDGET_MINUTES[r.kind],
-        width: Math.round(pxW * scale),
-        height: Math.round(Math.max(40, pxH * scale)),
-        wait: 4
+        width: Math.round(w * zoom),
+        height: Math.round(h * zoom),
+        wait: r.kind === 'app' ? 7 : 4, // kartfliser trenger litt ekstra tid
+        transparent: true
       });
       continue;
     }
@@ -98,16 +105,17 @@ export async function refreshTenant(slug) {
 
     const now = new Date().toISOString();
     try {
-      const image = await screenshotUrl(t.fetchUrl, { width: t.width, height: t.height, waitSeconds: t.wait });
-      const key = `snapshots/${randomUUID()}.jpg`;
-      await env.MEDIA.put(key, image, { httpMetadata: { contentType: 'image/jpeg' } });
+      const image = await screenshotUrl(t.fetchUrl, { width: t.width, height: t.height, waitSeconds: t.wait, transparent: t.transparent });
+      const type = t.transparent ? 'image/png' : 'image/jpeg';
+      const key = `snapshots/${randomUUID()}.${t.transparent ? 'png' : 'jpg'}`;
+      await env.MEDIA.put(key, image, { httpMetadata: { contentType: type } });
       await env.DB.prepare(
         `INSERT INTO web_snapshots (url, r2_key, content_type, width, height, taken_at, tried_at, error)
-         VALUES (?, ?, 'image/jpeg', ?, ?, ?, ?, NULL)
-         ON CONFLICT(url) DO UPDATE SET r2_key = excluded.r2_key, width = excluded.width, height = excluded.height,
-           taken_at = excluded.taken_at, tried_at = excluded.tried_at, error = NULL`
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+         ON CONFLICT(url) DO UPDATE SET r2_key = excluded.r2_key, content_type = excluded.content_type, width = excluded.width,
+           height = excluded.height, taken_at = excluded.taken_at, tried_at = excluded.tried_at, error = NULL`
       )
-        .bind(url, key, t.width, t.height, now, now)
+        .bind(url, key, type, t.width, t.height, now, now)
         .run();
       if (row?.r2_key) await env.MEDIA.delete(row.r2_key).catch(() => {});
     } catch (err) {
@@ -137,6 +145,25 @@ async function tick() {
   } finally {
     running = false;
   }
+}
+
+/** Lag manglende skjermbilder for en kunde snart (når en TV venter på dem). */
+const pending = new Set();
+export function requestRefresh(slug) {
+  if (pending.has(slug)) return;
+  pending.add(slug);
+  setTimeout(async () => {
+    pending.delete(slug);
+    if (running) return; // den faste runden tar det
+    running = true;
+    try {
+      await refreshTenant(slug);
+    } catch (err) {
+      console.error(`[snapshot] ${slug}:`, err.message);
+    } finally {
+      running = false;
+    }
+  }, 2000).unref();
 }
 
 export function startSnapshots() {

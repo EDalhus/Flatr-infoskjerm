@@ -52,6 +52,9 @@ function ToolButton({ icon, label, onClick, active, disabled, shortcut }) {
   );
 }
 
+export const AI_PROMPT_KEY = 'flatr.aiPrompt';
+export const AI_APP_KINDS = ['claude'];
+
 export default function Editor({ playlistId, onBack, onChange, me }) {
   const [playlist, setPlaylist] = useState(null);
   const [nameDraft, setNameDraft] = useState('');
@@ -63,8 +66,42 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const [snap, setSnap] = useState(true);
   const [err, setErr] = useState('');
   const [toast, setToast] = useState('');
+  // Høyre panel: design | layers | ai. ⌘K sender en melding hit (aiPending).
+  const [panelTab, setPanelTab] = useState('design');
+  const [aiPending, setAiPending] = useState(null);
+  useEffect(() => {
+    const take = (p) => {
+      if (!p || Number(p.playlist) !== Number(playlistId)) return;
+      setPanelTab('ai');
+      setAiPending({ id: p.id, text: p.text });
+    };
+    // Kom vi hit fra ⌘K (ny eller annen presentasjon)?
+    try {
+      const raw = sessionStorage.getItem(AI_PROMPT_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (Number(p.playlist) === Number(playlistId)) {
+          sessionStorage.removeItem(AI_PROMPT_KEY);
+          take(p);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    const onAsk = (e) => take(e.detail);
+    window.addEventListener('flatr:ai', onAsk);
+    return () => window.removeEventListener('flatr:ai', onAsk);
+  }, [playlistId]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  // Aktiverte Flatr Apps styrer hvilke widgeter som kan legges til.
+  const [installedApps, setInstalledApps] = useState([]);
+  useEffect(() => {
+    api.apps
+      .list()
+      .then((rows) => setInstalledApps(rows || []))
+      .catch(() => setInstalledApps([]));
+  }, []);
   const [mediaFor, setMediaFor] = useState(null); // 'image' | 'video' når vi setter inn fra biblioteket
   const [importing, setImporting] = useState(null);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -310,11 +347,11 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
 
   const maxZ = () => (slide?.elements || []).reduce((m, e) => Math.max(m, e.z), -1);
 
-  const insert = async (kind, configPatch = {}) => {
+  const insert = async (kind, configPatch = {}, box = null) => {
     setMoreOpen(false);
     if (!slide) return;
     const d = defaultElement(kind, maxZ() + 1);
-    const el = { ...d, x: round(50 - d.w / 2), y: round(50 - d.h / 2), config: { ...d.config, ...configPatch } };
+    const el = { ...d, x: round(50 - d.w / 2), y: round(50 - d.h / 2), ...box, config: { ...d.config, ...configPatch } };
     try {
       const [created] = await createElements(slide.id, [el]);
       pushHistory({ type: 'add', slideId: slide.id, els: [created] });
@@ -409,6 +446,30 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
       return { id: e.id, patch: Object.fromEntries(Object.entries(p).map(([k, v]) => [k, round(v)])) };
     });
     change(patches, 'now');
+  };
+
+  // Grupper: medlemmene deler config.group (og config.groupName for laglisten).
+  const group = () => {
+    const els = selected.filter((e) => !locks.has(e.id));
+    if (els.length < 2) return;
+    const existing = new Set((slide?.elements || []).map((e) => e.config?.group).filter(Boolean));
+    const id = `g${Date.now().toString(36)}`;
+    const groupName = `Gruppe ${existing.size + 1}`;
+    change(els.map((e) => ({ id: e.id, patch: { config: { ...e.config, group: id, groupName } } })), 'now');
+    say(`${groupName} er laget`);
+  };
+
+  const ungroup = () => {
+    const els = selected.filter((e) => !locks.has(e.id) && e.config?.group);
+    if (!els.length) return;
+    change(
+      els.map((e) => {
+        const { group: _g, groupName: _n, ...config } = e.config;
+        return { id: e.id, patch: { config } };
+      }),
+      'now'
+    );
+    say('Gruppen er løst opp');
   };
 
   const nudge = (dx, dy) => {
@@ -579,7 +640,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   /* -------------------------------- tastatur -------------------------------- */
 
   const keys = useRef({});
-  keys.current = { undo, redo, copy, paste, duplicate, deleteSelected, nudge, slide, selection };
+  keys.current = { undo, redo, copy, paste, duplicate, deleteSelected, nudge, group, ungroup, slide, selection };
   useEffect(() => {
     const onKey = (e) => {
       if (typingIn(e.target) || pickerOpen || mediaFor) return;
@@ -594,6 +655,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
       if (mod && key === 'c') return k.copy();
       if (mod && key === 'v') return e.preventDefault(), k.paste();
       if (mod && key === 'd') return e.preventDefault(), k.duplicate();
+      if (mod && key === 'g') return e.preventDefault(), e.shiftKey ? k.ungroup() : k.group();
       if (mod && key === 'a') {
         e.preventDefault();
         return setSelection((k.slide?.elements || []).filter((x) => !locks.has(x.id)).map((x) => x.id));
@@ -618,7 +680,14 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const canUndo = history.current.undo.length > 0;
   const canRedo = history.current.redo.length > 0;
   void historyVersion;
-  const others = ELEMENT_KINDS.filter((k) => !PRIMARY.includes(k.kind));
+  // Vær/nyheter/kalender er apper i markedsplassen – vises bare når de er aktivert.
+  // Apper med data (AIS, egne) blir hver sin «Flatr App»-knapp.
+  const appGated = new Set(['weather', 'rss', 'calendar', 'app']);
+  const activeKinds = new Set(installedApps.map((a) => a.kind));
+  const others = ELEMENT_KINDS.filter((k) => !PRIMARY.includes(k.kind) && (!appGated.has(k.kind) || (k.kind !== 'app' && activeKinds.has(k.kind))));
+  const dataApps = installedApps.filter((a) => ['ais', 'custom', 'birthdays'].includes(a.kind));
+  // AI-fanen finnes når en assistent-app (Claude AI) er aktivert.
+  const aiEnabled = installedApps.some((a) => AI_APP_KINDS.includes(a.kind)) || panelTab === 'ai';
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-paper">
@@ -673,6 +742,38 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
                     {k.label}
                   </button>
                 ))}
+                {dataApps.map((a) => (
+                  <button
+                    key={`app-${a.id}`}
+                    type="button"
+                    onClick={() => insert('app', a.kind === 'birthdays' ? { appId: a.id, days: 7 } : { appId: a.id })}
+                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-ink hover:bg-zone"
+                  >
+                    <Icon name={a.definition?.icon || { ais: 'pin', birthdays: 'users' }[a.kind] || 'sparkle'} className="h-4 w-4 text-muted" />
+                    <span className="truncate">{a.name}</span>
+                  </button>
+                ))}
+                {dataApps
+                  .filter((a) => a.kind === 'birthdays')
+                  .map((a) => (
+                    <button
+                      key={`rain-${a.id}`}
+                      type="button"
+                      // Fremst og over hele lysbildet; kan gjøres mindre etterpå.
+                      onClick={() => insert('app', { appId: a.id, effect: 'rain', amount: 'normal' }, { x: 0, y: 0, w: 100, h: 100 })}
+                      className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-ink hover:bg-zone"
+                    >
+                      <span className="w-4 text-center text-sm" aria-hidden="true">🎂</span>
+                      <span className="truncate">Kakeregn</span>
+                    </button>
+                  ))}
+                <a
+                  href="/admin?view=apps"
+                  className="col-span-2 mt-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm font-semibold text-brand hover:bg-brand-tint"
+                >
+                  <Icon name="sparkle" className="h-4 w-4" />
+                  Finn flere i Flatr Apps
+                </a>
               </div>
             )}
           </div>
@@ -738,6 +839,17 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
             </button>
           </div>
           <ToolButton icon="layers" label={snap ? 'Snapping på' : 'Snapping av'} active={snap} onClick={() => setSnap((v) => !v)} />
+          {aiEnabled && (
+          <button
+            type="button"
+            onClick={() => setPanelTab((t) => (t === 'ai' ? 'design' : 'ai'))}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold ${panelTab === 'ai' ? 'bg-brand-tint text-brand' : 'text-ink hover:bg-zone'}`}
+            title={`AI-assistent (${MOD}K)`}
+          >
+            <Icon name="sparkle" className="h-4 w-4" />
+            AI
+          </button>
+          )}
           <a
             href={`${origin}/preview/${playlistId}`}
             target="_blank"
@@ -804,7 +916,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           )}
 
           <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-card/90 px-3 py-1 text-[11px] text-muted shadow-card">
-            Dobbeltklikk tekst for å skrive · Shift-klikk for flere · {MOD}C / {MOD}V / {MOD}D · {MOD}Z angre
+            Dobbeltklikk tekst for å skrive · Shift-klikk for flere · {MOD}G grupper · Alt-klikk velger én i en gruppe · {MOD}Z angre
           </div>
           {toast && (
             <div role="status" className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper shadow-pop">
@@ -823,6 +935,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onSelect={setSelection}
           onPatch={(patches) => change(patches, 'later')}
           onLayer={layer}
+          onGroup={group}
           onAlign={align}
           onDuplicate={duplicate}
           onDelete={deleteSelected}
@@ -830,6 +943,17 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onDuplicateSlide={dupSlide}
           onDeleteSlide={deleteSlide}
           onSaveTemplate={saveTemplate}
+          tab={panelTab}
+          aiEnabled={aiEnabled}
+          onTab={setPanelTab}
+          playlistId={playlistId}
+          aiPending={aiPending}
+          onAiPendingUsed={() => setAiPending(null)}
+          onAiChanged={() => {
+            reload();
+            sendOp({ k: 'deck.reload' });
+            onChange?.();
+          }}
         />
       </div>
 
