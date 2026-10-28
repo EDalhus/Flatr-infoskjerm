@@ -486,10 +486,10 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
             </div>
           )}
 
-          {orgs?.length > 1 && (
+          {orgs && (
             <div className="border-t border-line px-1 py-2">
-              <div className="mb-1 px-1 text-xs font-semibold text-muted">Bytt organisasjon</div>
-              {orgs.map((o) => {
+              {orgs.length > 1 && <div className="mb-1 px-1 text-xs font-semibold text-muted">Bytt organisasjon</div>}
+              {orgs.length > 1 && orgs.map((o) => {
                 const current = o.slug === tenant?.slug;
                 return (
                   <a
@@ -504,6 +504,16 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
                   </a>
                 );
               })}
+              {/* Ny organisasjon med samme konto (flatr.no/signup kjenner deg igjen). */}
+              <a
+                href={`${window.location.protocol}//${window.location.host.split('.').slice(1).join('.')}/signup`}
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted hover:bg-hair hover:text-ink"
+              >
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-dashed border-line">
+                  <Icon name="plus" className="h-3 w-3" />
+                </span>
+                Ny organisasjon
+              </a>
             </div>
           )}
 

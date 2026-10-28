@@ -159,12 +159,20 @@ export function Signup({ baseDomain }) {
       title={me ? 'Ny organisasjon' : 'Opprett en Flatr-konto'}
       subtitle={me ? `Du er logget inn som ${me.email} og blir eier av den nye organisasjonen.` : 'Du får din egen adresse der du styrer alle skjermene dine.'}
       footer={
-        <>
-          Har du allerede konto?{' '}
-          <Link to="/login" className="font-semibold text-brand hover:underline">
-            Logg inn
-          </Link>
-        </>
+        me ? null : (
+          <>
+            Har du allerede konto?{' '}
+            <Link to="/login" className="font-semibold text-brand hover:underline">
+              Logg inn
+            </Link>
+            <span className="mt-1 block text-xs">
+              Vil du lage en ny organisasjon med kontoen din?{' '}
+              <Link to="/login?next=%2Fsignup" className="font-semibold text-brand hover:underline">
+                Logg inn først
+              </Link>
+            </span>
+          </>
+        )
       }
     >
       {/* Ny bruker: registrer med Google/Microsoft, så trengs bare organisasjonen her etterpå. */}
