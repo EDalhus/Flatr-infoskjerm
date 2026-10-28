@@ -8,6 +8,7 @@ import CustomSettings from './apps/CustomSettings.jsx';
 import BirthdaySettings from './apps/BirthdaySettings.jsx';
 import ClaudeSettings from './apps/ClaudeSettings.jsx';
 import AisCalls from './apps/AisCalls.jsx';
+import UnsplashSettings from './apps/UnsplashSettings.jsx';
 import AppBuilder from './apps/AppBuilder.jsx';
 import IconEditor from './apps/IconEditor.jsx';
 import { Icon, Input, Button, Card, PageHeader, ErrorText, Segmented } from './ui.jsx';
@@ -206,7 +207,7 @@ export default function AppsManager() {
   /* ------------------------------ detaljside ------------------------------- */
   if (current) {
     const ins = installOf(current);
-    const hasSettings = ['ais', 'custom', 'birthdays', 'claude'].includes(current.kind);
+    const hasSettings = ['ais', 'custom', 'birthdays', 'claude', 'unsplash'].includes(current.kind);
     // NAIS har tillegget «Anløp» som egen fane.
     const extraTabs = current.kind === 'ais' && ins ? [['calls', 'Anløp']] : [];
     const view = !ins || !hasSettings ? 'about' : detailTab === 'about' ? 'about' : extraTabs.some(([id]) => id === detailTab) ? detailTab : 'setup';
@@ -316,6 +317,7 @@ export default function AppsManager() {
 
           {view === 'setup' && current.kind === 'ais' && <AisSettings app={ins} onSaved={onSaved} />}
           {view === 'calls' && current.kind === 'ais' && <AisCalls app={ins} onSaved={onSaved} />}
+          {view === 'setup' && current.kind === 'unsplash' && <UnsplashSettings app={ins} onSaved={onSaved} />}
           {view === 'setup' && current.kind === 'custom' && <CustomSettings app={ins} onSaved={onSaved} />}
           {view === 'setup' && current.kind === 'birthdays' && <BirthdaySettings app={ins} onSaved={onSaved} />}
           {view === 'setup' && current.kind === 'claude' && <ClaudeSettings app={ins} onSaved={onSaved} />}

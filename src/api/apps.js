@@ -4,6 +4,7 @@ import { OFFICIAL_BY_KEY } from '../lib/appCatalog.js';
 import { normBirthdate, upcomingBirthdays, todayIn } from '../lib/birthdays.js';
 import { AGENTS } from './agents/index.js';
 import { cleanCalls } from '../lib/portCalls.js';
+import { verifyUnsplashKey, searchPhotos, importPhoto } from './photos.js';
 
 // Flatr Apps – aktiverte apper for kunden. En rad = én aktivert app fra
 // markedsplassen: offisiell (kind = ais | weather | rss | calendar) eller egen
@@ -332,6 +333,18 @@ export async function onRequestGet(context) {
     const { results } = await env.DB.prepare('SELECT * FROM apps ORDER BY name COLLATE NOCASE, id').all();
     return json((results ?? []).map((r) => publicApp(env, r)));
   }
+  // ?photos=: søk i Unsplash (bildebank-appen).
+  if (params.has('photos')) {
+    const row = await env.DB.prepare('SELECT * FROM apps WHERE id = ?').bind(id).first();
+    if (!row || row.kind !== 'unsplash') return notFound('Appen finnes ikke');
+    const { access_key: key } = await readSecrets(env, row);
+    if (!key) return json({ error: 'Legg inn en Unsplash Access Key i appen først' }, { status: 400 });
+    try {
+      return json(await searchPhotos(key, params.get('photos'), { orientation: params.get('orientation'), page: Number(params.get('page')) || 1 }));
+    } catch (err) {
+      return json({ error: err.message }, { status: 502 });
+    }
+  }
   // ?search=: båter med AIS-signal som matcher navn/MMSI (NAIS).
   if (params.has('search')) {
     const row = await env.DB.prepare('SELECT * FROM apps WHERE id = ?').bind(id).first();
@@ -354,10 +367,22 @@ export async function onRequestGet(context) {
 }
 
 // Aktiver en app fra markedsplassen (én gang per app).
+// ?id=&import_photo=<unsplash-id>: hent et Unsplash-bilde inn i biblioteket.
 export async function onRequestPost(context) {
   const denied = await requireAdmin(context);
   if (denied) return denied;
   const { env } = context;
+  const params = new URL(context.request.url).searchParams;
+  if (params.get('import_photo')) {
+    const row = await env.DB.prepare(`SELECT * FROM apps WHERE kind = 'unsplash' LIMIT 1`).first();
+    const key = row && (await readSecrets(env, row)).access_key;
+    if (!key) return json({ error: 'Unsplash bildebank er ikke satt opp' }, { status: 400 });
+    try {
+      return json(await importPhoto(env, key, params.get('import_photo')), { status: 201 });
+    } catch (err) {
+      return json({ error: err.message }, { status: 502 });
+    }
+  }
   const b = (await readJson(context.request)) || {};
   const kind = APP_KINDS.includes(b.kind) ? b.kind : null;
   if (!kind) return badRequest('Ukjent app');
@@ -375,6 +400,7 @@ export async function onRequestPost(context) {
     if (kind === 'ais') config = cleanAisConfig({});
     if (kind === 'birthdays') config = cleanBirthdaysConfig({});
     if (AGENTS[kind]) config = { effort: 'medium' };
+    if (kind === 'unsplash') config = {};
   }
 
   const exists = await env.DB.prepare('SELECT id FROM apps WHERE kind = ? AND COALESCE(app_ref, 0) = ?').bind(kind, ref ?? 0).first();
@@ -420,6 +446,17 @@ export async function onRequestPut(context) {
         await AGENTS[row.kind].verifyKey(apiKey);
         secrets = { api_key: apiKey };
         config.key_hint = `…${apiKey.slice(-4)}`;
+      } else if (b.api_key === null) {
+        secrets = {};
+        delete config.key_hint;
+      }
+    } else if (row.kind === 'unsplash') {
+      config = { ...prevConfig };
+      if (typeof b.api_key === 'string' && b.api_key.trim()) {
+        const key = b.api_key.trim().slice(0, 200);
+        await verifyUnsplashKey(key);
+        secrets = { access_key: key };
+        config.key_hint = `…${key.slice(-4)}`;
       } else if (b.api_key === null) {
         secrets = {};
         delete config.key_hint;

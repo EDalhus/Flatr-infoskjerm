@@ -3,6 +3,7 @@ import { decryptSecret } from './apps.js';
 import { AGENTS, AGENT_KINDS } from './agents/index.js';
 import { cleanBrand } from '../lib/brand.js';
 import { cleanCalls, UNITS } from '../lib/portCalls.js';
+import { searchPhotos, importPhoto } from './photos.js';
 import { addPdf, addLink, addText, archiveItem, activeItems, publicItem, loadItems } from './agents/context.js';
 
 // AI-assistenten i editoren (⌘K / AI-fanen). Assistentene er Flatr Apps
@@ -136,6 +137,20 @@ function slideScreenshot(env, request, playlistId) {
   };
 }
 
+/** Unsplash-verktøy for AI-en hvis bildebank-appen er satt opp, ellers undefined. */
+async function photoTools(env) {
+  const row = await env.DB.prepare(`SELECT * FROM apps WHERE kind = 'unsplash' LIMIT 1`).first().catch(() => null);
+  if (!row?.secret) return undefined;
+  let key;
+  try {
+    key = safeJson(await decryptSecret(env, row.secret), {}).access_key;
+  } catch {
+    return undefined;
+  }
+  if (!key) return undefined;
+  return { search: (q, orientation) => searchPhotos(key, q, { orientation }), import: (id) => importPhoto(env, key, id) };
+}
+
 /** Merkevaresettet (Merkevare-siden), eller null. */
 async function readBrand(env) {
   const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = 'brand'`).first();
@@ -264,6 +279,7 @@ export async function onRequestPost(context) {
   let answered = false;
 
   const brand = await readBrand(env);
+  const photos = await photoTools(env);
   const enc = new TextEncoder();
   let closed = false;
   const body = new ReadableStream({
@@ -293,7 +309,8 @@ export async function onRequestPost(context) {
           usage: (u) => addUsage(env, assistant.row.id, u),
           screenshot: slideScreenshot(env, request, playlistId),
           contextItems: (ids) => loadItems(env, assistant.config, ids),
-          brand
+          brand,
+          photos
         })
         .catch(async (err) => {
           console.warn('[ai]', err?.message || err);

@@ -11,7 +11,7 @@ const MAX_STEPS = 40; // verktøyrunder per melding
 const EFFORTS = ['low', 'medium', 'high'];
 
 // Strømmer verktøy-input mens den skrives; inputen valideres i verktøyene.
-const claudeTools = (canSee) => toolsFor({ canSee }).map((t) => ({ ...t, eager_input_streaming: true }));
+const claudeTools = (canSee, photos) => toolsFor({ canSee, photos }).map((t) => ({ ...t, eager_input_streaming: true }));
 
 /**
  * Bytter ut plassholderne for fast kontekst ({ type: 'flatr_context', ids })
@@ -90,8 +90,8 @@ export async function run(ctx) {
   const { env, playlistId, apiKey, config, lock, send } = ctx;
   const client = new Anthropic({ apiKey });
   const canSee = typeof ctx.screenshot === 'function';
-  const tools = makeTools(env, playlistId, { screenshot: ctx.screenshot });
-  const toolDefs = claudeTools(canSee);
+  const tools = makeTools(env, playlistId, { screenshot: ctx.screenshot, photos: ctx.photos });
+  const toolDefs = claudeTools(canSee, !!ctx.photos);
   const pl = await env.DB.prepare('SELECT orientation FROM playlists WHERE id = ?').bind(playlistId).first();
   const system = systemPrompt(pl?.orientation, { canSee, brand: ctx.brand });
   const effort = EFFORTS.includes(config?.effort) ? config.effort : 'medium';

@@ -28,6 +28,44 @@ export function MediaPicker({ onPick, onClose, kind = 'image' }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
+  // Unsplash bildebank (Flatr App): egen fane når appen er satt opp.
+  const [unsplash, setUnsplash] = useState(null);
+  const [tab, setTab] = useState('library');
+  const [photos, setPhotos] = useState(null);
+  const [importing, setImporting] = useState(null);
+  useEffect(() => {
+    if (kind !== 'image') return;
+    api.apps
+      .list()
+      .then((rows) => setUnsplash((rows || []).find((a) => a.kind === 'unsplash' && a.has_secret) || null))
+      .catch(() => {});
+  }, [kind]);
+  const searchPhotos = async (e) => {
+    e?.preventDefault();
+    if (!query.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      setPhotos(await api.apps.searchPhotos(unsplash.id, query.trim()));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const pickPhoto = async (p) => {
+    setImporting(p.id);
+    setError('');
+    try {
+      const m = await api.apps.importPhoto(p.id);
+      onPick(api.media.url(m.id), m);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setImporting(null);
+    }
+  };
 
   const load = () =>
     api.media
@@ -64,7 +102,21 @@ export function MediaPicker({ onPick, onClose, kind = 'image' }) {
   return (
     <Modal onClose={onClose}>
       <header className="flex items-center justify-between border-b border-hair px-5 py-3">
-        <h2 className="text-base font-bold text-ink">{kind === 'video' ? 'Velg video' : 'Velg bilde'}</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-base font-bold text-ink">{kind === 'video' ? 'Velg video' : 'Velg bilde'}</h2>
+          {unsplash && (
+            <div className="flex rounded-full bg-zone p-0.5 text-xs font-semibold">
+              {[
+                ['library', 'Biblioteket'],
+                ['unsplash', 'Unsplash']
+              ].map(([id, label]) => (
+                <button key={id} type="button" onClick={() => setTab(id)} className={`rounded-full px-3 py-1 ${tab === id ? 'bg-card text-ink shadow-card' : 'text-muted hover:text-ink'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <input
             ref={fileRef}
@@ -89,6 +141,49 @@ export function MediaPicker({ onPick, onClose, kind = 'image' }) {
             {error}
           </p>
         )}
+        {tab === 'unsplash' ? (
+          <>
+            <form onSubmit={searchPhotos} className="mb-4 flex items-center gap-2">
+              <Icon name="search" className="h-4 w-4 shrink-0 text-muted" />
+              <Input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Søk i Unsplash, f.eks. «fjord vinter» eller «kontor»" />
+              <Button type="submit" size="sm" disabled={busy || !query.trim()}>
+                {busy ? 'Søker …' : 'Søk'}
+              </Button>
+            </form>
+            {photos === null ? (
+              <p className="py-10 text-center text-muted">Søk etter bilder. Unsplash fungerer best med engelske ord.</p>
+            ) : photos.length === 0 ? (
+              <p className="py-10 text-center text-muted">Ingen treff.</p>
+            ) : (
+              <div className="columns-2 gap-3 sm:columns-3">
+                {photos.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => pickPhoto(p)}
+                    disabled={!!importing}
+                    className="group relative mb-3 block w-full overflow-hidden rounded-lg border border-hair text-left hover:border-brand disabled:opacity-60"
+                    style={{ background: p.color }}
+                    title={p.alt}
+                  >
+                    <img src={p.thumb} alt={p.alt} loading="lazy" className="block w-full" style={{ aspectRatio: `${p.width} / ${p.height}` }} />
+                    <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-2 pb-1 pt-4 text-[11px] text-white">
+                      {importing === p.id ? 'Henter …' : `Foto: ${p.author}`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="mt-2 text-center text-[11px] text-muted">
+              Bilder fra{' '}
+              <a href="https://unsplash.com/?utm_source=flatr&utm_medium=referral" target="_blank" rel="noreferrer" className="underline">
+                Unsplash
+              </a>
+              . Bildet lagres i biblioteket (mappen Unsplash) med fotografens navn.
+            </p>
+          </>
+        ) : (
+        <>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <label className="flex min-w-[180px] flex-1 items-center gap-2">
             <Icon name="search" className="h-4 w-4 shrink-0 text-muted" />
@@ -135,6 +230,8 @@ export function MediaPicker({ onPick, onClose, kind = 'image' }) {
               </button>
             ))}
           </div>
+        )}
+        </>
         )}
       </div>
     </Modal>

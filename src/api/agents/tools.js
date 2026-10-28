@@ -76,7 +76,7 @@ Durations: 8–12 s for short statements, 15–20 s for widgets and lists.
 The customer can attach fixed context – brand guidelines, design manuals, tone of voice, facts about the company – as documents in the conversation, marked «Fast kontekst fra kunden». When present it is binding and overrides the generic advice above. Follow it to the letter: exact colour values (hex), typography (if their font is not available, use the closest available one and say which you substituted), logo rules (use their logo from list_media if it exists – never imitate a logo with text), spacing and composition rules, tone of voice and wording, do's and don'ts. When guidelines are ambiguous, choose the most conservative interpretation. Mention briefly in your reply which guidelines you followed.
 
 # Work method
-1. get_presentation first. Use list_media / list_data before using images, apps or programme categories – never invent URLs or ids. Use the customer's own images and logo when they exist.
+1. get_presentation first. Use list_media / list_data before using images, apps or programme categories – never invent URLs or ids. Use the customer's own images and logo when they exist. When search_photos is available, a strong full-bleed or split-layout photo often gives a slide the most soul – prefer the customer's own photos, then Unsplash; put a dark overlay (a shape with opacity) under text on photos for contrast.
 2. For a new presentation: decide the concept, then build slide by slide with add_slide (pass elements directly). Name each slide.
 ${canSee ? `3. After building or changing a slide, call look_at_slide and LOOK at it critically like a demanding art director: text cut off or overflowing, overlaps, things too small to read from a distance, empty or unbalanced areas, weak contrast, everything looking the same. Fix what you see with update_elements and look again. Do this for every slide you make – it is the most important step.
 4.` : '3.'} When editing, change what was asked and keep the rest. Deleting moves things to the trash.
@@ -198,6 +198,20 @@ export const TOOLS = [
     input_schema: { type: 'object', properties: { slide_id: { type: 'integer' } }, required: ['slide_id'] }
   },
   {
+    name: 'search_photos',
+    description: 'Search the Unsplash photo library (English keywords work best). Returns photo ids with descriptions and photographer. Use use_photo to get a usable url.',
+    input_schema: {
+      type: 'object',
+      properties: { query: { type: 'string' }, orientation: { type: 'string', enum: ['landscape', 'portrait', 'squarish'] } },
+      required: ['query']
+    }
+  },
+  {
+    name: 'use_photo',
+    description: 'Add an Unsplash photo (id from search_photos) to the media library and get its url for an image element or background.',
+    input_schema: { type: 'object', properties: { photo_id: { type: 'string' } }, required: ['photo_id'] }
+  },
+  {
     name: 'list_media',
     description: 'Images and videos in the media library (url, name, folder). Use these urls for image elements and backgrounds.',
     input_schema: { type: 'object', properties: {} }
@@ -210,7 +224,8 @@ export const TOOLS = [
 ];
 
 /** Verktøyene en agent kan bruke nå (look_at_slide bare når skjermbilder virker). */
-export const toolsFor = ({ canSee }) => TOOLS.filter((t) => canSee || t.name !== 'look_at_slide');
+export const toolsFor = ({ canSee, photos }) =>
+  TOOLS.filter((t) => (canSee || t.name !== 'look_at_slide') && (photos || !['search_photos', 'use_photo'].includes(t.name)));
 
 export const TOOL_LABEL = {
   get_presentation: 'Leser presentasjonen',
@@ -223,6 +238,8 @@ export const TOOL_LABEL = {
   update_elements: 'Endrer elementer',
   delete_elements: 'Sletter elementer',
   look_at_slide: 'Ser på lysbildet',
+  search_photos: 'Søker etter bilder',
+  use_photo: 'Henter bilde',
   list_media: 'Ser i biblioteket',
   list_data: 'Ser på apper og program'
 };
@@ -389,6 +406,16 @@ export function makeTools(env, playlistId, opts = {}) {
       if (!opts.screenshot) throw new Error('Skjermbilder er ikke tilgjengelig her');
       const data = await opts.screenshot(s.id);
       return { __image: data, note: `Slide ${s.id}${s.name ? ` «${s.name}»` : ''}` };
+    },
+    async search_photos(input) {
+      if (!opts.photos) throw new Error('Bildebanken er ikke satt opp');
+      const list = await opts.photos.search(input.query, input.orientation);
+      return list.slice(0, 15).map((p) => ({ id: p.id, description: p.alt, photographer: p.author, width: p.width, height: p.height, color: p.color }));
+    },
+    async use_photo(input) {
+      if (!opts.photos) throw new Error('Bildebanken er ikke satt opp');
+      const m = await opts.photos.import(input.photo_id);
+      return { url: `/api/media?id=${m.id}&raw=1`, name: m.name };
     },
     async list_media() {
       const rows = await call(env, 'GET', '/api/media');

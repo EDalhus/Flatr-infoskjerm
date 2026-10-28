@@ -126,6 +126,30 @@ export const OFFICIAL_APPS = [
     }
   },
   {
+    key: 'unsplash',
+    name: 'Unsplash bildebank',
+    tagline: 'Søk blant millioner av gratis bilder rett fra editoren – og la Claude AI finne bilder til presentasjonene.',
+    description:
+      'Når appen er aktivert, får bildevelgeren en fane for Unsplash: søk, klikk, og bildet hentes inn i mediebiblioteket (mappen Unsplash) med fotografens navn. Claude AI kan også søke opp og bruke bilder når den lager presentasjoner.\n\nBildene er gratis å bruke etter Unsplash-lisensen. Hver konto bruker sin egen gratis Access Key.',
+    category: 'other',
+    icon: 'image',
+    color: '#111111',
+    element: 'images',
+    views: ['Bildesøk i bildevelgeren', 'Bilder til Claude AI'],
+    requires: 'Unsplash Access Key (gratis)',
+    guide: {
+      title: 'Slik får du en Unsplash-nøkkel',
+      intro: 'Det tar et par minutter og er gratis.',
+      steps: [
+        { title: 'Lag en utviklerkonto', body: 'Registrer deg eller logg inn som utvikler hos Unsplash.', link: { href: 'https://unsplash.com/oauth/applications', label: 'Åpne unsplash.com/oauth/applications' } },
+        { title: 'Lag en ny applikasjon', body: 'Trykk «New Application», godta vilkårene og gi den et navn, f.eks. «Flatr – firmanavn».' },
+        { title: 'Kopier Access Key', body: 'Under «Keys» finner du Access Key. Kopier den (ikke Secret Key).' },
+        { title: 'Lim den inn i Flatr', body: 'Aktiver Unsplash bildebank, gå til Oppsett og lim inn nøkkelen. Flatr sjekker at den virker.' }
+      ],
+      troubleshooting: 'Demo-nøkler hos Unsplash har en grense på 50 søk i timen. Søker dere mye, kan dere søke om produksjonstilgang hos Unsplash (gratis).'
+    }
+  },
+  {
     key: 'weather',
     name: 'Vær (Yr)',
     tagline: 'Været nå, de neste timene eller de neste dagene.',
