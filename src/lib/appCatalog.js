@@ -128,6 +128,44 @@ export const OFFICIAL_APPS = [
     }
   },
   {
+    key: 'cursor',
+    name: 'Cursor AI',
+    tagline: 'Lag og endre presentasjoner med Cursors agent.',
+    description:
+      'Samme AI-assistent som Claude AI, men drevet av Cursor: trykk ⌘K (Ctrl+K på Windows) hvor som helst i Flatr og beskriv presentasjonen du vil ha, eller be om endringer i AI-fanen i editoren. Du ser tankegangen og hvert steg underveis.\n\nAgenten kjører i Cursors sky og kan bare lese og endre presentasjoner – ikke skjermer, brukere eller innstillinger – og alt kan angres. Appen bruker kontoens egen API-nøkkel fra Cursor (krever et betalt Cursor-abonnement), og bruken faktureres der. Har dere både Claude AI og Cursor AI, velger dere assistent i dialogen.',
+    category: 'ai',
+    icon: 'sparkle',
+    color: '#111827',
+    element: 'assistant',
+    views: ['Lag en presentasjon fra en kort beskrivelse', 'Velg blant modellene i Cursor-kontoen', 'Bruker deres egen Cursor-nøkkel'],
+    requires: 'API-nøkkel fra Cursor',
+    guide: {
+      title: 'Slik kobler du til Cursor',
+      intro: 'Cursor AI bruker Cursors Cloud Agents med en API-nøkkel fra Cursor-kontoen deres. Det krever et betalt Cursor-abonnement.',
+      steps: [
+        {
+          title: 'Logg inn på Cursor',
+          body: 'Logg inn på cursor.com med kontoen som skal betale for bruken, og åpne Dashboard.',
+          link: { href: 'https://cursor.com/dashboard', label: 'Åpne cursor.com/dashboard' }
+        },
+        {
+          title: 'Lag en API-nøkkel',
+          body: 'Gå til Integrations (eller Cloud Agents) og lag en ny API-nøkkel. Kall den for eksempel «Flatr», og kopier den – du får ikke se den igjen.'
+        },
+        {
+          title: 'Lim inn nøkkelen i Flatr',
+          body: 'Aktiver Cursor AI, gå til fanen Oppsett og lim inn nøkkelen. Flatr sjekker at den virker før den lagres kryptert. Velg gjerne modell samme sted.'
+        },
+        {
+          title: 'Trykk ⌘K og beskriv hva du vil ha',
+          body: 'Velg Cursor som assistent hvis dere også har Claude AI. Agenten starter i Cursors sky og bygger presentasjonen mens du ser på – første svar kan ta litt lenger tid enn med Claude.'
+        }
+      ],
+      troubleshooting:
+        'Står det at kontoen ikke har tilgang? Cloud Agents krever et betalt Cursor-abonnement. Sier Flatr at nøkkelen ikke godtas, sjekk at du kopierte hele nøkkelen.'
+    }
+  },
+  {
     key: 'events',
     name: 'Arrangement og program',
     tagline: 'Program, scener og nedtelling for konferanser, festivaler og arrangementer.',

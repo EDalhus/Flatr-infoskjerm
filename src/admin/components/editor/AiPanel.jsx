@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { Icon, Button } from '../ui.jsx';
+import { chosenAgent, chooseAgent } from '../aiAgent.js';
 
 const MOD = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
 
@@ -52,6 +53,7 @@ function toTurns(messages) {
     }
     for (const b of m.content || []) {
       if (b.type === 'thinking' && b.thinking) turn.blocks.push({ type: 'thinking', text: b.thinking });
+      else if (b.type === 'flatr_thinking' && b.text) turn.blocks.push({ type: 'thinking', text: b.text }); // Cursor AI
       else if (b.type === 'text' && b.text) turn.blocks.push({ type: 'text', text: b.text });
       else if (b.type === 'tool_use') turn.blocks.push({ type: 'tool', id: b.id, name: b.name, status: status[b.id] || 'error' });
     }
@@ -135,6 +137,7 @@ function AssistantTurn({ blocks, live }) {
 }
 
 function KeySetup({ app, onSaved }) {
+  const cursor = app.kind === 'cursor';
   const [key, setKey] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -153,19 +156,24 @@ function KeySetup({ app, onSaved }) {
   };
   return (
     <form onSubmit={save} className="m-3 grid gap-3 rounded-xl border border-line bg-zone/40 p-4 text-sm">
-      <div className="font-semibold text-ink">Koble til Claude</div>
+      <div className="font-semibold text-ink">Koble til {cursor ? 'Cursor' : 'Claude'}</div>
       <p className="m-0 text-xs leading-relaxed text-muted">
-        Claude AI bruker kontoens egen API-nøkkel fra Anthropic. Lag en på{' '}
-        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">
-          console.anthropic.com
+        {app.name} bruker kontoens egen API-nøkkel fra {cursor ? 'Cursor' : 'Anthropic'}. Lag en på{' '}
+        <a
+          href={cursor ? 'https://cursor.com/dashboard' : 'https://console.anthropic.com/settings/keys'}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-brand hover:underline"
+        >
+          {cursor ? 'cursor.com/dashboard' : 'console.anthropic.com'}
         </a>{' '}
-        og lim den inn her. Nøkkelen lagres kryptert og vises aldri igjen. Bruken faktureres på Anthropic-kontoen.
+        og lim den inn her. Nøkkelen lagres kryptert og vises aldri igjen. Bruken faktureres på {cursor ? 'Cursor' : 'Anthropic'}-kontoen.
       </p>
       <input
         type="password"
         value={key}
         onChange={(e) => setKey(e.target.value)}
-        placeholder="sk-ant-…"
+        placeholder={cursor ? 'key_…' : 'sk-ant-…'}
         autoComplete="off"
         className="h-9 rounded-lg border border-line bg-paper px-3 font-mono text-xs text-ink outline-none focus:border-focus"
       />
@@ -188,16 +196,24 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
   const inputRef = useRef(null);
   const sentPending = useRef(null);
 
+  const [agent, setAgent] = useState(chosenAgent);
   const load = () =>
     api.ai
-      .history(playlistId)
+      .history(playlistId, agent)
       .then(setData)
       .catch((e) => setError(e.message));
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playlistId]);
+  }, [playlistId, agent]);
+
+  // Valgt assistent (⌘K-dialogen og denne fanen deler valget).
+  useEffect(() => {
+    const on = (e) => setAgent(e.detail || null);
+    window.addEventListener('flatr:ai-agent', on);
+    return () => window.removeEventListener('flatr:ai-agent', on);
+  }, []);
 
   // Hold bunnen i syne mens det strømmer.
   useEffect(() => {
@@ -217,7 +233,7 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
     setLive([]);
     let changedT = null;
     try {
-      const res = await api.ai.send(playlistId, message);
+      const res = await api.ai.send(playlistId, message, data?.app?.kind);
       await readSse(res, (event, d) => {
         if (event === 'thinking_start') blocks.push({ type: 'thinking', text: '' });
         else if (event === 'thinking_delta') {
@@ -299,7 +315,20 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between border-b border-line px-3 py-2 text-xs text-muted">
         <span className="flex items-center gap-1.5">
-          <Icon name="sparkle" className="h-3.5 w-3.5 text-brand" /> {data.app.name} · {data.app.model}
+          <Icon name="sparkle" className="h-3.5 w-3.5 text-brand" />
+          {data.apps?.length > 1 ? (
+            <select value={data.app.kind} onChange={(e) => chooseAgent(e.target.value)} disabled={busy} className="cursor-pointer bg-transparent text-muted outline-none hover:text-ink" aria-label="Assistent">
+              {data.apps.map((a) => (
+                <option key={a.kind} value={a.kind}>
+                  {a.kind === 'claude' ? `${a.name} · ${a.model}` : a.model === 'Cursor' ? a.name : `Cursor · ${a.model}`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              {data.app.name} · {data.app.model}
+            </>
+          )}
         </span>
         <div className="relative">
           <button type="button" onClick={() => setMenu((m) => !m)} className="rounded-md px-1.5 py-0.5 font-bold hover:bg-zone hover:text-ink" aria-label="Mer">

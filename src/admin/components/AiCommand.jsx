@@ -7,6 +7,7 @@ import { api } from '../../lib/api.js';
 import { AI_PROMPT_KEY } from './editor/Editor.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
 import { AddContext } from './AiContext.jsx';
+import { chosenAgent, chooseAgent } from './aiAgent.js';
 import { Icon, Button } from './ui.jsx';
 
 const NEW = 'new';
@@ -53,6 +54,7 @@ export default function AiCommand({ go, me }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [assistant, setAssistant] = useState(undefined); // undefined = laster, null = ikke aktivert
+  const [assistants, setAssistants] = useState([]); // alle aktiverte (velger når flere)
   const [plus, setPlus] = useState(false);
   const inputRef = useRef(null);
 
@@ -63,7 +65,10 @@ export default function AiCommand({ go, me }) {
         setOpen((o) => !o);
       }
     };
-    const onOpen = () => setOpen(true);
+    const onOpen = (e) => {
+      if (e.detail?.agent) chooseAgent(e.detail.agent);
+      setOpen(true);
+    };
     window.addEventListener('keydown', onKey);
     window.addEventListener('flatr:ai-open', onOpen);
     return () => {
@@ -80,8 +85,11 @@ export default function AiCommand({ go, me }) {
     const editing = param('view') === 'playlists' && param('edit');
     setTarget(editing || NEW);
     api.ai
-      .app()
-      .then((r) => setAssistant(r?.app || null))
+      .app(chosenAgent())
+      .then((r) => {
+        setAssistant(r?.app || null);
+        setAssistants(r?.apps || []);
+      })
       .catch(() => setAssistant(null));
     api.playlists
       .list()
@@ -116,6 +124,12 @@ export default function AiCommand({ go, me }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const switchAgent = async (kind) => {
+    chooseAgent(kind);
+    const r = await api.ai.app(kind).catch(() => null);
+    if (r?.app) setAssistant(r.app);
   };
 
   const setEffort = async (effort) => {
@@ -200,7 +214,7 @@ export default function AiCommand({ go, me }) {
                   type="button"
                   onClick={async () => {
                     try {
-                      setAssistant(await api.ai.removeContext(c.id));
+                      setAssistant(await api.ai.removeContext(c.id, assistant?.kind));
                     } catch (e) {
                       setError(e.message);
                     }
@@ -232,7 +246,7 @@ export default function AiCommand({ go, me }) {
                 Administrer
               </button>
             </div>
-            <AddContext compact onChange={(a) => setAssistant(a)} />
+            <AddContext compact agent={assistant?.kind} onChange={(a) => setAssistant(a)} />
           </div>
         )}
       </div>
@@ -256,7 +270,18 @@ export default function AiCommand({ go, me }) {
           </select>
         )}
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-ink">{assistant?.model?.replace(/^Claude /, '') || '…'}</span>
+          {assistants.length > 1 ? (
+            <select value={assistant?.kind || ''} onChange={(e) => switchAgent(e.target.value)} className="cursor-pointer bg-transparent text-ink outline-none" aria-label="Assistent">
+              {assistants.map((a) => (
+                <option key={a.kind} value={a.kind}>
+                  {a.kind === 'claude' ? a.model : a.model === 'Cursor' ? a.name : `Cursor · ${a.model}`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="text-ink">{assistant?.model?.replace(/^Claude /, '') || '…'}</span>
+          )}
+          {assistant?.kind !== 'cursor' && (
           <select value={assistant?.effort || 'medium'} onChange={(e) => setEffort(e.target.value)} className="cursor-pointer bg-transparent text-muted outline-none" aria-label="Innsats">
             {EFFORTS.map((e) => (
               <option key={e.value} value={e.value}>
@@ -264,9 +289,10 @@ export default function AiCommand({ go, me }) {
               </option>
             ))}
           </select>
+          )}
         </div>
       </div>
-      {assistant && !assistant.has_key && <p className="m-0 mt-3 px-3 text-sm text-warn">Claude AI mangler API-nøkkel – du blir bedt om den i editoren.</p>}
+      {assistant && !assistant.has_key && <p className="m-0 mt-3 px-3 text-sm text-warn">{assistant.name} mangler API-nøkkel – legg den inn under Flatr Apps.</p>}
       {error && <p className="m-0 mt-3 px-3 text-sm text-danger">{error}</p>}
 
       {recent.length > 0 && (

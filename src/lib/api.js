@@ -121,29 +121,30 @@ export const api = {
   },
   // AI-assistenten (src/api/ai.js). send() gir rå Response (SSE) til AiPanel.
   ai: {
-    app: () => req('/ai'),
+    // agent: 'claude' | 'cursor' når flere assistenter er aktivert (ellers den første).
+    app: (agent) => req(`/ai${agent ? `?agent=${agent}` : ''}`),
     parseCalls: (text) => req('/ai?parse=calls', { method: 'POST', body: { text } }),
     // Fast kontekst (merkevare o.l.). Alle returnerer oppdatert app.
-    addLink: (url, title) => req('/ai?context=link', { method: 'POST', body: { url, title } }),
-    addText: (text, title) => req('/ai?context=text', { method: 'POST', body: { text, title } }),
-    addPdf: async (file) => {
+    addLink: (url, title, agent) => req(`/ai?context=link${agent ? `&agent=${agent}` : ''}`, { method: 'POST', body: { url, title } }),
+    addText: (text, title, agent) => req(`/ai?context=text${agent ? `&agent=${agent}` : ''}`, { method: 'POST', body: { text, title } }),
+    addPdf: async (file, agent) => {
       const headers = { 'Content-Type': 'application/pdf' };
       const token = getToken();
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${BASE}/ai?context=pdf&name=${encodeURIComponent(file.name)}`, { method: 'POST', headers, body: file });
+      const res = await fetch(`${BASE}/ai?context=pdf&name=${encodeURIComponent(file.name)}${agent ? `&agent=${agent}` : ''}`, { method: 'POST', headers, body: file });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`);
       return data;
     },
-    removeContext: (id) => req(`/ai?context=${encodeURIComponent(id)}`, { method: 'DELETE' }),
-    history: (playlistId) => req(`/ai?playlist=${encodeURIComponent(playlistId)}`),
+    removeContext: (id, agent) => req(`/ai?context=${encodeURIComponent(id)}${agent ? `&agent=${agent}` : ''}`, { method: 'DELETE' }),
+    history: (playlistId, agent) => req(`/ai?playlist=${encodeURIComponent(playlistId)}${agent ? `&agent=${agent}` : ''}`),
     clear: (playlistId) => req(`/ai?playlist=${encodeURIComponent(playlistId)}`, { method: 'DELETE' }),
     stop: (playlistId) => req(`/ai?stop=1&playlist=${encodeURIComponent(playlistId)}`, { method: 'POST', body: {} }),
-    send: async (playlistId, message) => {
+    send: async (playlistId, message, agent) => {
       const headers = { 'Content-Type': 'application/json' };
       const token = getToken();
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${BASE}/ai`, { method: 'POST', headers, body: JSON.stringify({ playlist_id: playlistId, message }) });
+      const res = await fetch(`${BASE}/ai`, { method: 'POST', headers, body: JSON.stringify({ playlist_id: playlistId, message, agent }) });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw Object.assign(new Error(data?.error || `${res.status} ${res.statusText}`), { status: res.status, code: data?.code });
@@ -268,6 +269,7 @@ export const api = {
     searchPhotos: (id, q, orientation) => req(`/apps?id=${encodeURIComponent(id)}&photos=${encodeURIComponent(q)}${orientation ? `&orientation=${orientation}` : ''}`),
     importPhoto: (photoId) => req(`/apps?import_photo=${encodeURIComponent(photoId)}`, { method: 'POST', body: {} }),
     searchFootball: (id, kind, q) => req(`/apps?id=${encodeURIComponent(id)}&football=${kind}&q=${encodeURIComponent(q)}`),
+    models: (id) => req(`/apps?id=${encodeURIComponent(id)}&models=1`),
     searchVessels: (id, q) => req(`/apps?id=${encodeURIComponent(id)}&search=${encodeURIComponent(q)}`),
     create: (body) => req('/apps', { method: 'POST', body }),
     update: (id, body) => req(`/apps?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),

@@ -392,6 +392,18 @@ export async function onRequestGet(context) {
       return json({ error: err.message }, { status: 502 });
     }
   }
+  // ?models=1: modellene Cursor-kontoen kan bruke (Cursor AI).
+  if (params.has('models')) {
+    const row = await env.DB.prepare('SELECT * FROM apps WHERE id = ?').bind(id).first();
+    if (!row || !AGENTS[row.kind]?.listModels) return notFound('Appen finnes ikke');
+    const { api_key: key } = await readSecrets(env, row);
+    if (!key) return json({ error: 'Legg inn API-nøkkelen først' }, { status: 400 });
+    try {
+      return json(await AGENTS[row.kind].listModels(key));
+    } catch (err) {
+      return json({ error: AGENTS[row.kind].errorText(err) }, { status: 502 });
+    }
+  }
   // ?photos=: søk i Unsplash (bildebank-appen).
   if (params.has('photos')) {
     const row = await env.DB.prepare('SELECT * FROM apps WHERE id = ?').bind(id).first();
@@ -504,6 +516,17 @@ export async function onRequestPut(context) {
       // AI-assistent: innsats og API-nøkkel (sjekkes mot leverandøren før lagring).
       config = { ...prevConfig };
       if (['low', 'medium', 'high'].includes(b.config?.effort)) config.effort = b.config.effort;
+      // Cursor AI: valgt modell (id fra Cursors modell-liste) og navnet som vises; null = Cursors standard.
+      if (b.config && 'model' in b.config) {
+        const id = b.config.model ? String(b.config.model).slice(0, 80) : null;
+        if (id) {
+          config.model = id;
+          config.model_label = String(b.config.model_label || id).slice(0, 80);
+        } else {
+          delete config.model;
+          delete config.model_label;
+        }
+      }
       if (typeof b.api_key === 'string' && b.api_key.trim()) {
         const apiKey = b.api_key.trim().slice(0, 500);
         await AGENTS[row.kind].verifyKey(apiKey);

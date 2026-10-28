@@ -57,7 +57,7 @@ function ToolButton({ icon, label, onClick, active, disabled, shortcut }) {
 }
 
 export const AI_PROMPT_KEY = 'flatr.aiPrompt';
-export const AI_APP_KINDS = ['claude'];
+export const AI_APP_KINDS = ['claude', 'cursor'];
 
 export default function Editor({ playlistId, onBack, onChange, me }) {
   const [playlist, setPlaylist] = useState(null);

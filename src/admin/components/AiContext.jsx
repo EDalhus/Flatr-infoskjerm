@@ -10,7 +10,7 @@ const KIND_ICON = { pdf: '📄', link: '🔗', text: '📝' };
 const kb = (n) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1024))} kB`);
 
 /** Skjema for å legge til. mode: null | 'link' | 'text'. onChange(app) får oppdatert app. */
-export function AddContext({ onChange, compact = false }) {
+export function AddContext({ onChange, compact = false, agent }) {
   const [mode, setMode] = useState(null);
   const [url, setUrl] = useState('');
   const [text, setText] = useState('');
@@ -56,7 +56,7 @@ export function AddContext({ onChange, compact = false }) {
           onChange={(e) => {
             const f = e.target.files?.[0];
             e.target.value = '';
-            if (f) run(() => api.ai.addPdf(f));
+            if (f) run(() => api.ai.addPdf(f, agent));
           }}
         />
         {busy && <span className="self-center text-xs text-muted">{mode === 'link' ? 'Henter siden …' : 'Laster opp …'}</span>}
@@ -65,7 +65,7 @@ export function AddContext({ onChange, compact = false }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            run(() => api.ai.addLink(url.trim(), title.trim() || undefined));
+            run(() => api.ai.addLink(url.trim(), title.trim() || undefined, agent));
           }}
           className={`grid gap-2 ${compact ? '' : 'sm:grid-cols-[minmax(0,1fr)_auto]'}`}
         >
@@ -85,7 +85,7 @@ export function AddContext({ onChange, compact = false }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            run(() => api.ai.addText(text, title.trim() || undefined));
+            run(() => api.ai.addText(text, title.trim() || undefined, agent));
           }}
           className="grid gap-2"
         >
@@ -114,7 +114,7 @@ export function AddContext({ onChange, compact = false }) {
 }
 
 /** Lista over fast kontekst med fjern-knapp. */
-export function ContextList({ items, onChange, empty = 'Ingen fast kontekst ennå.' }) {
+export function ContextList({ items, onChange, empty = 'Ingen fast kontekst ennå.', agent }) {
   const [busy, setBusy] = useState(null);
   if (!items?.length) return <p className="m-0 text-sm text-muted">{empty}</p>;
   return (
@@ -142,7 +142,7 @@ export function ContextList({ items, onChange, empty = 'Ingen fast kontekst enn�
             onClick={async () => {
               setBusy(i.id);
               try {
-                onChange(await api.ai.removeContext(i.id));
+                onChange(await api.ai.removeContext(i.id, agent));
               } finally {
                 setBusy(null);
               }

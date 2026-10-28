@@ -15,7 +15,7 @@ const THEMES = [
   { id: 'arbeidsplass', title: 'Arbeidsplassen', text: 'Det som gjør skjermen i lunsjrommet verdt å se på.', keys: ['birthdays', 'menu', 'calendar'] },
   { id: 'nyheter', title: 'Nyheter og sport', text: 'Nyhetene og lagene dere følger med på.', keys: ['rss', 'football'] },
   { id: 'arrangement', title: 'Arrangementer og styring', text: 'Program, tidsstyring og skjermer folk kan trykke på.', keys: ['events', 'timetable', 'touch'] },
-  { id: 'innhold', title: 'Innhold og AI', text: 'Lag presentasjoner raskere, med bilder som passer.', keys: ['claude', 'unsplash'] }
+  { id: 'innhold', title: 'Innhold og AI', text: 'Lag presentasjoner raskere, med bilder som passer.', keys: ['claude', 'cursor', 'unsplash'] }
 ];
 
 function themed() {

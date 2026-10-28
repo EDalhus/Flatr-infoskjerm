@@ -102,6 +102,8 @@ function isPublic(method, key, url) {
   if (key === '/api/context' || key === '/api/health') return true;
   if (key.startsWith('/api/pairing/status/')) return method === 'GET';
   if (key === '/api/pairing/request' || key === '/api/heartbeat' || key === '/api/plays') return method === 'POST';
+  // Cursor AI: egen nøkkel per pågående oppgave (src/api/mcp.js).
+  if (key === '/api/mcp') return true;
   if (key.startsWith('/api/pairing/screenshot/')) return method === 'POST'; // TV-token sjekkes i pairing.js
   if (method !== 'GET') return false;
   if (['/api/state', '/api/stream', '/api/schedule', '/api/categories', '/api/screens', '/api/snapshot', '/api/feeds'].includes(key)) {
@@ -183,7 +185,7 @@ function crossSiteWrite(request) {
 
 // Skriving som ikke endrer det skjermene viser – vekker ikke skjermstrømmene
 // (pulsen fra hver skjerm ville ellers fått alle de andre til å hente på nytt).
-const QUIET_WRITES = /^\/api\/(heartbeat|plays|comments|prefs|ai|agents|activity|pairing\/screenshot|pairing\/request)/;
+const QUIET_WRITES = /^\/api\/(heartbeat|plays|mcp|comments|prefs|ai|agents|activity|pairing\/screenshot|pairing\/request)/;
 
 async function handleTenant(request, tenant) {
   // Mediefiler på en adresse Cloudflare mellomlagrer (se cdnMediaUrls i src/api/_shared.js).

@@ -29,10 +29,14 @@ import { addPdf, addLink, addText, archiveItem, activeItems, publicItem, loadIte
 
 const running = new Map(); // `${tenant}:${playlist}` -> { stop }
 
-/** Den aktiverte assistent-appen (første), med nøkkel. null = ingen aktivert. */
-async function assistantApp(env) {
+/**
+ * Assistent-appen å bruke, med nøkkel: den valgte (kind, f.eks. 'cursor') hvis
+ * den er aktivert, ellers den første. null = ingen aktivert.
+ */
+async function assistantApp(env, kind) {
   const marks = AGENT_KINDS.map(() => '?').join(',');
-  const row = await env.DB.prepare(`SELECT * FROM apps WHERE kind IN (${marks}) ORDER BY id LIMIT 1`).bind(...AGENT_KINDS).first();
+  const { results } = await env.DB.prepare(`SELECT * FROM apps WHERE kind IN (${marks}) ORDER BY id`).bind(...AGENT_KINDS).all();
+  const row = (results ?? []).find((r) => r.kind === kind) || results?.[0];
   if (!row) return null;
   let apiKey = null;
   if (row.secret) {
@@ -51,7 +55,7 @@ const publicAssistant = (a) =>
         id: a.row.id,
         kind: a.row.kind,
         name: a.row.name,
-        model: a.agent.MODEL_LABEL,
+        model: a.config.model_label || a.agent.MODEL_LABEL,
         effort: a.config.effort || 'medium',
         has_key: !!a.apiKey,
         key_hint: a.config.key_hint || null,
@@ -86,6 +90,16 @@ const save = (env, playlistId, role, content, author = null) =>
   env.DB.prepare('INSERT INTO ai_messages (playlist_id, role, content, author) VALUES (?, ?, ?, ?)')
     .bind(playlistId, role, JSON.stringify(content), author)
     .run();
+
+/**
+ * Til API-et: Cursors tankegang (flatr_thinking) er bare for visning og sendes
+ * ikke til Claude; meldinger som da blir tomme, tas ut.
+ */
+function forApi(messages) {
+  return messages
+    .map((m) => ({ role: m.role, content: Array.isArray(m.content) ? m.content.filter((b) => b.type !== 'flatr_thinking') : m.content }))
+    .filter((m) => !Array.isArray(m.content) || m.content.length);
+}
 
 /**
  * Et verktøykall uten svar (f.eks. hvis serveren startet på nytt midt i en
@@ -173,14 +187,23 @@ async function addUsage(env, appId, usage) {
 
 const lockKey = (env, playlistId) => `${env.TENANT?.slug || '-'}:${playlistId}`;
 
+/** Alle aktiverte assistenter (til velgeren når det er flere enn én). */
+async function assistantList(env) {
+  const marks = AGENT_KINDS.map(() => '?').join(',');
+  const { results } = await env.DB.prepare(`SELECT id, kind, name, config FROM apps WHERE kind IN (${marks}) ORDER BY id`).bind(...AGENT_KINDS).all();
+  return (results ?? []).map((r) => ({ id: r.id, kind: r.kind, name: r.name, model: safeJson(r.config, {}).model_label || AGENTS[r.kind].MODEL_LABEL }));
+}
+
 export async function onRequestGet(context) {
   const denied = await requireAdmin(context);
   if (denied) return denied;
   const { env, request } = context;
-  const playlistId = toIntOrNull(new URL(request.url).searchParams.get('playlist'));
-  const app = publicAssistant(await assistantApp(env));
-  if (!playlistId) return json({ app });
-  return json({ app, running: running.has(lockKey(env, playlistId)), messages: await history(env, playlistId) });
+  const params = new URL(request.url).searchParams;
+  const playlistId = toIntOrNull(params.get('playlist'));
+  const app = publicAssistant(await assistantApp(env, params.get('agent')));
+  const apps = await assistantList(env);
+  if (!playlistId) return json({ app, apps });
+  return json({ app, apps, running: running.has(lockKey(env, playlistId)), messages: await history(env, playlistId) });
 }
 
 export async function onRequestDelete(context) {
@@ -189,7 +212,7 @@ export async function onRequestDelete(context) {
   const { env, request } = context;
   const contextId = new URL(request.url).searchParams.get('context');
   if (contextId) {
-    const a = await assistantApp(env);
+    const a = await assistantApp(env, new URL(request.url).searchParams.get('agent'));
     if (!a) return notFound('Ingen AI-app er aktivert');
     await saveConfig(env, a.row.id, archiveItem(a.config, contextId));
     return json(publicAssistant(await assistantApp(env)));
@@ -198,6 +221,15 @@ export async function onRequestDelete(context) {
   if (!playlistId) return badRequest('playlist er påkrevd');
   if (running.has(lockKey(env, playlistId))) return json({ error: 'Assistenten jobber – stopp den først' }, { status: 409 });
   await env.DB.prepare('DELETE FROM ai_messages WHERE playlist_id = ?').bind(playlistId).run();
+  // Ny samtale: Cursor-agentene for presentasjonen glemmes også.
+  const { results: agentApps } = await env.DB.prepare(`SELECT id, config FROM apps WHERE kind = 'cursor'`).all();
+  for (const r of agentApps ?? []) {
+    const config = safeJson(r.config, {});
+    if (config.agents?.[playlistId]) {
+      delete config.agents[playlistId];
+      await saveConfig(env, r.id, config);
+    }
+  }
   return json({ ok: true });
 }
 
@@ -209,7 +241,7 @@ export async function onRequestPost(context) {
 
   // ?parse=calls { text }: tolk anløp fra fri tekst (NAIS → Anløp → Importer).
   if (params.get('parse') === 'calls') {
-    const a = await assistantApp(env);
+    const a = await assistantApp(env, 'claude');
     if (!a?.apiKey || !a.agent.parseCalls) return json({ error: 'Krever Claude AI med API-nøkkel', code: 'no_ai' }, { status: 400 });
     const b = (await readJson(request)) || {};
     const ais = await env.DB.prepare(`SELECT config FROM apps WHERE kind = 'ais' ORDER BY id LIMIT 1`).first();
@@ -226,7 +258,7 @@ export async function onRequestPost(context) {
 
   const ctxKind = params.get('context');
   if (ctxKind) {
-    const a = await assistantApp(env);
+    const a = await assistantApp(env, params.get('agent'));
     if (!a) return notFound('Aktiver Claude AI først');
     try {
       let config;
@@ -258,9 +290,9 @@ export async function onRequestPost(context) {
   if (!message) return badRequest('Skriv hva du vil ha');
   const pl = await env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(playlistId).first();
   if (!pl) return notFound('Presentasjonen finnes ikke');
-  const assistant = await assistantApp(env);
-  if (!assistant) return json({ error: 'Aktiver Claude AI under Flatr Apps først.', code: 'no_app' }, { status: 400 });
-  if (!assistant.apiKey) return json({ error: 'Legg inn en API-nøkkel i Claude AI-appen først.', code: 'no_key' }, { status: 400 });
+  const assistant = await assistantApp(env, b.agent);
+  if (!assistant) return json({ error: 'Aktiver Claude AI eller Cursor AI under Flatr Apps først.', code: 'no_app' }, { status: 400 });
+  if (!assistant.apiKey) return json({ error: `Legg inn en API-nøkkel i ${assistant.row.name}-appen først.`, code: 'no_key' }, { status: 400 });
 
   const key = lockKey(env, playlistId);
   if (running.has(key)) return json({ error: 'Assistenten jobber allerede med denne presentasjonen' }, { status: 409 });
@@ -301,7 +333,7 @@ export async function onRequestPost(context) {
           config: assistant.config,
           lock,
           send,
-          messages: async () => repair((await history(env, playlistId)).map((m) => ({ role: m.role, content: m.content }))),
+          messages: async () => repair(forApi(await history(env, playlistId))),
           save: (role, content) => {
             answered = true;
             return save(env, playlistId, role, content);
@@ -310,7 +342,17 @@ export async function onRequestPost(context) {
           screenshot: slideScreenshot(env, request, playlistId),
           contextItems: (ids) => loadItems(env, assistant.config, ids),
           brand,
-          photos
+          photos,
+          // Cursor AI: MCP-serveren vår, agenten per presentasjon og hvilken fast kontekst som skal med.
+          mcpUrl: `${globalThis.process?.env?.PUBLIC_PROTOCOL || 'https'}://${request.headers.get('host')}/api/mcp`,
+          agentId: () => assistant.config.agents?.[playlistId] || null,
+          setAgentId: async (id) => {
+            const row = await env.DB.prepare('SELECT config FROM apps WHERE id = ?').bind(assistant.row.id).first();
+            const config = safeJson(row?.config, {});
+            await saveConfig(env, assistant.row.id, { ...config, agents: { ...(config.agents || {}), [playlistId]: id } });
+          },
+          contextIds: withContext ? activeIds : null,
+          allContextIds: activeIds
         })
         .catch(async (err) => {
           console.warn('[ai]', err?.message || err);

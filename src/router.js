@@ -24,6 +24,7 @@ import * as timeslots from './api/timeslots.js';
 import * as settings from './api/settings.js';
 import * as reports from './api/reports.js';
 import * as plays from './api/plays.js';
+import * as mcp from './api/mcp.js';
 import * as feeds from './api/feeds.js';
 import * as apps from './api/apps.js';
 import * as ai from './api/ai.js';
@@ -57,6 +58,7 @@ const ROUTES = {
   '/api/settings': settings,
   '/api/reports': reports,
   '/api/plays': plays,
+  '/api/mcp': mcp,
   '/api/feeds': feeds,
   '/api/apps': apps,
   '/api/ai': ai,
