@@ -74,6 +74,7 @@ function PlaylistCard({ p, onEdit, onDuplicate, onDelete }) {
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <h3 className="m-0 truncate text-base font-bold text-ink">{p.name}</h3>
+            {p.review_requested_at && <span className="mt-0.5 inline-block rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-semibold text-warn">Venter på godkjenning</span>}
             <p className="m-0 text-sm text-muted">
               {p.slide_count} lysbilde{p.slide_count === 1 ? '' : 'r'} · {fmtDuration(p.total_seconds)} ·{' '}
               {p.orientation === 'portrait' ? 'Stående' : 'Liggende'}

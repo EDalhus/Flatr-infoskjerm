@@ -31,6 +31,7 @@ import { startSnapshots, requestRefresh } from './snapshots.js';
 import { startMonitor } from './monitor.js';
 import { startNotices } from './notices.js';
 import { afterWrite, beforeWrite } from '../src/api/activity.js';
+import { notifier, teamMembers } from './notify.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -72,6 +73,9 @@ function tenantEnv(tenant, user) {
     REQUEST_SNAPSHOTS: () => process.env.CONVERTER_URL && requestRefresh(tenant.slug),
     // Skjermbilde av en side (AI-assistenten ser lysbildene den lager). Bare med konverter.
     SCREENSHOT: process.env.CONVERTER_URL ? screenshotUrl : null,
+    // Varsler (godkjenning, kommentarer) og teamet (@-omtaler).
+    NOTIFY: notifier(tenant),
+    TEAM: () => teamMembers(tenant.id),
     // Egne Flatr Apps ligger i platform.db; src/api/apps.js når dem herfra.
     APP_CATALOG: {
       customAppFor: (id) => customAppFor(id, tenant.id),

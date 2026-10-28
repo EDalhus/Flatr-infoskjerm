@@ -13,9 +13,20 @@ export default function TeamManager({ me }) {
   const [busy, setBusy] = useState(false);
   const isOwner = me?.role === 'owner';
   const [require2fa, setRequire2fa] = useState(null);
+  const [approval, setApproval] = useState(null);
   useEffect(() => {
     api.settings.get().then((s) => setRequire2fa(!!s.require_2fa)).catch(() => {});
+    api.review.pending().then((r) => setApproval(!!r.required)).catch(() => {});
   }, []);
+  const toggleApproval = async (on) => {
+    if (on && !confirm('Slå på godkjenning? Slik presentasjonene ser ut nå, blir publisert. Etter dette må en eier publisere endringer før de vises på skjermene.')) return;
+    setError('');
+    try {
+      setApproval((await api.review.setRequired(on)).required);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
   const toggle2fa = async (on) => {
     setError('');
     try {
@@ -119,6 +130,17 @@ export default function TeamManager({ me }) {
                 </span>
               </span>
             </label>
+            {approval !== null && (
+              <label className="mt-4 flex items-start gap-3 border-t border-hair pt-4 text-sm">
+                <input type="checkbox" className="mt-1" checked={approval} onChange={(e) => toggleApproval(e.target.checked)} />
+                <span>
+                  <span className="font-semibold text-ink">Krev godkjenning før publisering</span>
+                  <span className="block text-muted">
+                    Endringer i presentasjoner vises ikke på skjermene før en eier har publisert dem. Redaktører trykker «Send til godkjenning», og eierne får beskjed på e-post (og Slack/Teams).
+                  </span>
+                </span>
+              </label>
+            )}
           </Card>
         )}
 

@@ -28,6 +28,7 @@ import * as apps from './api/apps.js';
 import * as ai from './api/ai.js';
 import * as activity from './api/activity.js';
 import * as versions from './api/versions.js';
+import * as review from './api/review.js';
 
 export { pairing };
 
@@ -57,7 +58,8 @@ const ROUTES = {
   '/api/apps': apps,
   '/api/ai': ai,
   '/api/activity': activity,
-  '/api/versions': versions
+  '/api/versions': versions,
+  '/api/review': review
 };
 
 const METHOD_HANDLER = {

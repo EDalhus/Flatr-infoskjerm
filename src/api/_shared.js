@@ -245,6 +245,24 @@ export async function touchScreen(env, screenId) {
  * (med utledet status), sponsorer og aktive alerts.
  * Gjenbrukes av /api/state og /api/stream.
  */
+/** Krever kontoen godkjenning før publisering? */
+export async function approvalRequired(env) {
+  const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = 'require_approval'`).first().catch(() => null);
+  return row?.value === '1';
+}
+
+/** Siste publiserte versjon av en presentasjon (når godkjenning er på), ellers null. */
+async function publishedDeck(env, playlistId) {
+  if (!(await approvalRequired(env))) return null;
+  const row = await env.DB.prepare(
+    'SELECT v.data FROM playlists p JOIN playlist_versions v ON v.id = p.published_version_id WHERE p.id = ?'
+  )
+    .bind(playlistId)
+    .first()
+    .catch(() => null);
+  return row ? safeJson(row.data, null) : null;
+}
+
 export async function buildState(env, screenId, { playlistId: previewPlaylistId } = {}) {
   const id = toIntOrNull(screenId);
   const now = Date.now();
@@ -310,11 +328,22 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
     effective_status: effectiveStatus(row, now)
   }));
 
+  // Godkjenning før publisering: skjermene viser siste publiserte versjon
+  // (forhåndsvisningen i editoren viser utkastet).
+  const published = !previewPlaylistId && playlistId ? await publishedDeck(env, playlistId) : null;
+
   // Hent elementene for lysbildene og bygg deck.
-  const rawSlides = deckSlides.results ?? [];
+  const rawSlides = published ? published.slides.filter((s) => s.enabled !== 0) : deckSlides.results ?? [];
   const slideIds = rawSlides.map((s) => s.id);
   const elsBySlide = {};
-  if (slideIds.length) {
+  if (published) {
+    for (const s of rawSlides)
+      for (const e of s.elements || []) {
+        const config = safeJson(e.config, {});
+        if (config.hidden === true) continue;
+        (elsBySlide[s.id] ||= []).push({ ...e, slide_id: s.id, config });
+      }
+  } else if (slideIds.length) {
     const marks = slideIds.map(() => '?').join(',');
     const { results: els } = await env.DB
       .prepare(
@@ -328,7 +357,7 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
       (elsBySlide[e.slide_id] ||= []).push({ ...e, config });
     }
   }
-  const deck = rawSlides.map((s) => ({
+  const deck = rawSlides.map(({ elements: _e, ...s }) => ({
     ...s,
     background: safeJson(s.background, { type: 'color', color: '#0f2733' }),
     elements: elsBySlide[s.id] ?? []

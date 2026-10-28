@@ -102,6 +102,12 @@ export const api = {
     testWebhook: () => req('/settings?test=webhook', { method: 'POST', body: {} })
   },
   activity: (before, q) => req(`/activity?${new URLSearchParams({ ...(before ? { before } : {}), ...(q ? { q } : {}) })}`),
+  review: {
+    status: (playlistId) => req(`/review?playlist=${encodeURIComponent(playlistId)}`),
+    pending: () => req('/review'),
+    setRequired: (required) => req('/review', { method: 'PUT', body: { required } }),
+    act: (playlistId, action, note) => req(`/review?playlist=${encodeURIComponent(playlistId)}&action=${action}`, { method: 'POST', body: { note } })
+  },
   versions: {
     list: (playlistId) => req(`/versions?playlist=${encodeURIComponent(playlistId)}`),
     get: (id) => req(`/versions?id=${encodeURIComponent(id)}`),

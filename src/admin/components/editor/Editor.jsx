@@ -15,6 +15,7 @@ import { MediaPicker } from '../MediaPicker.jsx';
 import Stage from './Stage.jsx';
 import Panel from './Panel.jsx';
 import VersionHistory from './VersionHistory.jsx';
+import ReviewBar from './ReviewBar.jsx';
 import SlideRail from './SlideRail.jsx';
 import { bbox, clamp, round } from './geometry.js';
 import { hostOf, videoSeconds, ImportBanner } from './media.jsx';
@@ -887,6 +888,8 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           </button>
         </div>
       )}
+
+      <ReviewBar playlistId={playlistId} version={slides} readOnly={readOnly} onPublished={() => say('Publisert til skjermene')} />
 
       {/* ------------------------------ arbeidsflate ------------------------------ */}
       <div className="flex min-h-0 flex-1">

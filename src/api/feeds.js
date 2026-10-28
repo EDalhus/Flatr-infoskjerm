@@ -227,6 +227,21 @@ function parseFeed(xml) {
 /* -------------------------------- endepunkt ------------------------------ */
 
 // GET /api/feeds  (åpent – data som uansett vises på skjermene)
+async function publishedElement(env, id) {
+  const { results } = await env.DB.prepare(
+    `SELECT v.data FROM playlists p JOIN playlist_versions v ON v.id = p.published_version_id WHERE v.data LIKE ?`
+  )
+    .bind(`%"id":${Number(id)},%`)
+    .all()
+    .catch(() => ({ results: [] }));
+  for (const r of results || []) {
+    const deck = safeJson(r.data, null);
+    for (const s of deck?.slides || [])
+      for (const e of s.elements || []) if (e.id === Number(id)) return { kind: e.kind, config: e.config, w: e.w, h: e.h, background: s.background };
+  }
+  return null;
+}
+
 export async function onRequestGet({ request, env }) {
   const params = new URL(request.url).searchParams;
 
@@ -254,11 +269,14 @@ export async function onRequestGet({ request, env }) {
 
   const id = toIntOrNull(params.get('element'));
   if (!id) return badRequest('element er påkrevd');
-  const el = await env.DB.prepare(
+  let el = await env.DB.prepare(
     `SELECT e.kind, e.config, e.w, e.h, d.background FROM deck_elements e JOIN deck_slides d ON d.id = e.slide_id WHERE e.id = ?`
   )
     .bind(id)
     .first();
+  // Godkjenning: skjermene kan vise en publisert versjon der elementet
+  // fortsatt finnes, selv om det er slettet i utkastet.
+  if (!el) el = await publishedElement(env, id);
   if (!el || ![...WIDGET_KINDS, 'carousel'].includes(el.kind)) return notFound('Elementet finnes ikke');
   const c = safeJson(el.config, {});
 
