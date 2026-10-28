@@ -4,7 +4,9 @@ import AiCommand from './components/AiCommand.jsx';
 import BrandManager from './components/BrandManager.jsx';
 import ActivityManager from './components/ActivityManager.jsx';
 import { setBrand } from './brandStore.js';
-import { refreshApps, useAppKinds } from './appsStore.js';
+import { refreshApps, useAppKinds, useInstalledApps } from './appsStore.js';
+import AppIcon from './components/apps/AppIcon.jsx';
+import { OFFICIAL_BY_KEY } from '../lib/appCatalog.js';
 import { Icon } from './components/ui.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ProgramManager from './components/ProgramManager.jsx';
@@ -36,7 +38,7 @@ const NAV = [
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
   // Maler er en fane under Presentasjoner (?view=playlists&tab=templates).
   { id: 'templates', label: 'Maler', icon: 'copy', group: 'hidden', Component: TemplatesManager },
-  { id: 'apps', label: 'Flatr Apps', icon: 'sparkle', group: 'content', Component: AppsManager },
+  { id: 'apps', label: 'Flatr Apps', icon: 'sparkle', group: 'apps', Component: AppsManager },
   { id: 'reports', label: 'Rapporter', icon: 'chart', group: 'content', Component: ReportsManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
   { id: 'brand', label: 'Merkevare', icon: 'tag', group: 'account', Component: BrandManager, tenantOnly: true },
@@ -228,8 +230,63 @@ function AdminShell({ context }) {
 
 const NAV_WIDE_KEY = 'flatr.navWide';
 
+// Apper med egen side i admin: lenken i sidemenyen går dit i stedet for til innstillingene.
+const APP_PAGE = { events: 'schedule', timetable: 'timetable' };
+
+/** «Flatr Apps» i sidemenyen: markedsplassen og hver aktiverte app. */
+function AppsSection({ tab, go, wide }) {
+  const apps = useInstalledApps();
+  const openApp = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('app') : null;
+  const item = (key, label, icon, active, onClick) => (
+    <button
+      key={key}
+      type="button"
+      onClick={onClick}
+      title={wide ? undefined : label}
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
+      className={`flex h-9 shrink-0 items-center rounded-lg transition-colors ${wide ? 'w-full gap-3 px-3 text-left text-sm font-medium' : 'w-10 justify-center'} ${
+        active ? 'bg-brand-tint text-brand' : 'text-muted hover:bg-hair hover:text-ink'
+      }`}
+    >
+      {icon}
+      {wide && <span className="truncate">{label}</span>}
+    </button>
+  );
+  return (
+    <div className={`flex min-h-0 shrink flex-col gap-0.5 overflow-y-auto ${wide ? '' : 'items-center'}`}>
+      <span className={`my-2 h-px shrink-0 bg-line ${wide ? 'mx-2' : 'w-6'}`} aria-hidden="true" />
+      {wide ? (
+        <div className="flex items-center justify-between px-3 pb-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">Flatr Apps</span>
+          <button type="button" onClick={() => go('apps')} className="grid h-6 w-6 place-items-center rounded-md text-muted hover:bg-hair hover:text-ink" title="Finn flere apper" aria-label="Finn flere apper">
+            <Icon name="plus" className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : (
+        item('market', 'Flatr Apps', <Icon name="sparkle" className="h-5 w-5 shrink-0" />, tab === 'apps' && !openApp, () => go('apps'))
+      )}
+      {apps.map((a) => {
+        const def = OFFICIAL_BY_KEY[a.kind];
+        const id = a.kind === 'custom' ? `c${a.app_ref}` : a.kind;
+        const page = APP_PAGE[a.kind];
+        const active = page ? tab === page : tab === 'apps' && openApp === id;
+        const icon = <AppIcon icon={a.definition?.icon || def?.icon || 'sparkle'} color={a.definition?.color || def?.color || '#5b5bd6'} size={wide ? 20 : 24} />;
+        return item(`a${a.id}`, a.name, icon, active, () => (page ? go(page) : go('apps', { app: id })));
+      })}
+      {wide && !apps.length && (
+        <button type="button" onClick={() => go('apps')} className="px-3 py-1.5 text-left text-xs text-muted hover:text-ink">
+          Ingen apper aktivert. Utforsk →
+        </button>
+      )}
+      {wide && apps.length > 0 && item('market', 'Alle apper', <Icon name="sparkle" className="h-5 w-5 shrink-0" />, tab === 'apps' && !openApp, () => go('apps'))}
+    </div>
+  );
+}
+
 function RailShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout, lobby, current, children }) {
-  const mainItems = nav.filter((n) => n.group !== 'account' && n.group !== 'hidden');
+  // Sider fra apper (Program, Tidsplan) og markedsplassen ligger i Flatr Apps-seksjonen.
+  const mainItems = nav.filter((n) => !['account', 'hidden', 'apps'].includes(n.group) && !n.requires);
   // Sidemenyen er åpen (full bredde med navn) som standard; lukker du den,
   // huskes det i nettleseren til du åpner den igjen.
   const [wide, setWide] = useState(() => {
@@ -292,6 +349,7 @@ function RailShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout
             </div>
           );
         })}
+        <AppsSection tab={tab} go={go} wide={wide} />
         <div className={`mt-auto flex flex-col ${wide ? '' : 'items-center'}`}>
           <UserMenu
             me={me}
