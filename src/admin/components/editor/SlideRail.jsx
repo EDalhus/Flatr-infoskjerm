@@ -26,7 +26,7 @@ function period(s) {
   return null;
 }
 
-export default function SlideRail({ slides, orientation, selectedId, peers, onSelect, onAdd, onDuplicate, onDelete, onMove, onCopyTo, onAi, playlistId }) {
+export default function SlideRail({ slides, orientation, selectedId, peers, onSelect, onAdd, onDuplicate, onDelete, onMove, onCopyTo, onAi, playlistId, commentCounts = {} }) {
   const { rowProps } = useListDnd((from, to) => onMove(from, to));
   // «Kopier til …»: de andre presentasjonene, hentet når menyen åpnes.
   const [copyFor, setCopyFor] = useState(null);
@@ -89,6 +89,11 @@ export default function SlideRail({ slides, orientation, selectedId, peers, onSe
                 <div className="flex items-center gap-1.5 px-0.5 pt-1.5 text-xs">
                   <span className="font-semibold text-muted">{i + 1}</span>
                   <span className="min-w-0 flex-1 truncate text-ink">{s.name || 'Lysbilde'}</span>
+                  {commentCounts[s.id] > 0 && (
+                    <span className="shrink-0 rounded-full bg-brand-tint px-1.5 text-[10px] font-semibold text-brand" title={`${commentCounts[s.id]} åpne kommentarer`}>
+                      💬 {commentCounts[s.id]}
+                    </span>
+                  )}
                   <span className="shrink-0 tabular-nums text-muted">{s.duration_seconds}s</span>
                 </div>
                 {period(s) && (

@@ -7,6 +7,7 @@ import { BASE_SIZE, ELEMENT_LABEL, ELEMENT_ICON } from '../../../lib/deck.js';
 import { Icon, Button } from '../ui.jsx';
 import ElementConfigFields from '../deck/ElementConfigFields.jsx';
 import AiPanel from './AiPanel.jsx';
+import CommentsPanel from './CommentsPanel.jsx';
 import { SlideInspector } from '../deck/Inspector.jsx';
 
 function Section({ title, children, action }) {
@@ -402,6 +403,7 @@ export default function Panel(props) {
         {[
           ['design', 'Design'],
           ['layers', `Lag${slide ? ` (${slide.elements.length})` : ''}`],
+          ['comments', `💬${props.openComments ? ` ${props.openComments}` : ''}`],
           ...(props.aiEnabled ? [['ai', '✦ AI']] : [])
         ].map(([id, label]) => (
           <button
@@ -418,13 +420,25 @@ export default function Panel(props) {
       </div>
 
       {/* AI-fanen holdes montert, så samtalen fortsetter når du bytter fane. */}
+      <div className={`min-h-0 flex-1 ${tab === 'comments' ? '' : 'hidden'}`}>
+        <CommentsPanel
+          playlistId={props.playlistId}
+          slide={slide}
+          slides={props.slides || []}
+          selected={selected}
+          onSelectElement={(id) => props.onSelect([id])}
+          onSelectSlide={props.onSelectSlide}
+          onCount={props.onCommentCount}
+        />
+      </div>
+
       {props.aiEnabled && (
         <div className={`min-h-0 flex-1 ${tab === 'ai' ? '' : 'hidden'}`}>
           <AiPanel playlistId={props.playlistId} onChanged={props.onAiChanged} pending={props.aiPending} onPendingUsed={props.onAiPendingUsed} />
         </div>
       )}
 
-      <div className={`min-h-0 flex-1 overflow-y-auto ${tab === 'ai' ? 'hidden' : ''}`}>
+      <div className={`min-h-0 flex-1 overflow-y-auto ${tab === 'ai' || tab === 'comments' ? 'hidden' : ''}`}>
         {tab === 'layers' && slide ? (
           <LayerList elements={slide.elements} selection={selection} locks={locks} onSelect={props.onSelect} onPatch={props.onPatch} onGroup={props.onGroup} />
         ) : selected.length === 1 ? (

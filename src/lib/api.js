@@ -102,6 +102,12 @@ export const api = {
     testWebhook: () => req('/settings?test=webhook', { method: 'POST', body: {} })
   },
   activity: (before, q) => req(`/activity?${new URLSearchParams({ ...(before ? { before } : {}), ...(q ? { q } : {}) })}`),
+  comments: {
+    list: (playlistId) => req(`/comments?playlist=${encodeURIComponent(playlistId)}`),
+    add: (body) => req('/comments', { method: 'POST', body }),
+    update: (id, body) => req(`/comments?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+    remove: (id) => req(`/comments?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
   review: {
     status: (playlistId) => req(`/review?playlist=${encodeURIComponent(playlistId)}`),
     pending: () => req('/review'),

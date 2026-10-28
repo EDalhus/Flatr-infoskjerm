@@ -199,7 +199,7 @@ async function handleTenant(request, tenant) {
       });
     }
     // Lesere kan se alt, men ikke endre noe.
-    if (user.role === 'viewer' && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+    if (user.role === 'viewer' && !['GET', 'HEAD', 'OPTIONS'].includes(request.method) && key !== '/api/comments') {
       return jsonError(403, 'Du har lesetilgang og kan ikke endre noe. Be en eier om å gi deg redaktørtilgang.');
     }
   }

@@ -72,6 +72,11 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const [toast, setToast] = useState('');
   const readOnly = me?.role === 'viewer';
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [commentCounts, setCommentCounts] = useState({});
+  // ?comments=1 (lenke fra e-postvarsel) åpner kommentarfanen.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('comments')) setPanelTab('comments');
+  }, []);
   // Høyre panel: design | layers | ai. ⌘K sender en melding hit (aiPending).
   const [panelTab, setPanelTab] = useState('design');
   const [aiPending, setAiPending] = useState(null);
@@ -904,6 +909,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onDelete={deleteSlide}
           onMove={moveSlide}
           playlistId={playlistId}
+          commentCounts={commentCounts}
           onAi={
             aiEnabled
               ? (s, kind) => {
@@ -970,7 +976,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           )}
         </main>
 
-        <div className={readOnly ? 'pointer-events-none opacity-60' : 'contents'}>
+        <div className={readOnly && panelTab !== 'comments' ? 'pointer-events-none opacity-60' : 'contents'}>
         <Panel
           slide={slide}
           selected={selected}
@@ -990,6 +996,10 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onDeleteSlide={deleteSlide}
           onSaveTemplate={saveTemplate}
           tab={panelTab}
+          slides={slides}
+          onSelectSlide={setSelSlide}
+          onCommentCount={setCommentCounts}
+          openComments={Object.values(commentCounts).reduce((a, b) => a + b, 0)}
           aiEnabled={aiEnabled}
           onTab={setPanelTab}
           playlistId={playlistId}
