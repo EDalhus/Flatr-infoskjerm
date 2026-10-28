@@ -1,7 +1,8 @@
-import { json, badRequest, notFound, handleOptions, readJson, requireAdmin, toIntOrNull, safeJson, previewToken } from './_shared.js';
+import { json, badRequest, notFound, handleOptions, readJson, requireAdmin, toIntOrNull, safeJson, previewToken, getTimezone } from './_shared.js';
 import { decryptSecret } from './apps.js';
 import { AGENTS, AGENT_KINDS } from './agents/index.js';
 import { cleanBrand } from '../lib/brand.js';
+import { cleanCalls, UNITS } from '../lib/portCalls.js';
 import { addPdf, addLink, addText, archiveItem, activeItems, publicItem, loadItems } from './agents/context.js';
 
 // AI-assistenten i editoren (⌘K / AI-fanen). Assistentene er Flatr Apps
@@ -190,6 +191,23 @@ export async function onRequestPost(context) {
   if (denied) return denied;
   const { env, request } = context;
   const params = new URL(request.url).searchParams;
+
+  // ?parse=calls { text }: tolk anløp fra fri tekst (NAIS → Anløp → Importer).
+  if (params.get('parse') === 'calls') {
+    const a = await assistantApp(env);
+    if (!a?.apiKey || !a.agent.parseCalls) return json({ error: 'Krever Claude AI med API-nøkkel', code: 'no_ai' }, { status: 400 });
+    const b = (await readJson(request)) || {};
+    const ais = await env.DB.prepare(`SELECT config FROM apps WHERE kind = 'ais' ORDER BY id LIMIT 1`).first();
+    const config = safeJson(ais?.config, {});
+    try {
+      const tz = await getTimezone(env);
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+      const calls = await a.agent.parseCalls(a.apiKey, b.text || '', { fleet: config.fleet || [], quays: config.quays || [], today, units: UNITS });
+      return json({ calls: cleanCalls(calls) });
+    } catch (err) {
+      return json({ error: a.agent.errorText(err) }, { status: 502 });
+    }
+  }
 
   const ctxKind = params.get('context');
   if (ctxKind) {

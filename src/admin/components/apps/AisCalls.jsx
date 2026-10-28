@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { etaTo, etaText } from '../../../lib/ais.js';
-import { CARGO_DIRS, UNITS, currentCalls, cargoText, callTimeText, callDate, hasClock } from '../../../lib/portCalls.js';
+import { CARGO_DIRS, UNITS, currentCalls, cargoText, callTimeText, callDate, hasClock, parseCallTable, cleanCalls } from '../../../lib/portCalls.js';
 import { Icon, Field, Input, Select, Button, IconButton } from '../ui.jsx';
 import { Section } from './parts.jsx';
 
@@ -185,12 +185,150 @@ function CallForm({ initial, fleet, quays, goodsList, onSave, onCancel, onDelete
   );
 }
 
+/** Importer anløp: lim inn fra Excel, e-post eller notater. Claude AI tolker fri tekst; tabeller leses direkte. */
+function ImportCalls({ fleet, quays, onAdd, onClose, busy }) {
+  const [text, setText] = useState('');
+  const [found, setFound] = useState(null);
+  const [picked, setPicked] = useState(new Set());
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState('');
+  const [ai, setAi] = useState(null);
+  useEffect(() => {
+    api.ai.app().then((r) => setAi(!!r?.app?.has_key)).catch(() => setAi(false));
+  }, []);
+  const today = new Date().toISOString().slice(0, 10);
+  const show = (calls) => {
+    const clean = cleanCalls(calls.map((c) => ({ ...c, id: Math.random().toString(36).slice(2, 10) })));
+    setFound(clean);
+    setPicked(new Set(clean.map((c) => c.id)));
+    if (!clean.length) setError('Fant ingen anløp. Har tabellen en overskriftsrad med f.eks. «Båt» og «Dato»?');
+  };
+  const byAi = async () => {
+    setWorking(true);
+    setError('');
+    try {
+      show((await api.ai.parseCalls(text)).calls || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setWorking(false);
+    }
+  };
+  const boatName = (c) => c.name || fleet.find((b) => b.mmsi === c.mmsi)?.name || c.mmsi;
+  return (
+    <div className="grid gap-3 border-y border-hair bg-zone/40 px-5 py-4">
+      <div className="text-sm text-ink">
+        <strong>Importer anløp</strong>
+        <span className="text-muted"> – lim inn rader fra Excel, en e-post fra rederiet eller egne notater.</span>
+      </div>
+      <textarea
+        rows={7}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={'F.eks.\nBåt\tKai\tDato\tTid\tNeste havn\tVare\tMengde\tEnhet\tRetning\nFramfjord\tSkutvika\t02.11\t14:30\tBergen\tOlivin\t3500\ttonn\tLasting\n\neller fri tekst: «Holmfoss kommer onsdag til Ålesund og henter 200 big bags Sea …»'}
+        className="rounded-xl border border-line bg-paper px-3 py-2 font-mono text-xs text-ink outline-none focus:border-focus"
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        {ai && (
+          <Button size="sm" onClick={byAi} disabled={working || !text.trim()}>
+            <Icon name="sparkle" className="h-4 w-4" />
+            {working ? 'Claude leser …' : 'Tolk med Claude AI'}
+          </Button>
+        )}
+        <Button size="sm" variant={ai ? 'outline' : 'primary'} onClick={() => (setError(''), show(parseCallTable(text, { fleet, quays, today })))} disabled={working || !text.trim()}>
+          Les som tabell
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onClose}>
+          Avbryt
+        </Button>
+        {ai === false && <span className="text-xs text-muted">Med Claude AI kan du også lime inn fri tekst og e-poster.</span>}
+      </div>
+      {error && <p className="m-0 text-xs text-danger">{error}</p>}
+      {found?.length > 0 && (
+        <div className="grid gap-2">
+          <ul className="m-0 list-none divide-y divide-hair rounded-xl border border-hair bg-card p-0">
+            {found.map((c) => (
+              <li key={c.id} className="flex items-start gap-3 px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={picked.has(c.id)}
+                  onChange={(e) => {
+                    const next = new Set(picked);
+                    if (e.target.checked) next.add(c.id);
+                    else next.delete(c.id);
+                    setPicked(next);
+                  }}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-ink">
+                    <strong>{callTimeText(c.eta)}</strong> · {boatName(c)}
+                    {!c.mmsi && <span className="text-xs text-muted"> (ikke i flåten)</span>} · {quays.find((q) => q.id === c.quayId)?.name || <span className="text-warn">ukjent kai</span>}
+                  </div>
+                  <div className="truncate text-xs text-muted">{[c.next && `→ ${c.next}`, cargoText(c.cargo)].filter(Boolean).join('  ·  ')}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Button size="sm" className="justify-self-start" disabled={busy || !picked.size} onClick={() => onAdd(found.filter((c) => picked.has(c.id)))}>
+            Legg til {picked.size} anløp
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Varer levert og hentet de siste N dagene (fra registrerte anløp). */
+function CargoReport({ calls, days }) {
+  const since = Date.now() - days * 86_400_000;
+  const totals = new Map();
+  for (const c of calls) {
+    const t = callDate(c.eta).getTime();
+    if (t < since || t > Date.now()) continue;
+    for (const g of c.cargo) {
+      const key = `${g.dir}|${g.goods.toLowerCase()}|${g.unit || ''}`;
+      const cur = totals.get(key) || { dir: g.dir, goods: g.goods, unit: g.unit, qty: 0, calls: 0 };
+      cur.qty += g.qty || 0;
+      cur.calls += 1;
+      totals.set(key, cur);
+    }
+  }
+  const rows = [...totals.values()].sort((a, b) => a.dir.localeCompare(b.dir) || b.qty - a.qty);
+  if (!rows.length) return <p className="m-0 px-5 pb-4 text-sm text-muted">Ingen varer registrert de siste {days} dagene.</p>;
+  return (
+    <div className="px-5 pb-4">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            <th className="py-1 font-semibold">Vare</th>
+            <th className="py-1 font-semibold">Retning</th>
+            <th className="py-1 text-right font-semibold">Mengde</th>
+            <th className="py-1 text-right font-semibold">Anløp</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-hair">
+          {rows.map((r) => (
+            <tr key={`${r.dir}${r.goods}${r.unit}`}>
+              <td className="py-1.5 text-ink">{r.goods}</td>
+              <td className="py-1.5 text-muted">{r.dir === 'load' ? '↑ Hentet' : '↓ Levert'}</td>
+              <td className="py-1.5 text-right tabular-nums text-ink">{r.qty ? `${r.qty.toLocaleString('nb-NO')} ${r.unit || ''}` : '–'}</td>
+              <td className="py-1.5 text-right tabular-nums text-muted">{r.calls}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function AisCalls({ app, onSaved }) {
   const fleet = app.config?.fleet || [];
   const quays = app.config?.quays || [];
   const [calls, setCalls] = useState(app.config?.calls || []);
   const [editing, setEditing] = useState(null); // id | 'new'
   const [showPast, setShowPast] = useState(false);
+  const [reportDays, setReportDays] = useState(30);
   const [quayFilter, setQuayFilter] = useState('');
   const [live, setLive] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -257,15 +395,22 @@ export default function AisCalls({ app, onSaved }) {
         count={upcoming.length}
         hint="Båtanløp dere vet om: kai, forventet ankomst og avgang, neste havn og varer. Vis dem på skjermene med NAIS → Anløpsplan i editoren."
         action={
-          editing !== 'new' && (
-            <Button size="sm" variant="outline" onClick={() => setEditing('new')}>
-              <Icon name="plus" className="h-4 w-4" />
-              Nytt anløp
-            </Button>
+          editing !== 'new' &&
+          editing !== 'import' && (
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setEditing('import')}>
+                Importer
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setEditing('new')}>
+                <Icon name="plus" className="h-4 w-4" />
+                Nytt anløp
+              </Button>
+            </div>
           )
         }
         flush
       >
+        {editing === 'import' && <ImportCalls fleet={fleet} quays={quays} busy={busy} onClose={() => setEditing(null)} onAdd={(list) => save([...calls, ...list])} />}
         {editing === 'new' && (
           <CallForm
             initial={blankCall(quays)}
@@ -323,6 +468,22 @@ export default function AisCalls({ app, onSaved }) {
           )}
           {error && <span className="text-xs text-danger">{error}</span>}
         </div>
+
+        {showPast && (
+          <div className="border-t border-hair">
+            <div className="flex items-center gap-2 px-5 pb-2 pt-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              Varer
+              <select value={reportDays} onChange={(e) => setReportDays(Number(e.target.value))} className="rounded-md border border-line bg-paper px-1.5 py-0.5 text-xs normal-case text-ink">
+                {[30, 90, 365].map((d) => (
+                  <option key={d} value={d}>
+                    siste {d} dager
+                  </option>
+                ))}
+              </select>
+            </div>
+            <CargoReport calls={calls.filter((c) => !quayFilter || c.quayId === quayFilter)} days={reportDays} />
+          </div>
+        )}
 
         {!list.length && (
           <p className="m-0 px-5 pb-5 text-sm text-muted">

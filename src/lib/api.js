@@ -104,6 +104,7 @@ export const api = {
   // AI-assistenten (src/api/ai.js). send() gir rå Response (SSE) til AiPanel.
   ai: {
     app: () => req('/ai'),
+    parseCalls: (text) => req('/ai?parse=calls', { method: 'POST', body: { text } }),
     // Fast kontekst (merkevare o.l.). Alle returnerer oppdatert app.
     addLink: (url, title) => req('/ai?context=link', { method: 'POST', body: { url, title } }),
     addText: (text, title) => req('/ai?context=text', { method: 'POST', body: { text, title } }),

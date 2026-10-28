@@ -187,3 +187,71 @@ export async function run(ctx) {
   }
   send('notice', { text: 'Stoppet etter mange steg. Skriv «fortsett» for å fortsette.' });
 }
+
+/* ------------------- tolking av anløp (NAIS → Anløp → Importer) ------------------- */
+
+const nullable = (type) => ({ type: [type, 'null'] });
+const CALLS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['calls'],
+  properties: {
+    calls: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['mmsi', 'name', 'quayId', 'eta', 'etd', 'from', 'next', 'cargo'],
+        properties: {
+          mmsi: nullable('string'),
+          name: nullable('string'),
+          quayId: nullable('string'),
+          eta: { type: 'string' },
+          etd: nullable('string'),
+          from: nullable('string'),
+          next: nullable('string'),
+          cargo: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['dir', 'goods', 'qty', 'unit'],
+              properties: { dir: { type: 'string', enum: ['load', 'unload'] }, goods: { type: 'string' }, qty: nullable('number'), unit: nullable('string') }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+/**
+ * Gjør fri tekst (e-post, Excel, notater) om til anløp. fleet/quays brukes til
+ * å koble båter og kaier; today ("YYYY-MM-DD") til datoer uten år.
+ */
+export async function parseCalls(apiKey, text, { fleet = [], quays = [], today, units = [] }) {
+  const client = new Anthropic({ apiKey });
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 16000,
+    output_config: { effort: 'low', format: { type: 'json_schema', schema: CALLS_SCHEMA } },
+    system: `You extract planned port calls (ship visits) from text a Norwegian shipping/port office pasted: emails, Excel rows or notes. Return every call you can find.
+Rules:
+- eta/etd: local wall time "YYYY-MM-DDTHH:MM", or only "YYYY-MM-DD" when no time is given. Today is ${today}; dates without a year are the next occurrence. etd null if unknown.
+- Match ships to the fleet by name (case-insensitive, ignore prefixes like MS/MV) and return its mmsi; otherwise mmsi null and the ship name in name. When matched, name may be null.
+- Match the quay to the known quays by name and return its id; otherwise null.
+- cargo: dir "unload" when the ship delivers/discharges/lands goods here, "load" when it picks up/loads goods. qty as a number (no thousands separators), unit preferably one of: ${units.join(', ')}.
+- from/next: previous and next port names if mentioned.
+- Never invent calls that are not in the text.`,
+    messages: [
+      {
+        role: 'user',
+        content: `Fleet: ${JSON.stringify(fleet.map((b) => ({ mmsi: b.mmsi, name: b.name })))}\nQuays: ${JSON.stringify(quays.map((q) => ({ id: q.id, name: q.name })))}\n\nText:\n${String(text).slice(0, 30_000)}`
+      }
+    ]
+  });
+  if (response.stop_reason === 'refusal') throw new Error('Claude ville ikke tolke teksten.');
+  const block = response.content.find((b) => b.type === 'text');
+  const parsed = block ? JSON.parse(block.text) : { calls: [] };
+  return parsed.calls || [];
+}
