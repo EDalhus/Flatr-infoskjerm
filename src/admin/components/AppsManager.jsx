@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api.js';
+import { refreshApps } from '../appsStore.js';
 import { OFFICIAL_APPS, CATEGORIES, CATEGORY_LABEL, TEMPLATES } from '../../lib/appCatalog.js';
 import AppIcon from './apps/AppIcon.jsx';
 import { useUrlParam } from '../useUrlParam.js';
@@ -142,6 +143,7 @@ export default function AppsManager() {
     try {
       await api.apps.create({ kind: item.kind, app_ref: item.ref });
       await load();
+      refreshApps();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -155,6 +157,7 @@ export default function AppsManager() {
     try {
       await api.apps.remove(ins.id);
       await load();
+      refreshApps();
     } catch (e) {
       setError(e.message);
     }
@@ -339,7 +342,11 @@ export default function AppsManager() {
                   <div className="mt-6 flex items-start gap-3 rounded-2xl border border-brand/30 bg-brand-tint p-4 text-sm text-ink">
                     <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                     <span>
-                      Klar til bruk. Åpne en presentasjon og legg den til fra <strong>Widgeter</strong> i editoren.
+                      {current.ready || (
+                        <>
+                          Klar til bruk. Åpne en presentasjon og legg den til fra <strong>Widgeter</strong> i editoren.
+                        </>
+                      )}
                     </span>
                   </div>
                 )}

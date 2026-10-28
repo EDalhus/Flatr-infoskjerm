@@ -4,6 +4,7 @@ import AiCommand from './components/AiCommand.jsx';
 import BrandManager from './components/BrandManager.jsx';
 import ActivityManager from './components/ActivityManager.jsx';
 import { setBrand } from './brandStore.js';
+import { refreshApps, useAppKinds } from './appsStore.js';
 import { Icon } from './components/ui.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ProgramManager from './components/ProgramManager.jsx';
@@ -29,14 +30,16 @@ const NAV = [
   { id: 'dashboard', label: 'Hjem', icon: 'home', group: 'main', Component: Dashboard },
   { id: 'screens', label: 'Skjermer', icon: 'monitor', group: 'main', Component: ScreensManager },
   { id: 'playlists', label: 'Presentasjoner', icon: 'layers', group: 'main', Component: PlaylistsManager },
-  { id: 'timetable', label: 'Tidsplan', icon: 'clock', group: 'main', Component: TimetableManager },
-  { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager },
+  // Tidsplan og Program er Flatr Apps (requires): vises bare når appen er aktivert.
+  { id: 'timetable', label: 'Tidsplan', icon: 'clock', group: 'main', Component: TimetableManager, requires: 'timetable' },
+  { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager, requires: 'events' },
   { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
-  { id: 'templates', label: 'Maler', icon: 'copy', group: 'content', Component: TemplatesManager },
-  { id: 'brand', label: 'Merkevare', icon: 'tag', group: 'content', Component: BrandManager },
+  // Maler er en fane under Presentasjoner (?view=playlists&tab=templates).
+  { id: 'templates', label: 'Maler', icon: 'copy', group: 'hidden', Component: TemplatesManager },
   { id: 'apps', label: 'Flatr Apps', icon: 'sparkle', group: 'content', Component: AppsManager },
   { id: 'reports', label: 'Rapporter', icon: 'chart', group: 'content', Component: ReportsManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
+  { id: 'brand', label: 'Merkevare', icon: 'tag', group: 'account', Component: BrandManager, tenantOnly: true },
   { id: 'account', label: 'Konto og sikkerhet', icon: 'lock', group: 'account', Component: AccountManager, tenantOnly: true },
   { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
   { id: 'activity', label: 'Aktivitet', icon: 'clock', group: 'account', Component: ActivityManager, tenantOnly: true },
@@ -44,7 +47,7 @@ const NAV = [
 ];
 
 // Gamle adresser som er slått sammen med andre sider.
-const VIEW_ALIAS = { categories: 'schedule', sponsors: 'media', alerts: 'dashboard', pairing: 'screens' };
+const VIEW_ALIAS = { categories: 'schedule', sponsors: 'media', alerts: 'dashboard', pairing: 'screens', templates: 'playlists' };
 
 const initialTab = () => {
   if (typeof window === 'undefined') return 'dashboard';
@@ -126,7 +129,12 @@ function AdminShell({ context }) {
   const [theme, setTheme] = useTheme(me);
 
   const tenant = context?.tenant ?? null;
-  const nav = useMemo(() => NAV.filter((n) => !n.tenantOnly || tenant), [tenant]);
+  const appKinds = useAppKinds();
+  useEffect(() => {
+    refreshApps();
+  }, []);
+  // Sider fra apper vises når appen er aktivert (og mens listen lastes, så adressen ikke hopper).
+  const nav = useMemo(() => NAV.filter((n) => (!n.tenantOnly || tenant) && (!n.requires || !appKinds || appKinds.has(n.requires))), [tenant, appKinds]);
   const current = nav.find((n) => n.id === tab) ?? nav[0];
 
   useEffect(() => {
@@ -221,7 +229,7 @@ function AdminShell({ context }) {
 const NAV_WIDE_KEY = 'flatr.navWide';
 
 function RailShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout, lobby, current, children }) {
-  const mainItems = nav.filter((n) => n.group !== 'account');
+  const mainItems = nav.filter((n) => n.group !== 'account' && n.group !== 'hidden');
   // Sidemenyen er åpen (full bredde med navn) som standard; lukker du den,
   // huskes det i nettleseren til du åpner den igjen.
   const [wide, setWide] = useState(() => {

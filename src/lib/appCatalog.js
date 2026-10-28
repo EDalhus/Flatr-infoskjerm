@@ -128,6 +128,45 @@ export const OFFICIAL_APPS = [
     }
   },
   {
+    key: 'events',
+    name: 'Arrangement og program',
+    tagline: 'Program, scener og nedtelling for konferanser, festivaler og arrangementer.',
+    description:
+      'Gir deg Program i menyen – programposter med tid, scene og fargede kategorier, og status som «pågår» og «forsinket» – og widgetene Program og Nedtelling i editoren. QR-koden kan lenke til programmet på mobil.',
+    category: 'productivity',
+    icon: 'calendar',
+    color: '#7c3aed',
+    element: 'feature',
+    views: ['Program-siden i menyen', 'Widgeten Program (agenda / nå)', 'Widgeten Nedtelling', 'QR til programmet på mobil'],
+    ready: 'Klar til bruk. Program finner du nå i menyen, og Program og Nedtelling under Widgeter i editoren.'
+  },
+  {
+    key: 'timetable',
+    name: 'Tidsplan',
+    tagline: 'Vis andre presentasjoner til bestemte tider – f.eks. lunsjmeny kl. 11–13 og nyheter om kvelden.',
+    description:
+      'Gir deg Tidsplan i menyen: velg hvilken presentasjon hver skjerm skal vise når, per ukedag og klokkeslett, eller slå skjermen helt av i perioder. Uten Tidsplan viser hver skjerm én presentasjon hele tiden (åpningstider fungerer uansett).',
+    category: 'productivity',
+    icon: 'clock',
+    color: '#0ea5e9',
+    element: 'feature',
+    views: ['Tidsplan-siden i menyen', 'Presentasjon per tidsrom og ukedag', 'Skjerm av i perioder'],
+    ready: 'Klar til bruk. Tidsplan finner du nå i menyen.'
+  },
+  {
+    key: 'touch',
+    name: 'Berøringsskjerm',
+    tagline: 'Knapper og sveip for interaktive skjermer i resepsjoner og showrom.',
+    description:
+      'Gir deg elementet Knapp i editoren: gå til et lysbilde, neste/forrige, eller vis en nettside. På berøringsskjermer kan man også sveipe mellom lysbildene. Når noen trykker, stopper automatisk bytte; etter 45 sekunder uten berøring går skjermen tilbake til start.\n\nVirker på skjermer som viser Flatr i en nettleser med berøring (ikke Apple TV).',
+    category: 'other',
+    icon: 'link',
+    color: '#db2777',
+    element: 'feature',
+    views: ['Knapper som navigerer', 'Sveip mellom lysbilder', 'Nettside over skjermen'],
+    ready: 'Klar til bruk. Legg til en knapp fra Widgeter i editoren.'
+  },
+  {
     key: 'menu',
     name: 'Dagens meny',
     tagline: 'Kantinemenyen på skjermene – dagens retter med pris og allergener.',

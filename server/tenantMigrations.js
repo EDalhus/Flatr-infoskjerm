@@ -256,7 +256,18 @@ const MIGRATIONS = [
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
   CREATE INDEX IF NOT EXISTS comments_pl ON comments (playlist_id, id);
-  `
+  `,
+  // 13: Program, Tidsplan og Berøringsskjerm ble Flatr Apps (av fra start).
+  //     Kunder som allerede bruker dem, får appen aktivert, så ingenting forsvinner.
+  (db) => {
+    const has = (sql) => !!db.prepare(sql).get();
+    const add = (kind, name) => {
+      if (!db.prepare('SELECT id FROM apps WHERE kind = ?').get(kind)) db.prepare(`INSERT INTO apps (name, kind, config) VALUES (?, ?, '{}')`).run(name, kind);
+    };
+    if (has('SELECT 1 FROM schedule LIMIT 1') || has(`SELECT 1 FROM deck_elements WHERE kind IN ('program', 'countdown') LIMIT 1`)) add('events', 'Arrangement og program');
+    if (has('SELECT 1 FROM timeslots LIMIT 1')) add('timetable', 'Tidsplan');
+    if (has(`SELECT 1 FROM deck_elements WHERE kind = 'button' LIMIT 1`)) add('touch', 'Berøringsskjerm');
+  }
 ];
 
 export const TENANT_SCHEMA_VERSION = MIGRATIONS.length;

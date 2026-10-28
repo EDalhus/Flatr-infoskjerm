@@ -296,7 +296,7 @@ function ShareDialog({ playlists, templates, initial, onClose, onDone }) {
   );
 }
 
-export default function TemplatesManager({ onChange, onNavigate }) {
+export default function TemplatesManager({ onChange, onNavigate, embedded = false }) {
   const [tab, setTab] = useState('explore');
   const [items, setItems] = useState(null);
   const [mine, setMine] = useState([]);
@@ -376,16 +376,28 @@ export default function TemplatesManager({ onChange, onNavigate }) {
 
   return (
     <>
-      <PageHeader
-        title="Maler"
-        subtitle="Ferdige kits, lysbilder og temaer delt av Flatr-brukere. Gratis å hente, og gratis å dele."
-        action={
-          <Button onClick={() => setSharing({})}>
+      {/* Som fane under Presentasjoner (embedded) står overskriften der. */}
+      {!embedded && (
+        <PageHeader
+          title="Maler"
+          subtitle="Ferdige kits, lysbilder og temaer delt av Flatr-brukere. Gratis å hente, og gratis å dele."
+          action={
+            <Button onClick={() => setSharing({})}>
+              <Icon name="plus" className="h-4 w-4" />
+              Del en mal
+            </Button>
+          }
+        />
+      )}
+      {embedded && (
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 pt-2 sm:px-8">
+          <p className="m-0 text-sm text-muted">Ferdige kits, lysbilder og temaer delt av Flatr-brukere. Gratis å hente, og gratis å dele.</p>
+          <Button variant="outline" size="sm" onClick={() => setSharing({})}>
             <Icon name="plus" className="h-4 w-4" />
             Del en mal
           </Button>
-        }
-      />
+        </div>
+      )}
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <Segmented
           value={tab}

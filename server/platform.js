@@ -205,13 +205,28 @@ export function createTenant({ slug, name, ownerEmail, ownerName }) {
   const db = new D1Database(path.join(dir, 'db.sqlite'));
   db.db.exec(TENANT_SCHEMA);
   migrateTenant(db.db);
-  // Eksempelinnholdet blir presentasjoner; skjermer er fysiske TV-er som kunden
-  // legger til selv (oppstartsveiviseren på Hjem hjelper med den første).
+  // Nye kunder starter enkelt: én «Velkommen»-presentasjon og ingen apper.
+  // Eksempelprogrammet i schema.sql hører til appen Arrangement og program.
+  // Skjermer er fysiske TV-er som kunden legger til selv (veiviseren på Hjem).
   db.db.exec(`
     DELETE FROM timeslots;
     DELETE FROM screens;
-    UPDATE playlists SET name = 'Program med klokke' WHERE id = 1;
-    UPDATE playlists SET name = 'Dagens program' WHERE id = 2;
+    DELETE FROM schedule;
+    DELETE FROM sponsors;
+    DELETE FROM apps;
+    DELETE FROM deck_elements;
+    DELETE FROM deck_slides WHERE playlist_id != 1;
+    DELETE FROM playlists WHERE id != 1;
+    UPDATE playlists SET name = 'Velkommen' WHERE id = 1;
+    UPDATE deck_slides SET name = 'Velkommen', duration_seconds = 15,
+      background = '{"type":"dynamic","preset":"aurora","base":"#0a1a2f","colors":["#34d399","#22d3ee","#3b82f6"]}'
+      WHERE playlist_id = 1;
+    INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, config)
+      SELECT id, 0, 'text', 7, 30, 62, 22, '{"text":"Velkommen","size":170,"weight":800,"color":"#ffffff","valign":"bottom"}' FROM deck_slides WHERE playlist_id = 1;
+    INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, config)
+      SELECT id, 1, 'text', 7, 54, 60, 14, '{"text":"Dobbeltklikk på teksten for å endre den,\\nog legg til bilder og widgeter.","size":48,"weight":500,"color":"#d7f5ec","lineHeight":1.25}' FROM deck_slides WHERE playlist_id = 1;
+    INSERT INTO deck_elements (slide_id, z, kind, x, y, w, h, config)
+      SELECT id, 2, 'clock', 70, 7, 24, 16, '{"showDate":true,"showSeconds":false}' FROM deck_slides WHERE playlist_id = 1;
   `);
   db.close();
 

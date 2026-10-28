@@ -1,6 +1,7 @@
 // Detaljer for én skjerm i skuffen på Skjermer-siden: live-visning, hva den
 // viser, fjernkontroll for Apple TV-en, innstillinger og info om spilleren.
 import { useEffect, useState } from 'react';
+import { useAppKinds } from '../appsStore.js';
 import { Icon, IconButton, Input, Select, Button } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
 import { CodeInput, CopyLink } from './AddScreen.jsx';
@@ -91,6 +92,7 @@ function PairTv({ label, onSubmit, onCancel }) {
 export default function ScreenDetail({ screen: s, playlists, onClose, onCommand, onPatch, onEditContent, onTimetable, onReplaceTv, onUnpairTv, onDelete }) {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(s.name);
+  const appKinds = useAppKinds();
   const [location, setLocation] = useState(s.location || '');
   const [tagsDraft, setTagsDraft] = useState((s.tags || []).join(', '));
   const [pairing, setPairing] = useState(false);
@@ -185,6 +187,7 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
                 </Button>
               </div>
             </label>
+            {(!appKinds || appKinds.has('timetable') || s.now_slot || s.now_off) && (
             <button
               type="button"
               onClick={onTimetable}
@@ -205,6 +208,7 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
               </span>
               <Icon name="chevron" className="h-4 w-4 text-muted" />
             </button>
+            )}
           </div>
         </Card>
 

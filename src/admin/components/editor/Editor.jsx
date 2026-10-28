@@ -701,9 +701,11 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   void historyVersion;
   // Vær/nyheter/kalender er apper i markedsplassen – vises bare når de er aktivert.
   // Apper med data (AIS, egne) blir hver sin «Flatr App»-knapp.
-  const appGated = new Set(['weather', 'rss', 'calendar', 'app']);
+  // Widgeter som hører til en app (elementtype -> app-kind). Gamle elementer vises
+  // fortsatt på lysbildene; det er bare innsettingen som krever appen.
+  const NEEDS_APP = { weather: 'weather', rss: 'rss', calendar: 'calendar', program: 'events', countdown: 'events', button: 'touch' };
   const activeKinds = new Set(installedApps.map((a) => a.kind));
-  const others = ELEMENT_KINDS.filter((k) => !PRIMARY.includes(k.kind) && (!appGated.has(k.kind) || (k.kind !== 'app' && activeKinds.has(k.kind))));
+  const others = ELEMENT_KINDS.filter((k) => !PRIMARY.includes(k.kind) && k.kind !== 'app' && (!NEEDS_APP[k.kind] || activeKinds.has(NEEDS_APP[k.kind])));
   const dataApps = installedApps.filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football'].includes(a.kind));
   // AI-fanen finnes når en assistent-app (Claude AI) er aktivert.
   const aiEnabled = installedApps.some((a) => AI_APP_KINDS.includes(a.kind)) || panelTab === 'ai';

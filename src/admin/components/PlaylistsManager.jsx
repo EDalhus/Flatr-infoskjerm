@@ -6,6 +6,7 @@ import { api } from '../../lib/api.js';
 import { Icon, Field, Input, Select, Button, IconButton, PageHeader, ErrorText } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
 import Editor from './editor/Editor.jsx';
+import TemplatesManager from './TemplatesManager.jsx';
 import { useUrlParam } from '../useUrlParam.js';
 
 const fmtDuration = (sec) => {
@@ -104,7 +105,7 @@ function PlaylistCard({ p, onEdit, onDuplicate, onDelete }) {
   );
 }
 
-function PlaylistList({ onEdit, onChange }) {
+function PlaylistList({ onEdit, onChange, tab, setTab, onNavigate }) {
   const [items, setItems] = useState(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
@@ -146,9 +147,10 @@ function PlaylistList({ onEdit, onChange }) {
     <>
       <PageHeader
         title="Presentasjoner"
-        subtitle="Det skjermene viser: lysbilder med tekst, bilder, program og mer. Velg på hver skjerm hvilken presentasjon den viser."
+        subtitle="Det skjermene viser: lysbilder med tekst, bilder og widgeter. Velg på hver skjerm hvilken presentasjon den viser."
         action={
-          !creating && (
+          !creating &&
+          tab !== 'templates' && (
             <Button onClick={() => setCreating(true)}>
               <Icon name="plus" className="h-4 w-4" />
               Ny presentasjon
@@ -156,6 +158,26 @@ function PlaylistList({ onEdit, onChange }) {
           )
         }
       />
+      <div className="mx-auto w-full max-w-6xl px-6 sm:px-8">
+        <div className="flex gap-1 border-b border-hair">
+          {[
+            ['list', 'Presentasjoner'],
+            ['templates', 'Maler']
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id === 'list' ? null : id)}
+              className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold ${tab === id ? 'border-brand text-ink' : 'border-transparent text-muted hover:text-ink'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {tab === 'templates' ? (
+        <TemplatesManager embedded onChange={onChange} onNavigate={onNavigate} />
+      ) : (
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         {creating && <NewPlaylist onCreated={(p) => onEdit(p.id)} onCancel={() => setCreating(false)} />}
         <ErrorText>{error}</ErrorText>
@@ -179,11 +201,14 @@ function PlaylistList({ onEdit, onChange }) {
           ))}
         </div>
       </div>
+      )}
     </>
   );
 }
 
-export default function PlaylistsManager({ onChange, me }) {
+export default function PlaylistsManager({ onChange, me, onNavigate }) {
+  // Maler er en fane her (tidligere eget menypunkt).
+  const [tab, setTab] = useUrlParam('tab');
   // Åpen presentasjon bor i adressen (?edit=), så Tilbake lukker editoren.
   const [edit, setEdit] = useUrlParam('edit');
   const editingId = /^\d+$/.test(edit) ? Number(edit) : null;
@@ -191,6 +216,6 @@ export default function PlaylistsManager({ onChange, me }) {
   return editingId ? (
     <Editor playlistId={editingId} onBack={() => setEdit(null)} onChange={onChange} me={me} />
   ) : (
-    <PlaylistList onEdit={setEdit} onChange={onChange} />
+    <PlaylistList onEdit={setEdit} onChange={onChange} tab={tab === 'templates' ? 'templates' : 'list'} setTab={setTab} onNavigate={onNavigate} />
   );
 }
