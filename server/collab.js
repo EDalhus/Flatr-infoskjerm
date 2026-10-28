@@ -64,6 +64,8 @@ export function handleCollabUpgrade(req, socket, head, { roomKey, identity }) {
       name: identity.name,
       color: identity.color,
       sub: identity.sub,
+      // Lesere ser hvem som er der, men kan ikke sende endringer (DeckRoom).
+      canEdit: identity.canEdit !== false,
       slide: null,
       el: null
     });

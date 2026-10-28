@@ -10,6 +10,7 @@ import {
   safeJson,
   moveToTrash
 } from './_shared.js';
+import { cleanConfigUrls, cleanBackground } from '../lib/safeUrl.js';
 
 const TRANSITIONS = ['none', 'fade', 'dissolve', 'push-left', 'push-up'];
 const normTransition = (v, f = 'fade') => (TRANSITIONS.includes(v) ? v : f);
@@ -23,7 +24,7 @@ const daypartFrom = (b, cur = {}) => {
 };
 const bgString = (v, fallback = '{"type":"color","color":"#0f2733"}') => {
   const o = safeJson(v, null);
-  return o && typeof o === 'object' ? JSON.stringify(o) : fallback;
+  return o && typeof o === 'object' ? JSON.stringify(cleanBackground(o)) : fallback;
 };
 
 async function insertElements(env, slideId, elements) {
@@ -43,7 +44,7 @@ async function insertElements(env, slideId, elements) {
         Number(e.w) || 30,
         Number(e.h) || 20,
         Number(e.rotation) || 0,
-        JSON.stringify(safeJson(e.config, {}))
+        JSON.stringify(cleanConfigUrls(safeJson(e.config, {})))
       )
     )
   );

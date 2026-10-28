@@ -10,6 +10,7 @@ import {
   safeJson,
   moveToTrash
 } from './_shared.js';
+import { cleanConfigUrls } from '../lib/safeUrl.js';
 
 const KINDS = [
   'text',
@@ -69,7 +70,7 @@ export async function onRequestPost(context) {
       num(b?.w, 40),
       num(b?.h, 25),
       num(b?.rotation, 0),
-      JSON.stringify(safeJson(b?.config, {}))
+      JSON.stringify(cleanConfigUrls(safeJson(b?.config, {})))
     )
     .first();
   return json({ ...row, config: safeJson(row.config, {}) }, { status: 201 });
@@ -103,7 +104,7 @@ export async function onRequestPut(context) {
       b.w !== undefined ? num(b.w, cur.w) : cur.w,
       b.h !== undefined ? num(b.h, cur.h) : cur.h,
       b.rotation !== undefined ? num(b.rotation, cur.rotation) : cur.rotation,
-      b.config !== undefined ? JSON.stringify(safeJson(b.config, {})) : cur.config,
+      b.config !== undefined ? JSON.stringify(cleanConfigUrls(safeJson(b.config, {}))) : cur.config,
       id
     )
     .first();

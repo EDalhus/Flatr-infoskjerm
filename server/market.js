@@ -18,6 +18,7 @@ import { Readable } from 'node:stream';
 import path from 'node:path';
 import { platformDb } from './platform.js';
 import { safeJson } from '../src/api/_shared.js';
+import { cleanConfigUrls, cleanBackground } from '../src/lib/safeUrl.js';
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || './data');
 const MARKET_DIR = path.join(DATA_DIR, 'market');
@@ -184,7 +185,7 @@ async function insertSlide(env, playlistId, position, s) {
       `INSERT INTO deck_slides (playlist_id, position, name, duration_seconds, transition, transition_ms, background, enabled)
        VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`
     )
-    .bind(playlistId, position, s.name ?? null, Number(s.duration_seconds) || 15, s.transition || 'fade', Number(s.transition_ms) || 600, JSON.stringify(s.background || {}))
+    .bind(playlistId, position, s.name ?? null, Number(s.duration_seconds) || 15, s.transition || 'fade', Number(s.transition_ms) || 600, JSON.stringify(cleanBackground(s.background || {})))
     .first();
   const els = s.elements || [];
   if (els.length) {
@@ -193,7 +194,7 @@ async function insertSlide(env, playlistId, position, s) {
     );
     await env.DB.batch(
       els.map((e, i) =>
-        stmt.bind(slide.id, Number.isFinite(e.z) ? e.z : i, e.kind || 'text', Number(e.x) || 0, Number(e.y) || 0, Number(e.w) || 30, Number(e.h) || 20, Number(e.rotation) || 0, JSON.stringify(e.config || {}))
+        stmt.bind(slide.id, Number.isFinite(e.z) ? e.z : i, e.kind || 'text', Number(e.x) || 0, Number(e.y) || 0, Number(e.w) || 30, Number(e.h) || 20, Number(e.rotation) || 0, JSON.stringify(cleanConfigUrls(e.config || {})))
       )
     );
   }

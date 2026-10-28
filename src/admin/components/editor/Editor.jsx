@@ -190,9 +190,14 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const onRemoteOp = useCallback(
     (op) => {
       if (!op) return;
+      // Bare kjente felt fra andre (og adressene vasket ved visning, se ElementView).
+      const pick = (o, keys) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).filter(([k]) => keys.includes(k)));
+      const EL = ['x', 'y', 'w', 'h', 'z', 'rotation', 'config'];
       if (op.k === 'el.patch') {
-        updateSlides((ss) => ss.map((s) => ({ ...s, elements: s.elements.map((e) => (e.id === op.id ? { ...e, ...op.patch } : e)) })));
-      } else if (op.k === 'el.add' && op.el) {
+        const patch = pick(op.patch, EL);
+        updateSlides((ss) => ss.map((s) => ({ ...s, elements: s.elements.map((e) => (e.id === op.id ? { ...e, ...patch } : e)) })));
+      } else if (op.k === 'el.add' && op.el && typeof op.el === 'object') {
+        op = { ...op, el: { id: op.el.id, kind: op.el.kind, ...pick(op.el, EL) } };
         updateSlides((ss) =>
           ss.map((s) =>
             s.id === op.slideId && !s.elements.some((e) => e.id === op.el.id) ? { ...s, elements: [...s.elements, op.el] } : s
@@ -202,7 +207,8 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
         updateSlides((ss) => ss.map((s) => ({ ...s, elements: s.elements.filter((e) => e.id !== op.id) })));
         setSelection((sel) => sel.filter((id) => id !== op.id));
       } else if (op.k === 'slide.patch') {
-        updateSlides((ss) => ss.map((s) => (s.id === op.id ? { ...s, ...op.patch } : s)));
+        const patch = pick(op.patch, ['name', 'duration_seconds', 'transition', 'transition_ms', 'background', 'enabled', 'position', ...['active_from', 'active_to', 'active_days', 'active_from_date', 'active_to_date']]);
+        updateSlides((ss) => ss.map((s) => (s.id === op.id ? { ...s, ...patch } : s)));
       } else {
         clearTimeout(onRemoteOp.t);
         onRemoteOp.t = setTimeout(() => reload(), 250);

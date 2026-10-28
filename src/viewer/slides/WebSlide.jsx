@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { externalUrl } from '../../lib/safeUrl.js';
 
 export default function WebSlide({ slide }) {
   const cfg = slide.config || {};
@@ -11,17 +12,19 @@ export default function WebSlide({ slide }) {
     return () => clearInterval(id);
   }, [cfg.refreshMinutes]);
 
-  if (!cfg.url) {
+  // Bare vanlige nettadresser – aldri javascript: o.l. (ville kjørt i Flatrs domene).
+  const url = externalUrl(cfg.url);
+  if (!url) {
     return (
       <div className="grid h-full w-full place-items-center rounded-2xl border border-hair bg-card text-muted shadow-card">
-        Ingen nettside-URL
+        {cfg.url ? 'Ugyldig adresse – bruk en adresse som starter med https://' : 'Ingen nettside-URL'}
       </div>
     );
   }
   return (
     <iframe
       key={tick}
-      src={cfg.url}
+      src={url}
       title={slide.title || 'Nettside'}
       className="h-full w-full rounded-2xl border border-hair bg-white shadow-card"
       sandbox="allow-scripts allow-same-origin allow-popups allow-forms"

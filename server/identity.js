@@ -124,8 +124,9 @@ const options = {
     cookiePrefix: 'flatr',
     useSecureCookies: PROTOCOL === 'https',
     crossSubDomainCookies: { enabled: true, domain: BASE_HOST },
-    // Bak Cloudflare og nginx: ekte klient-IP (viktig for bremsene over).
-    ipAddress: { ipAddressHeaders: ['cf-connecting-ip', 'x-real-ip'] }
+    // Bak Cloudflare og nginx: server/index.js setter x-flatr-client-ip fra hoder vi
+    // kan stole på (server/clientIp.js). Viktig for bremsene over.
+    ipAddress: { ipAddressHeaders: ['x-flatr-client-ip'] }
   },
 
   databaseHooks: {

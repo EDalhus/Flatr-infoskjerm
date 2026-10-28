@@ -9,6 +9,8 @@
 //   SSE_POLL_MS=3000  + e-post (se server/mail.js)
 
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { screenshotUrl } from './convert.js';
 import path from 'node:path';
 import { getRequestListener } from '@hono/node-server';
@@ -33,6 +35,7 @@ import { startNotices } from './notices.js';
 import { afterWrite, beforeWrite } from '../src/api/activity.js';
 import { notifyChange, waitForChange } from './changes.js';
 import { notifier, teamMembers } from './notify.js';
+import { trustedClientIp } from './clientIp.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -88,6 +91,56 @@ function tenantEnv(tenant, user) {
       runCustomApp
     }
   };
+}
+
+/* ----------------------------- sikkerhetshoder ----------------------------- */
+
+// Det lille innebygde skriptet i index.html (tema før første tegning) godkjennes
+// med sitt fingeravtrykk – ellers bare skript fra egen adresse.
+const INLINE_SCRIPTS = (() => {
+  try {
+    const html = readFileSync(path.join(ROOT, 'dist', 'index.html'), 'utf8');
+    return [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => `'sha256-${createHash('sha256').update(m[1]).digest('base64')}'`).join(' ');
+  } catch {
+    return '';
+  }
+})();
+
+// Skjermvisning, offentlig program og widgeter kan bygges inn hos kunden; resten bare her.
+const EMBEDDABLE = /^\/(display|s|widget)(\/|$)/;
+
+function contentSecurityPolicy(pathname) {
+  return [
+    "default-src 'self'",
+    `script-src 'self' ${INLINE_SCRIPTS}`.trim(),
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    'img-src * data: blob:',
+    'media-src * data: blob:',
+    // Kartfliser (mørkt sjøkart fargelegges i nettleseren) og live-samarbeid.
+    "connect-src 'self' https://cache.kartverket.no",
+    // Nettside-widgeter, YouTube og Vimeo.
+    "frame-src 'self' https:",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    `frame-ancestors ${EMBEDDABLE.test(pathname) ? '*' : "'self'"}`
+  ].join('; ');
+}
+
+/** Legger på sikkerhetshoder (CSP på HTML-sider) uten å overstyre det et svar har satt selv. */
+function withSecurityHeaders(res, pathname) {
+  const out = new Response(res.body, res);
+  const h = out.headers;
+  if (!h.has('X-Content-Type-Options')) h.set('X-Content-Type-Options', 'nosniff');
+  h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  if (/text\/html/i.test(h.get('Content-Type') || '') && !h.has('Content-Security-Policy')) {
+    h.set('Content-Security-Policy', contentSecurityPolicy(pathname));
+    if (!EMBEDDABLE.test(pathname)) h.set('X-Frame-Options', 'SAMEORIGIN');
+  }
+  return out;
 }
 
 const json = (data, status = 200) =>
@@ -321,6 +374,16 @@ async function handlePlatform(request) {
 }
 
 async function app(request) {
+  // Én klarert klient-IP for hele appen (Better Auth og egne bremser), se clientIp.js.
+  const headers = new Headers(request.headers);
+  headers.set('x-flatr-client-ip', trustedClientIp(request.headers));
+  request = new Request(request, { headers });
+  const res = await route(request);
+  // WebSocket-oppgraderinger håndteres utenfor (server.on('upgrade')).
+  return res.status === 101 ? res : withSecurityHeaders(res, new URL(request.url).pathname);
+}
+
+async function route(request) {
   const where = resolveHost(request.headers.get('host'));
   try {
     // App-ikoner er åpne (vises i katalogen og på skjermene).
@@ -358,6 +421,15 @@ server.on('upgrade', async (req, socket, head) => {
     const url = new URL(req.url, 'http://x');
     const m = apiKey(url.pathname).match(/^\/api\/collab\/([A-Za-z0-9:._-]{1,64})$/);
     if (!m || where.kind !== 'tenant') return reject(404, 'Not Found');
+    // Bare fra kundens egen side: en side på et annet *.flatr.no-subdomene skal ikke
+    // kunne koble seg på med besøkerens innlogging.
+    let originHost = null;
+    try {
+      originHost = new URL(req.headers.origin || '').host;
+    } catch {
+      /* mangler */
+    }
+    if (originHost !== req.headers.host) return reject(403, 'Forbidden');
 
     const request = new Request(`http://${req.headers.host}${req.url}`, { headers: req.headers });
     const sess = await currentUser(request, where.tenant);
@@ -366,7 +438,7 @@ server.on('upgrade', async (req, socket, head) => {
 
     handleCollabUpgrade(req, socket, head, {
       roomKey: `${where.tenant.slug}:deck:${m[1]}`,
-      identity: { name: user.name, color: user.color, sub: user.sub }
+      identity: { name: user.name, color: user.color, sub: user.sub, canEdit: sess.role !== 'viewer' }
     });
   } catch (err) {
     console.error('[collab]', err);

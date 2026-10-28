@@ -1,3 +1,4 @@
+import { safeUrl } from './safeUrl.js';
 // Widget-typer, standardoppsett, bakgrunner og overganger for canvas-modellen.
 
 export const ELEMENT_KINDS = [
@@ -168,9 +169,11 @@ export function backgroundStyle(bg) {
       backgroundImage: `linear-gradient(${b.angle ?? 135}deg, ${b.from || '#1f5566'}, ${b.to || '#0f2733'})`
     };
   }
-  if (b.type === 'image' && b.url) {
+  const url = b.type === 'image' ? safeUrl(b.url) : '';
+  if (url) {
     return {
-      backgroundImage: `url("${b.url}")`,
+      // Anførselstegn og skråstreker i adressen kan ikke bryte ut av url("…").
+      backgroundImage: `url("${url.replace(/["\\\n\r]/g, encodeURIComponent)}")`,
       backgroundSize: b.fit === 'contain' ? 'contain' : 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',

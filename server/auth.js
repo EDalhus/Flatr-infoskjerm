@@ -69,8 +69,8 @@ setInterval(() => {
   for (const [k, b] of buckets) if (b.start < cutoff) buckets.delete(k);
 }, 600_000).unref();
 
-const clientIp = (request) =>
-  request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || 'ukjent';
+// Satt av server/index.js fra hoder vi kan stole på (se server/clientIp.js).
+const clientIp = (request) => request.headers.get('x-flatr-client-ip') || 'ukjent';
 
 function tooMany(request, email) {
   return (

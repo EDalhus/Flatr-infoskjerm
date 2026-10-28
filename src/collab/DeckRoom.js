@@ -99,7 +99,8 @@ export class DeckRoom {
         this.relay(ws, { t: 'cursor', id: a.id, slide: m.slide ?? null, x: m.x, y: m.y });
         break;
       case 'op':
-        if (m.op) this.relay(ws, { t: 'op', from: a.id, op: m.op });
+        // Endringer bare fra dem som kan redigere (ikke lesetilgang).
+        if (m.op && a.canEdit !== false) this.relay(ws, { t: 'op', from: a.id, op: m.op });
         break;
       default:
         break;

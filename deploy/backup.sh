@@ -11,6 +11,18 @@
 
 set -euo pipefail
 
+# Feiler noe, får plattformeierne (SUPERADMIN_EMAILS) beskjed på e-post.
+notify_failure() {
+  local line=$1
+  cd /opt/flatr 2>/dev/null || return 0
+  docker compose exec -T -e LINE="$line" flatr node --disable-warning=ExperimentalWarning --input-type=module -e "
+    const { sendMail } = await import('./server/mail.js');
+    const to = String(process.env.SUPERADMIN_EMAILS || '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (to.length) await sendMail({ to, subject: 'Backup av Flatr feilet', text: 'Nattens backup stoppet (linje ' + process.env.LINE + '). Se /var/log/flatr-backup.log på serveren.' });
+  " >/dev/null 2>&1 || true
+}
+trap 'notify_failure $LINENO' ERR
+
 APP=/opt/flatr
 OUT=/opt/flatr-backups
 STAMP=$(date +%Y%m%d-%H%M)
@@ -31,12 +43,18 @@ find "$OUT/db" -name 'flatr-db-*.tgz' -mtime +"$KEEP_DAYS" -delete
 # 2. Mediefiler (hver kundes media-mappe + skjermbilder)
 for dir in data/tenants/*/; do
   slug=$(basename "$dir")
-  [ -d "$dir/media" ] && rsync -a "$dir/media/" "$OUT/media/$slug/"
+  if [ -d "$dir/media" ]; then
+    mkdir -p "$OUT/media/$slug"
+    rsync -a "$dir/media/" "$OUT/media/$slug/"
+  fi
 done
 
 # Plattformens egne filer: app-ikoner (Flatr Apps) og bildene i malmarkedet.
 for sub in app-icons market; do
-  [ -d "data/$sub" ] && rsync -a "data/$sub/" "$OUT/media/_platform/$sub/"
+  if [ -d "data/$sub" ]; then
+    mkdir -p "$OUT/media/_platform/$sub"
+    rsync -a "data/$sub/" "$OUT/media/_platform/$sub/"
+  fi
 done
 
 # 3. Utenfor serveren, hvis konfigurert

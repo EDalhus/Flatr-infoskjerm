@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { cleanConfigUrls } from '../lib/safeUrl.js';
 import ClockSlide from './slides/ClockSlide.jsx';
 import CountdownSlide from './slides/CountdownSlide.jsx';
 import ProgramSlide from './slides/ProgramSlide.jsx';
@@ -172,7 +173,10 @@ const WIDGET = {
 };
 
 export default function ElementView({ element, ctx, onNext }) {
-  const { kind, config } = element;
+  const { kind } = element;
+  // Alle adresser vaskes før visning (innhold kan komme fra maler, gamle versjoner
+  // eller andres endringer i samarbeidet) – aldri javascript: o.l.
+  const config = cleanConfigUrls(element.config);
   if (kind === 'text') return <TextEl config={config} />;
   if (kind === 'image') return <ImageEl config={config} />;
   if (kind === 'shape') return <ShapeEl config={config} />;
