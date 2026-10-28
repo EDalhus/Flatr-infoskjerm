@@ -3,6 +3,7 @@ import { FONTS, FONT_WEIGHTS } from '../../../lib/deck.js';
 import { isoToLocalInput, localInputToIso } from '../../../lib/time.js';
 import { Field, Input, Select, Textarea, Segmented, ButtonGroup, ColorInput } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
+import { STOCK_GROUPS } from '../../../lib/stock.js';
 import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api.js';
 
@@ -166,6 +167,18 @@ function AppFields({ c, set }) {
         <>
           <Field label="Overskrift">
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} placeholder={app.config?.title || 'Lagerbeholdning'} />
+          </Field>
+          <Field label="Vis gruppene" hint="Ingen valgt = alle. Nyttig når hver gruppe skal på sin egen skjerm.">
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {STOCK_GROUPS.map((g) => (
+                <Check
+                  key={g.id}
+                  label={g.label}
+                  checked={(c.groups || []).includes(g.id)}
+                  onChange={(v) => set({ groups: v ? [...new Set([...(c.groups || []), g.id])] : (c.groups || []).filter((x) => x !== g.id) })}
+                />
+              ))}
+            </div>
           </Field>
           <Check label="Vis detaljer (silo, lagerplass …)" checked={c.showDetails !== false} onChange={(v) => set({ showDetails: v })} />
           <Check label="Vis når den sist ble oppdatert" checked={c.showUpdated !== false} onChange={(v) => set({ showUpdated: v })} />

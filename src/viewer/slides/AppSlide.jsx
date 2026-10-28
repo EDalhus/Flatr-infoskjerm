@@ -265,7 +265,7 @@ export default function AppSlide({ slide, chromeless }) {
       <div className={card} style={style}>
         {data.app.kind === 'menu' && <MenuView data={data} view={c.menuView || 'today'} title={c.title} showPrice={c.showPrice !== false} showTags={c.showTags !== false} />}
         {data.app.kind === 'tides' && <TidesView place={data.places?.[c.placeId] || Object.values(data.places || {})[0]} view={c.tideView || 'both'} title={c.title} now={now} />}
-        {data.app.kind === 'stock' && <StockView data={data} title={c.title} showUpdated={c.showUpdated !== false} showDetails={c.showDetails !== false} />}
+        {data.app.kind === 'stock' && <StockView data={data} title={c.title} groups={c.groups} showUpdated={c.showUpdated !== false} showDetails={c.showDetails !== false} />}
         {data.app.kind === 'football' && <FootballView data={data} view={c.footballView || 'next'} teamId={c.teamId} leagueId={c.leagueId} title={c.title} max={c.max} />}
       </div>
     );
