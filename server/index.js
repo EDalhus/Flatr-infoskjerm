@@ -160,10 +160,38 @@ async function requires2fa(tenant) {
 // Det en leser og en bruker uten påkrevd tofaktor fortsatt får gjøre.
 const ALWAYS_ALLOWED = new Set(['/api/me', '/api/context', '/api/plan']);
 
+/**
+ * CSRF-vern: innloggingen gjelder alle *.flatr.no, så en side på én kundes
+ * adresse må ikke kunne sende endringer til en annen. Nettlesere sender alltid
+ * Origin på POST/PUT/DELETE; den må være samme adresse som forespørselen.
+ * (TV-appen og serverkall sender ikke Origin og påvirkes ikke.)
+ */
+function crossSiteWrite(request) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return false;
+  const origin = request.headers.get('origin');
+  if (!origin || origin === 'null') return origin === 'null';
+  try {
+    return new URL(origin).host !== request.headers.get('host');
+  } catch {
+    return true;
+  }
+}
+
 async function handleTenant(request, tenant) {
   const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/') && crossSiteWrite(request)) {
+    return jsonError(403, 'Forespørselen kom fra en annen adresse.');
+  }
   const user = ensureColor(await currentUser(request, tenant), tenant);
   const ctx = { ...ctxBase, tenant, user };
+
+  // Tofaktorkravet gjelder også team, henvisning og forespørsler (håndteres under).
+  if (user && !user.two_factor && url.pathname.startsWith('/api/') && !ALWAYS_ALLOWED.has(apiKey(url.pathname)) && !/^\/api\/(auth|prefs|invite)(\/|$)/.test(url.pathname) && (await requires2fa(tenant))) {
+    return new Response(JSON.stringify({ error: 'Kontoen krever tofaktor. Slå det på under Konto og sikkerhet.', code: 'needs_2fa' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' }
+    });
+  }
 
   const auth = await handleTenantAuthRoute(request, ctx);
   if (auth) return auth;
@@ -243,6 +271,9 @@ async function handleTenant(request, tenant) {
 
 async function handlePlatform(request) {
   const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/') && crossSiteWrite(request)) {
+    return jsonError(403, 'Forespørselen kom fra en annen adresse.');
+  }
 
   const platform = await handlePlatformRoute(request, ctxBase);
   if (platform) return platform;

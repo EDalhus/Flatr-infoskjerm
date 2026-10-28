@@ -53,8 +53,16 @@ export async function onRequestGet({ request, env }) {
     }
     const obj = await env.MEDIA.get(row.r2_key, range ? { range } : undefined);
     if (!obj) return notFound('Fil mangler i lager');
+    // Opplastede filer skal aldri kunne kjøre som en side på kundens adresse
+    // (f.eks. HTML eller SVG med skript som bruker innloggingen): bilder, video,
+    // lyd og PDF vises; alt annet lastes ned. Sandbox stenger skript uansett.
+    const type = row.content_type || 'application/octet-stream';
+    const inline = /^(image\/(png|jpe?g|gif|webp|avif)|video\/|audio\/|application\/pdf)/i.test(type);
     const headers = {
-      'Content-Type': row.content_type || 'application/octet-stream',
+      'Content-Type': inline ? type : 'application/octet-stream',
+      'Content-Disposition': inline ? 'inline' : `attachment; filename="${encodeURIComponent(row.name || 'fil')}"`,
+      ...(/pdf/i.test(type) ? {} : { 'Content-Security-Policy': "sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'" }),
+      'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'public, max-age=31536000, immutable',
       'Accept-Ranges': 'bytes',
       ...corsHeaders

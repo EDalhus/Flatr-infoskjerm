@@ -255,12 +255,14 @@ export async function approvalRequired(env) {
 async function publishedDeck(env, playlistId) {
   if (!(await approvalRequired(env))) return null;
   const row = await env.DB.prepare(
-    'SELECT v.data FROM playlists p JOIN playlist_versions v ON v.id = p.published_version_id WHERE p.id = ?'
+    'SELECT p.published_version_id, v.data FROM playlists p LEFT JOIN playlist_versions v ON v.id = p.published_version_id WHERE p.id = ?'
   )
     .bind(playlistId)
     .first()
     .catch(() => null);
-  return row ? safeJson(row.data, null) : null;
+  // Aldri publisert (ny eller kopiert presentasjon): ingenting på skjermene før en eier publiserer.
+  if (!row?.data) return { slides: [] };
+  return safeJson(row.data, { slides: [] });
 }
 
 export async function buildState(env, screenId, { playlistId: previewPlaylistId } = {}) {

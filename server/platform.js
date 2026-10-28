@@ -155,8 +155,19 @@ export function referralCode(tenantId) {
   return code;
 }
 
+// Tallene brukes i kvotene ved hver forespørsel: mellomlagres et minutt.
+const referralCache = new Map();
+
 /** { referred, active, bonus } for en organisasjon. */
 export function referralStats(tenantId) {
+  const hit = referralCache.get(tenantId);
+  if (hit && Date.now() - hit.at < 60_000) return hit.stats;
+  const stats = computeReferralStats(tenantId);
+  referralCache.set(tenantId, { at: Date.now(), stats });
+  return stats;
+}
+
+function computeReferralStats(tenantId) {
   const referred = platformDb.prepare('SELECT COUNT(*) AS c FROM tenants WHERE referred_by = ?').bind(tenantId).firstSync('c') || 0;
   if (!referred) return { referred: 0, active: 0, bonus: 0 };
   const active =
@@ -171,11 +182,13 @@ export function referralStats(tenantId) {
 }
 
 /** Kobler en ny organisasjon til den som henviste (ugyldig/egen kode ignoreres). */
-export function applyReferral(tenantId, code) {
+export function applyReferral(tenantId, code, ownerEmail) {
   const c = String(code || '').trim().toLowerCase();
   if (!/^[a-z0-9]{6,12}$/.test(c)) return;
   const from = platformDb.prepare('SELECT id FROM tenants WHERE ref_code = ?').bind(c).firstSync();
   if (!from || from.id === tenantId) return;
+  // Ikke til seg selv: eieren av den nye organisasjonen er allerede med i den som henviste.
+  if (ownerEmail && platformDb.prepare('SELECT 1 FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.tenant_id = ? AND u.email = ?').bind(from.id, normEmail(ownerEmail)).firstSync()) return;
   platformDb.prepare('UPDATE tenants SET referred_by = ? WHERE id = ? AND referred_by IS NULL').bind(from.id, tenantId).runSync();
 }
 

@@ -36,7 +36,11 @@ const loadProviders = () =>
 export function SocialButtons({ callbackURL, divider = 'eller med e-post' }) {
   const [providers, setProviders] = useState([]);
   const [busy, setBusy] = useState(null);
-  const [error, setError] = useState('');
+  // Better Auth sender tilbake hit med ?error= når innloggingen stoppes,
+  // f.eks. fordi kontoen har tofaktor (da må e-post, passord og kode brukes).
+  const [error, setError] = useState(() =>
+    new URLSearchParams(window.location.search).get('error') ? 'Innloggingen ble ikke fullført. Har du tofaktor på kontoen, logg inn med e-post, passord og kode.' : ''
+  );
   useEffect(() => {
     loadProviders().then(setProviders);
   }, []);

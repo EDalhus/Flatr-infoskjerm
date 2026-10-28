@@ -55,7 +55,10 @@ const options = {
   user: { modelName: 'auth_user' },
   session: { modelName: 'auth_session', expiresIn: 30 * 24 * 3600, updateAge: 24 * 3600 },
   // Samme e-post fra Google/Microsoft kobles til den eksisterende kontoen.
-  account: { modelName: 'auth_account', accountLinking: { enabled: true, trustedProviders: ['google', 'microsoft'] } },
+  // Samme e-post fra Google kobles til den eksisterende kontoen (Google bekrefter
+  // e-posten). Microsoft kobles bare når Microsoft selv sier at e-posten er
+  // bekreftet – i Entra kan en administrator ellers sette hvilken som helst adresse.
+  account: { modelName: 'auth_account', accountLinking: { enabled: true, trustedProviders: ['google'] } },
   socialProviders,
   verification: { modelName: 'auth_verification' },
 
@@ -126,6 +129,17 @@ const options = {
   },
 
   databaseHooks: {
+    // Tofaktor: Google/Microsoft-innlogging hopper over koden, så brukere som har
+    // slått på tofaktor må logge inn med e-post, passord og kode.
+    session: {
+      create: {
+        before: async (session, ctx) => {
+          if (!String(ctx?.path || '').startsWith('/callback')) return;
+          const u = platformDb.prepare('SELECT twoFactorEnabled FROM auth_user WHERE id = ?').bind(session.userId).firstSync();
+          if (u?.twoFactorEnabled) return false;
+        }
+      }
+    },
     // Hver Better Auth-bruker har en Flatr-bruker (medlemskap, profil, farge).
     user: {
       create: { after: async (user) => void upsertUser(user.email, user.name) },

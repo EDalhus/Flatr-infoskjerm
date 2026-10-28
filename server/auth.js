@@ -119,8 +119,18 @@ onEmailVerified(async (user) => {
   platformDb.prepare('UPDATE login_tokens SET used_at = ? WHERE token_hash = ?').bind(new Date().toISOString(), row.token_hash).runSync();
   const p = JSON.parse(row.payload || '{}');
   try {
-    const { tenant, user: member } = createTenant({ slug: p.slug, name: p.org_name, ownerEmail: user.email, ownerName: p.name });
-    if (p.ref) applyReferral(tenant.id, p.ref);
+    // Adressen kan ha blitt tatt mens e-posten ventet på bekreftelse: prøv med tall bak.
+    let created = null;
+    for (let i = 0; i < 20 && !created; i++) {
+      try {
+        created = createTenant({ slug: i ? `${p.slug}-${i + 1}` : p.slug, name: p.org_name, ownerEmail: user.email, ownerName: p.name });
+      } catch (err) {
+        if (err.status !== 409) throw err;
+      }
+    }
+    if (!created) throw new Error('fant ingen ledig adresse');
+    const { tenant, user: member } = created;
+    if (p.ref) applyReferral(tenant.id, p.ref, user.email);
     platformDb
       .prepare('UPDATE users SET terms_accepted_at = COALESCE(terms_accepted_at, ?) WHERE id = ?')
       .bind(p.terms_accepted_at || new Date().toISOString(), member.id)
@@ -204,7 +214,7 @@ export async function handlePlatformRoute(request, ctx) {
     if (tooMany(request, s.user.email)) return json({ error: 'For mange forsøk. Prøv igjen senere.' }, 429);
     try {
       const { tenant } = createTenant({ slug, name: orgName, ownerEmail: s.user.email, ownerName: s.user.name });
-      if (b.ref) applyReferral(tenant.id, b.ref);
+      if (b.ref) applyReferral(tenant.id, b.ref, s.user.email);
       return json({ ok: true, url: `${ctx.origin(tenant.slug)}/admin?welcome=1` }, 201);
     } catch (err) {
       return json({ error: err.message }, err.status || 500);

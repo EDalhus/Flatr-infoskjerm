@@ -200,7 +200,8 @@ export async function handleAppMarketRoute(request, ctx) {
     }
     // En godkjent app som endres går tilbake til «ikke sendt» – andre kunder
     // beholder den godkjente versjonen til den nye er godkjent.
-    const status = r.review_status === 'approved' || r.review_status === 'rejected' ? 'none' : r.review_status;
+    // Også «venter»: godkjenneren skal godkjenne nøyaktig det som ble sendt inn.
+    const status = ['approved', 'rejected', 'pending'].includes(r.review_status) ? 'none' : r.review_status;
     platformDb
       .prepare('UPDATE custom_apps SET draft = ?, review_status = ?, updated_at = ? WHERE id = ?')
       .bind(JSON.stringify(m), status, now(), id)
