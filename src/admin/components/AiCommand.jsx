@@ -194,8 +194,23 @@ export default function AiCommand({ go, me }) {
           </button>
           <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
             {context.map((c) => (
-              <span key={c.id} className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-zone px-2.5 py-1 text-xs text-ink/80" title={`Fast kontekst: ${c.title}`}>
+              <span key={c.id} className="group inline-flex max-w-[240px] items-center gap-1 rounded-full bg-zone py-1 pl-2.5 pr-1 text-xs text-ink/80" title={`Fast kontekst: ${c.title}`}>
                 {c.kind === 'pdf' ? '📄' : c.kind === 'link' ? '🔗' : '📝'} <span className="truncate">{c.title}</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      setAssistant(await api.ai.removeContext(c.id));
+                    } catch (e) {
+                      setError(e.message);
+                    }
+                  }}
+                  className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-muted hover:bg-line hover:text-danger"
+                  aria-label={`Fjern ${c.title}`}
+                  title="Fjern fra fast kontekst"
+                >
+                  <Icon name="x" className="h-3 w-3" />
+                </button>
               </span>
             ))}
           </div>
