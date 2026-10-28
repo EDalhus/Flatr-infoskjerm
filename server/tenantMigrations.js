@@ -267,7 +267,22 @@ const MIGRATIONS = [
     if (has('SELECT 1 FROM schedule LIMIT 1') || has(`SELECT 1 FROM deck_elements WHERE kind IN ('program', 'countdown') LIMIT 1`)) add('events', 'Arrangement og program');
     if (has('SELECT 1 FROM timeslots LIMIT 1')) add('timetable', 'Tidsplan');
     if (has(`SELECT 1 FROM deck_elements WHERE kind = 'button' LIMIT 1`)) add('touch', 'Berøringsskjerm');
-  }
+  },
+  // 14: Visninger per lysbilde og sponsor, rapportert av skjermene (src/api/plays.js).
+  //     slide_id = 0 for sponsorrader og sponsor_id = 0 for lysbilderader.
+  `
+  CREATE TABLE IF NOT EXISTS play_stats (
+    day TEXT NOT NULL,
+    screen_id INTEGER NOT NULL,
+    playlist_id INTEGER NOT NULL DEFAULT 0,
+    slide_id INTEGER NOT NULL DEFAULT 0,
+    sponsor_id INTEGER NOT NULL DEFAULT 0,
+    shows INTEGER NOT NULL DEFAULT 0,
+    seconds REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, screen_id, playlist_id, slide_id, sponsor_id)
+  );
+  CREATE INDEX IF NOT EXISTS play_stats_day ON play_stats (day);
+  `
 ];
 
 export const TENANT_SCHEMA_VERSION = MIGRATIONS.length;

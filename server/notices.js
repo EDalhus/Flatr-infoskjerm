@@ -143,9 +143,21 @@ export async function healthIssues(env, tz) {
     `SELECT p.*, s.name AS screen_name FROM pairings p LEFT JOIN screens s ON s.id = p.screen_id WHERE p.status = 'paired'`
   ).all();
   for (const d of devices || []) {
+    const where = d.screen_name ? ` (${d.screen_name})` : '';
     if (!d.last_seen || now - Date.parse(d.last_seen) > 3600_000) {
-      issues.push(`TV frakoblet${d.screen_name ? ` (${d.screen_name})` : ''}${d.last_seen ? ` siden ${new Date(d.last_seen).toLocaleString('nb-NO', { timeZone: tz, dateStyle: 'short', timeStyle: 'short' })}` : ''}`);
+      issues.push(`TV frakoblet${where}${d.last_seen ? ` siden ${new Date(d.last_seen).toLocaleString('nb-NO', { timeZone: tz, dateStyle: 'short', timeStyle: 'short' })}` : ''}`);
+      continue;
     }
+    // Det TV-appen selv melder (client_info fra status-pollen).
+    let ci = {};
+    try {
+      ci = JSON.parse(d.client_info || '{}');
+    } catch {
+      /* ingen info */
+    }
+    if (ci.storage_pct >= 90) issues.push(`Lagringen på TV-en${where} er nesten full (${ci.storage_pct} %)`);
+    if (ci.content_at && now - Date.parse(ci.content_at) > 3 * 3600_000) issues.push(`TV-en${where} har ikke fått nytt innhold på over tre timer`);
+    if (ci.restarts >= 3) issues.push(`Visningen på TV-en${where} har startet seg selv på nytt ${ci.restarts} ganger`);
   }
   const { results: screens } = await env.DB.prepare(
     `SELECT s.name, s.playlist_id, (SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = s.playlist_id AND d.enabled = 1) AS slides FROM screens s`

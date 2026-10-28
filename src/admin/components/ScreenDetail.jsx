@@ -1,6 +1,7 @@
 // Detaljer for én skjerm i skuffen på Skjermer-siden: live-visning, hva den
 // viser, fjernkontroll for Apple TV-en, innstillinger og info om spilleren.
 import { useEffect, useState } from 'react';
+import { api } from '../../lib/api.js';
 import { useAppKinds } from '../appsStore.js';
 import { Icon, IconButton, Input, Select, Button } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
@@ -59,6 +60,50 @@ function Row({ label, value, sub, pct, mono }) {
     </div>
   );
 }
+
+/** Det Apple TV-en faktisk viser (skjermbilde fra appen), med knapp for et ferskt bilde. */
+function TvScreenshot({ device, screenId, orientation }) {
+  const [version, setVersion] = useState(device.screenshot_at || '');
+  const [takenAt, setTakenAt] = useState(device.screenshot_at);
+  const [busy, setBusy] = useState(false);
+  const [missing, setMissing] = useState(!device.screenshot_at);
+
+  const refresh = async () => {
+    setBusy(true);
+    try {
+      await api.pairing.command({ screen_id: screenId, command: 'screenshot' });
+    } catch {
+      /* vises som gammelt bilde */
+    }
+    // TV-en tar bildet med en gang den får kommandoen; gi den litt tid til å laste det opp.
+    setTimeout(() => {
+      setVersion(String(Date.now()));
+      setTakenAt(new Date().toISOString());
+      setMissing(false);
+      setBusy(false);
+    }, 5000);
+  };
+
+  return (
+    <div className="mb-3">
+      <div className={`overflow-hidden rounded-xl bg-black ${orientation === 'portrait' ? 'mx-auto aspect-[9/16] w-1/2' : 'aspect-video w-full'}`}>
+        {missing ? (
+          <div className="grid h-full place-items-center px-4 text-center text-xs text-white/60">Ingen skjermbilde ennå</div>
+        ) : (
+          <img src={api.pairing.screenshotUrl(device.device_id, version)} alt="Slik ser TV-en ut" className={`h-full w-full object-contain ${busy ? 'opacity-50' : ''}`} onError={() => setMissing(true)} />
+        )}
+      </div>
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted">
+        <span>{takenAt ? `Fra TV-en ${timeAgo(takenAt)}` : 'Skjermbilde fra TV-en'}</span>
+        <button type="button" onClick={refresh} disabled={busy} className="font-semibold text-brand hover:underline disabled:opacity-50">
+          {busy ? 'Henter …' : 'Oppdater'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const NETWORK = { ethernet: 'Kabel', wifi: 'Wi-Fi', other: 'Annet' };
 
 const Label = ({ children }) => <span className="mb-1.5 block text-xs font-semibold text-muted">{children}</span>;
 
@@ -214,6 +259,7 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
 
         {d && (
           <Card title="Fjernkontroll">
+            <TvScreenshot key={d.device_id} device={d} screenId={s.id} orientation={s.orientation} />
             <div className="grid grid-cols-2 gap-2">
               <ActionButton icon="pin" label="Identifiser" onClick={() => onCommand('identify', 'Identifiser')} />
               <ActionButton icon="refresh" label="Last inn" onClick={() => onCommand('reload', 'Last inn')} />
@@ -274,6 +320,10 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
               <Row label="Flatr-app" value={ci.app_version || ci.player_version} />
               <Row label="Oppløsning" value={ci.resolution ? ci.resolution.replace('x', '×') : null} sub={aspectOf(ci.resolution)} />
               <Row label="Oppetid" value={fmtUptime(ci.uptime_seconds)} />
+              <Row label="Nettverk" value={NETWORK[ci.network] || ci.network} />
+              <Row label="Sanntid" value={ci.live == null ? null : ci.live ? 'Tilkoblet' : 'Ikke tilkoblet – henter hvert 30. sekund'} />
+              <Row label="Innhold hentet" value={ci.content_at ? timeAgo(ci.content_at) : null} />
+              <Row label="Automatiske omstarter" value={ci.restarts ? `${ci.restarts} siden appen startet` : null} />
               <Row label="Lagring" value={ci.storage_pct != null ? `${ci.storage_pct} %` : null} pct={ci.storage_pct} />
               <Row label="Minne" value={ci.memory_pct != null ? `${ci.memory_pct} %` : null} pct={ci.memory_pct} />
               <Row label="CPU-temperatur" value={ci.cpu_temp != null ? `${ci.cpu_temp} °C` : null} />

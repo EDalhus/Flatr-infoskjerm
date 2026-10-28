@@ -361,6 +361,8 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
   }
   const deck = rawSlides.map(({ elements: _e, ...s }) => ({
     ...s,
+    // Publiserte versjoner lagrer ikke presentasjonen per lysbilde (visningsloggen trenger den).
+    playlist_id: s.playlist_id ?? playlistId ?? null,
     background: safeJson(s.background, { type: 'color', color: '#0f2733' }),
     elements: elsBySlide[s.id] ?? []
   }));
@@ -472,6 +474,41 @@ async function withBirthdays(env, deck) {
 }
 
 const DEVICE_WIDGETS = ['weather', 'rss', 'calendar', 'app'];
+
+/** «app,effects» (hodet X-Flatr-Features fra TV-appen) -> Set. */
+export const parseFeatures = (raw) => new Set(String(raw || '').split(',').map((f) => f.trim()).filter(Boolean));
+
+// Flatr Apps TV-appen kan tegne selv med «apps».
+const NATIVE_APP_KINDS = ['birthdays', 'menu', 'tides', 'football'];
+
+/**
+ * Tegner TV-appen dette elementet selv, ut fra hva den sier den kan?
+ *   app     – Skipstrafikk (AIS): kart, båtkort og ankomsttavle
+ *   widgets – vær, nyheter og kalender
+ *   apps    – bursdager, dagens meny, tidevann og fotball
+ * Resten (nettsider, anløpsplan, egne apper) blir skjermbilder. Brukes også av
+ * server/snapshots.js, som slipper å lage bilder ingen TV trenger.
+ */
+export function rendersNatively(e, appKind, features) {
+  if (['weather', 'rss', 'calendar'].includes(e.kind)) return features.has('widgets');
+  if (e.kind !== 'app' || e.config?.effect === 'rain') return false;
+  if (appKind === 'ais') return features.has('app') && ['map', 'cards', 'arrivals'].includes(e.config?.view || 'map');
+  return features.has('apps') && NATIVE_APP_KINDS.includes(appKind);
+}
+
+/** app-id -> kind for appene lysbildene bruker. */
+async function appKindsIn(env, deck) {
+  const ids = [...new Set(deck.flatMap((s) => s.elements.filter((e) => e.kind === 'app').map((e) => Number(e.config?.appId))))].filter(Boolean);
+  if (!ids.length) return {};
+  try {
+    const { results } = await env.DB.prepare(`SELECT id, kind FROM apps WHERE id IN (${ids.map(() => '?').join(',')})`)
+      .bind(...ids)
+      .all();
+    return Object.fromEntries((results ?? []).map((r) => [r.id, r.kind]));
+  } catch {
+    return {}; // ingen apps-tabell
+  }
+}
 // Nøkkelen skjermbildet er lagret under (se server/snapshots.js).
 /**
  * Skjermbildet av en widget hører til innstillingene og størrelsen den har:
@@ -513,24 +550,10 @@ async function adaptForDevices(env, deck) {
     }
   }
 
-  // TV-apper som tegner AIS selv (hodet X-Flatr-Features: app) får elementet
-  // med en datalenke i stedet for skjermbilde – live, ikke et bilde hvert 2. min.
-  const nativeAis = new Set();
-  const features = String(env.DEVICE_FEATURES || '').split(',').map((f) => f.trim());
-  if (features.includes('app')) {
-    const ids = [...new Set(deck.flatMap((s) => s.elements.filter((e) => e.kind === 'app').map((e) => Number(e.config?.appId))))].filter(Boolean);
-    if (ids.length) {
-      try {
-        // Bare visningene TV-appen kan tegne selv; anløpsplanen o.l. blir skjermbilde.
-        const { results } = await env.DB.prepare(`SELECT id FROM apps WHERE kind = 'ais' AND id IN (${ids.map(() => '?').join(',')})`)
-          .bind(...ids)
-          .all();
-        for (const r of results ?? []) nativeAis.add(r.id);
-      } catch {
-        /* ingen apps-tabell */
-      }
-    }
-  }
+  // TV-apper som tegner widgeten selv (se rendersNatively) får elementet med en
+  // datalenke i stedet for skjermbilde – live, ikke et bilde hvert par minutt.
+  const features = parseFeatures(env.DEVICE_FEATURES);
+  const appKinds = await appKindsIn(env, deck);
 
   // Widgeter uten skjermbilde ennå: TV-appen kjenner ikke typen og ville blitt
   // stående og laste. Hopp over dem nå, og be serveren lage skjermbildet med en gang.
@@ -549,10 +572,11 @@ async function adaptForDevices(env, deck) {
       // Kakeregn er en animasjon: TV-apper som kan tegne effekter selv (hodet
       // X-Flatr-Features: effects) får det som eget element, de andre hopper over.
       if (e.kind === 'app' && e.config?.effect === 'rain') {
-        return features.includes('effects') ? [{ ...e, kind: 'effect', config: { type: 'rain', amount: e.config.amount || 'normal', opacity: Math.min(1, Math.max(0.1, Number(e.config.opacity) || 1)) } }] : [];
+        return features.has('effects') ? [{ ...e, kind: 'effect', config: { type: 'rain', amount: e.config.amount || 'normal', opacity: Math.min(1, Math.max(0.1, Number(e.config.opacity) || 1)) } }] : [];
       }
-      if (e.kind === 'app' && nativeAis.has(Number(e.config?.appId)) && ['map', 'cards', 'arrivals'].includes(e.config?.view || 'map')) {
-        return [{ ...e, config: { ...e.config, data_url: `/api/feeds?element=${e.id}` } }];
+      const appKind = e.kind === 'app' ? appKinds[Number(e.config?.appId)] : undefined;
+      if (rendersNatively(e, appKind, features)) {
+        return [{ ...e, config: { ...e.config, data_url: `/api/feeds?element=${e.id}`, ...(appKind ? { app_kind: appKind } : {}) } }];
       }
       const key = snapshotKey(e);
       if (key && !shots[key] && e.kind !== 'web') missing = true;

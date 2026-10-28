@@ -25,6 +25,15 @@ function routeForToken(token) {
   return platformDb.prepare('SELECT * FROM device_routes WHERE auth_token = ?').bind(token).firstSync();
 }
 
+/** Skjermen en TV (Bearer-token) er koblet til hos kunden, eller -1. */
+async function screenForToken(tenant, tenantEnv, token) {
+  const row = await tenantEnv(tenant)
+    .DB.prepare(`SELECT screen_id FROM pairings WHERE auth_token = ? AND status = 'paired'`)
+    .bind(token)
+    .first();
+  return row?.screen_id ?? -1;
+}
+
 const bearer = (request) => (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
 
 /** Skriver om "/api/… til "https://<slug>.flatr.no/api/… i en tekststrøm eller -kropp. */
@@ -93,7 +102,7 @@ export async function handleApexDevice(request, { tenantEnv, origin }) {
   }
 
   // Innhold for en paret TV. Uten gyldig token finnes ingen kunde å svare for.
-  if (['/api/state', '/api/stream', '/api/heartbeat'].includes(key)) {
+  if (['/api/state', '/api/stream', '/api/heartbeat', '/api/plays'].includes(key)) {
     const route = routeForToken(bearer(request));
     const tenant = route && getTenantById(route.tenant_id);
     if (!tenant) {
@@ -103,7 +112,12 @@ export async function handleApexDevice(request, { tenantEnv, origin }) {
       });
     }
     // Hva TV-appen kan tegne selv (f.eks. «app» = live AIS), se adaptForDevices.
-    const res = await routeApi(request, { ...tenantEnv(tenant), DEVICE_FEATURES: request.headers.get('x-flatr-features') || '' });
+    const res = await routeApi(request, {
+      ...tenantEnv(tenant),
+      DEVICE_FEATURES: request.headers.get('x-flatr-features') || '',
+      // Visningsloggen godtas bare for skjermen TV-en faktisk er koblet til.
+      DEVICE_SCREEN_ID: key === '/api/plays' ? await screenForToken(tenant, tenantEnv, bearer(request)) : undefined
+    });
     return absolutize(res, origin(tenant.slug));
   }
 

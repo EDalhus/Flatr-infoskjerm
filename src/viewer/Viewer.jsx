@@ -7,6 +7,8 @@ import { useWakeLock } from '../hooks/useWakeLock.js';
 import { useSSE } from '../hooks/useSSE.js';
 import { useHeartbeat } from '../hooks/useHeartbeat.js';
 import { useFitScale } from '../hooks/useFitScale.js';
+import { setServerTime } from '../lib/deckClock.js';
+import { startPlayLog } from './playLog.js';
 import DeckPlayer from './DeckPlayer.jsx';
 import AlertOverlay from './components/AlertOverlay.jsx';
 
@@ -26,6 +28,8 @@ export default function Viewer() {
   const now = useNow(1000);
   useWakeLock(!preview);
   useHeartbeat(preview || playlistId ? null : screenId);
+  // Visningsloggen (rapporter) gjelder bare ekte skjermer, ikke forhåndsvisning.
+  useEffect(() => (preview || playlistId ? undefined : startPlayLog(screenId)), [preview, playlistId, screenId]);
 
   const [state, setState] = useState(EMPTY);
   const [loaded, setLoaded] = useState(false);
@@ -36,6 +40,7 @@ export default function Viewer() {
       .getState(target)
       .then((data) => {
         if (alive && data) {
+          setServerTime(data.serverTime);
           setState(data);
           setLoaded(true);
         }
@@ -47,6 +52,7 @@ export default function Viewer() {
   }, [target]);
 
   const onData = useCallback((data) => {
+    setServerTime(data?.serverTime);
     setState(data);
     setLoaded(true);
   }, []);

@@ -50,11 +50,55 @@ function BarList({ title, rows, total }) {
   );
 }
 
+const fmtSeconds = (sec) => (sec < 90 ? `${Math.round(sec)} s` : fmtMinutes(sec / 60));
+
+/** Visninger skjermene selv har meldt: hvor mange ganger, hvor lenge og på hvor mange skjermer. */
+function PlaysTable({ title, hint, rows, empty }) {
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-5">
+      <div>
+        <h2 className="m-0 text-base font-bold text-ink">{title}</h2>
+        {hint && <p className="m-0 mt-0.5 text-xs text-muted">{hint}</p>}
+      </div>
+      {rows.length === 0 ? (
+        <p className="m-0 text-sm text-muted">{empty}</p>
+      ) : (
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="text-left text-xs text-muted">
+              <th className="pb-2 font-semibold">Navn</th>
+              <th className="w-24 pb-2 text-right font-semibold">Visninger</th>
+              <th className="w-24 pb-2 text-right font-semibold">Tid</th>
+              <th className="w-20 pb-2 text-right font-semibold">Skjermer</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.key} className="border-t border-hair">
+                <td className="max-w-0 py-2 pr-2">
+                  <span className="block truncate font-medium text-ink">{r.name}</span>
+                  {r.sub && <span className="block truncate text-xs text-muted">{r.sub}</span>}
+                </td>
+                <td className="py-2 text-right tabular-nums text-ink">{r.shows.toLocaleString('nb-NO')}</td>
+                <td className="py-2 text-right tabular-nums text-muted">{fmtSeconds(r.seconds)}</td>
+                <td className="py-2 text-right tabular-nums text-muted">{r.screens}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
 function downloadCsv(report) {
   const rows = [['Type', 'Navn', 'Minutter']];
   for (const p of report.playlists) rows.push(['Presentasjon', p.name, p.minutes]);
   for (const s of report.screens) rows.push(['Skjerm', s.name, s.minutes]);
   for (const d of report.days) rows.push(['Dag', d.day, d.minutes]);
+  rows.push([], ['Type', 'Navn', 'Visninger', 'Sekunder', 'Skjermer']);
+  for (const s of report.sponsors || []) rows.push(['Sponsor', s.name, s.shows, s.seconds, s.screens]);
+  for (const s of report.slides || []) rows.push(['Lysbilde', `${s.playlist ? `${s.playlist} – ` : ''}${s.name}`, s.shows, s.seconds, s.screens]);
   const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
   const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
@@ -97,7 +141,7 @@ export default function ReportsManager() {
         subtitle="Hvor lenge innholdet har vært på skjerm. Basert på hva hver tilkoblede skjerm er satt til å vise, minutt for minutt."
         action={
           report && (
-            <Button variant="outline" onClick={() => downloadCsv(report)} disabled={!total}>
+            <Button variant="outline" onClick={() => downloadCsv(report)} disabled={!total && !report.slides?.length}>
               <Icon name="down" className="h-4 w-4" />
               Last ned CSV
             </Button>
@@ -188,9 +232,25 @@ export default function ReportsManager() {
               <BarList title="Skjermer" total={total} rows={report.screens.map((s) => ({ key: s.screen_id, name: s.name, minutes: s.minutes }))} />
             </div>
 
+            <div className="grid gap-4 lg:grid-cols-2">
+              <PlaysTable
+                title="Sponsorer"
+                hint="Hvor mange ganger hver sponsor faktisk ble vist."
+                empty="Ingen sponsorvisninger i perioden."
+                rows={(report.sponsors || []).map((s) => ({ key: s.sponsor_id, name: s.name, shows: s.shows, seconds: s.seconds, screens: s.screens }))}
+              />
+              <PlaysTable
+                title="Lysbilder"
+                hint="Hvor mange ganger hvert lysbilde faktisk ble vist."
+                empty="Ingen lysbildevisninger i perioden."
+                rows={(report.slides || []).slice(0, 50).map((s) => ({ key: `${s.playlist_id}-${s.slide_id}`, name: s.name, sub: s.playlist, shows: s.shows, seconds: s.seconds, screens: s.screens }))}
+              />
+            </div>
+
             <p className="m-0 text-xs text-muted">
-              Tidssone: {report.timezone}. Loggen telles av serveren hvert minutt for Apple TV-er som er online. Skjermer
-              som bare vises i nettleser telles ikke.
+              Tidssone: {report.timezone}. Skjermtiden telles av serveren hvert minutt for Apple TV-er som er online.
+              Visninger av lysbilder og sponsorer meldes av skjermene selv (Apple TV med ny app og nettleser), og kan
+              komme inn noen minutter etter at de ble vist.
             </p>
           </>
         )}

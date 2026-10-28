@@ -35,6 +35,23 @@ export async function onRequestGet(context) {
          FROM play_log l WHERE l.hour BETWEEN ? AND ? GROUP BY day ORDER BY day`)
   ]);
 
+  // Visninger meldt av skjermene selv (play_stats, src/api/plays.js).
+  const days = [from, to];
+  const qd = (sql) => env.DB.prepare(sql).bind(...days).all().then((r) => r.results ?? []).catch(() => []);
+  const [bySlide, bySponsor] = await Promise.all([
+    qd(`SELECT st.slide_id, st.playlist_id, ds.name AS slide_name, ds.position, p.name AS playlist_name,
+               SUM(st.shows) AS shows, SUM(st.seconds) AS seconds, COUNT(DISTINCT st.screen_id) AS screens
+          FROM play_stats st
+          LEFT JOIN deck_slides ds ON ds.id = st.slide_id
+          LEFT JOIN playlists p ON p.id = st.playlist_id
+         WHERE st.day BETWEEN ? AND ? AND st.sponsor_id = 0 AND st.slide_id > 0
+         GROUP BY st.slide_id, st.playlist_id ORDER BY seconds DESC LIMIT 200`),
+    qd(`SELECT st.sponsor_id, sp.name, SUM(st.shows) AS shows, SUM(st.seconds) AS seconds, COUNT(DISTINCT st.screen_id) AS screens
+          FROM play_stats st LEFT JOIN sponsors sp ON sp.id = st.sponsor_id
+         WHERE st.day BETWEEN ? AND ? AND st.sponsor_id > 0
+         GROUP BY st.sponsor_id ORDER BY seconds DESC`)
+  ]);
+
   const devices = byDevice.map((d) => {
     let info = {};
     try {
@@ -57,7 +74,17 @@ export async function onRequestGet(context) {
     })),
     screens: byScreen.map((s) => ({ screen_id: s.screen_id, name: s.name || 'Slettet skjerm', minutes: s.minutes })),
     devices,
-    days: byDay
+    days: byDay,
+    slides: bySlide.map((r) => ({
+      slide_id: r.slide_id,
+      playlist_id: r.playlist_id,
+      name: r.slide_name || (r.position != null ? `Lysbilde ${r.position + 1}` : 'Slettet lysbilde'),
+      playlist: r.playlist_name || null,
+      shows: r.shows,
+      seconds: Math.round(r.seconds),
+      screens: r.screens
+    })),
+    sponsors: bySponsor.map((r) => ({ sponsor_id: r.sponsor_id, name: r.name || 'Slettet sponsor', shows: r.shows, seconds: Math.round(r.seconds), screens: r.screens }))
   });
 }
 

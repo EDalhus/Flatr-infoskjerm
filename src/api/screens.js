@@ -28,7 +28,7 @@ const normRotation = (v, f = 0) => {
 const splitTags = (v) => String(v || '').split(',').map((t) => t.trim()).filter(Boolean);
 
 function decorate(row) {
-  const { playlist_orientation, d_device_id, d_code, d_paired_at, d_last_seen, d_client_info, ...rest } = row;
+  const { playlist_orientation, d_device_id, d_code, d_paired_at, d_last_seen, d_client_info, d_screenshot_at, ...rest } = row;
   return {
     ...rest,
     tags: splitTags(row.tags),
@@ -40,6 +40,7 @@ function decorate(row) {
           code: d_code,
           paired_at: d_paired_at,
           last_seen: d_last_seen,
+          screenshot_at: d_screenshot_at ?? null,
           online: d_last_seen ? Date.now() - Date.parse(d_last_seen) < ONLINE_MS : false,
           client_info: d_client_info ? safeJson(d_client_info, null) : null
         }
@@ -54,7 +55,7 @@ function decorate(row) {
 const EXTRA = `(SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = s.playlist_id) AS slide_count,
   (SELECT p.name FROM playlists p WHERE p.id = s.playlist_id) AS playlist_name,
   (SELECT p.orientation FROM playlists p WHERE p.id = s.playlist_id) AS playlist_orientation,
-  d.device_id AS d_device_id, d.code AS d_code, d.paired_at AS d_paired_at, d.last_seen AS d_last_seen, d.client_info AS d_client_info`;
+  d.device_id AS d_device_id, d.code AS d_code, d.paired_at AS d_paired_at, d.last_seen AS d_last_seen, d.client_info AS d_client_info, d.screenshot_at AS d_screenshot_at`;
 const DEVICE_JOIN = `LEFT JOIN pairings d ON d.id = (SELECT MAX(id) FROM pairings WHERE screen_id = s.id AND status = 'paired')`;
 
 const byId = (env, id) => env.DB.prepare(`SELECT s.*, ${EXTRA} FROM screens s ${DEVICE_JOIN} WHERE s.id = ?`).bind(id).first();

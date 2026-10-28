@@ -92,10 +92,17 @@ const CLIENT_INFO_KEYS = [
   'storage_pct',
   'memory_pct',
   'cpu_temp',
-  'gpu_temp'
+  'gpu_temp',
+  'features', // hva appen tegner selv, f.eks. "app,effects,widgets,apps" (se rendersNatively)
+  'network', // ethernet | wifi | other
+  'content_at', // sist appen fikk innhold
+  'live', // 1 = sanntidsforbindelsen er oppe
+  'restarts' // automatiske omstarter av visningen siden appen startet
 ];
 // Disse tolkes som tall (resten som tekst, maks 60 tegn).
 const CLIENT_INFO_NUM = new Set([
+  'live',
+  'restarts',
   'uptime_seconds',
   'storage_pct',
   'memory_pct',

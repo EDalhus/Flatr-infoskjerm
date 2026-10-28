@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { isWithinDaypart } from '../lib/daypart.js';
 import { backgroundStyle } from '../lib/deck.js';
+import { clockPosition, serverNow } from '../lib/deckClock.js';
+import { logPlay } from './playLog.js';
 import SlideCanvas from './SlideCanvas.jsx';
 
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
@@ -33,15 +35,35 @@ export default function DeckPlayer({ deck, ctx }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const slides = useMemo(() => visible, [key]);
 
-  const [index, setIndex] = useState(0);
+  // Berøringsskjermer (knapper) styres av den som står foran; de andre følger
+  // felles klokke, så flere skjermer med samme presentasjon bytter samtidig.
+  const synced = !slides.some((s) => (s.elements || []).some((e) => e.kind === 'button'));
+  const startIndex = () => (synced && slides.length > 1 ? clockPosition(slides).index : 0);
+
+  const [index, setIndex] = useState(startIndex);
   const [prev, setPrev] = useState(null); // { slide, transition, ms }
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    setIndex(0);
+    setIndex(startIndex());
     setPrev(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   const count = slides.length;
+
+  // Visningsloggen: hvert lysbilde meldes når det går av skjermen.
+  const shown = useRef(null);
+  const curSlide = slides[index % Math.max(1, count)];
+  useEffect(() => {
+    if (!curSlide) return undefined;
+    shown.current = { slide: curSlide, at: Date.now() };
+    return () => {
+      const s = shown.current;
+      if (s) logPlay({ playlistId: s.slide.playlist_id, slideId: s.slide.id }, s.at);
+      shown.current = null;
+    };
+  }, [curSlide?.id, key]);
 
   const go = (nextIdx) => {
     if (count < 1 || nextIdx === index) return;
@@ -90,12 +112,26 @@ export default function DeckPlayer({ deck, ctx }) {
 
   useEffect(() => {
     if (count < 2 || paused) return undefined;
-    const cur = slides[index % count];
-    const secs = Math.max(2, Number(cur?.duration_seconds) || 15);
-    const t = setTimeout(() => go((index + 1) % count), secs * 1000);
+    if (!synced) {
+      const cur = slides[index % count];
+      const secs = Math.max(2, Number(cur?.duration_seconds) || 15);
+      const t = setTimeout(() => go((index + 1) % count), secs * 1000);
+      return () => clearTimeout(t);
+    }
+    // Står vi på feil lysbilde (f.eks. etter pause), hopp dit klokka sier.
+    const pos = clockPosition(slides, serverNow());
+    if (pos.index !== index % count) {
+      go(pos.index);
+      return undefined;
+    }
+    const t = setTimeout(() => {
+      const next = clockPosition(slides, serverNow() + 50);
+      if (next.index !== index % count) go(next.index);
+      else setTick((n) => n + 1); // timeren gikk litt for tidlig – regn ut på nytt
+    }, pos.remainingMs + 20);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, index, count, paused]);
+  }, [key, index, count, paused, tick]);
 
   useEffect(() => {
     if (!prev) return undefined;

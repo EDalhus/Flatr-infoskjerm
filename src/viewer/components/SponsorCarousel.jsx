@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { logPlay } from '../playLog.js';
 
 /** Roterer sponsorlogoer – kun bildet, ingen ramme, ingen tekst. */
 export default function SponsorCarousel({ sponsors }) {
@@ -15,6 +16,14 @@ export default function SponsorCarousel({ sponsors }) {
     const id = setTimeout(() => setIndex((i) => (i + 1) % sponsors.length), seconds * 1000);
     return () => clearTimeout(id);
   }, [sponsors, index]);
+
+  // Visningsloggen: hver sponsor meldes når den går av skjermen (bare på ekte skjermer).
+  const currentId = sponsors.length ? sponsors[index % sponsors.length]?.id : null;
+  useEffect(() => {
+    if (!currentId) return undefined;
+    const at = Date.now();
+    return () => logPlay({ sponsorId: currentId }, at);
+  }, [currentId]);
 
   if (sponsors.length === 0) {
     return (

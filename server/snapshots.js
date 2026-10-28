@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { platformDb, tenantResources } from './platform.js';
 import { screenshotUrl } from './convert.js';
 import { notifyChange } from './changes.js';
-import { widgetSnapshotKey } from '../src/api/_shared.js';
+import { widgetSnapshotKey, rendersNatively, parseFeatures } from '../src/api/_shared.js';
 
 const TICK_MS = 2 * 60_000;
 const MIN_MINUTES = 10;
@@ -39,17 +39,36 @@ const origin = (slug) => `${process.env.PUBLIC_PROTOCOL || 'https'}://${slug}.${
  * Nettsider har adressen som nøkkel, widgeter "widget:<element-id>".
  * Bare spillelister som en kanal viser (som standard eller i tidsplanen).
  */
+/** Det alle parede TV-er hos kunden kan tegne selv (client_info.features fra status-pollen). */
+async function commonFeatures(env) {
+  const { results } = await env.DB.prepare(`SELECT client_info FROM pairings WHERE status = 'paired'`).all();
+  let common = null;
+  for (const r of results ?? []) {
+    let info = {};
+    try {
+      info = JSON.parse(r.client_info || '{}');
+    } catch {
+      /* ugyldig – regnes som ingen funksjoner */
+    }
+    const f = parseFeatures(info.features);
+    common = common ? new Set([...common].filter((x) => f.has(x))) : f;
+  }
+  return common ?? new Set();
+}
+
 async function webTargets(env, slug) {
   const { results } = await env.DB.prepare(
-    `SELECT e.id, e.kind, e.config, e.w, e.h, p.orientation
+    `SELECT e.id, e.kind, e.config, e.w, e.h, p.orientation, a.kind AS app_kind
        FROM deck_elements e
        JOIN deck_slides d ON d.id = e.slide_id
        JOIN playlists p ON p.id = d.playlist_id
+       LEFT JOIN apps a ON e.kind = 'app' AND a.id = CAST(json_extract(e.config, '$.appId') AS INTEGER)
       WHERE e.kind IN ('web', 'weather', 'rss', 'calendar', 'app') AND d.enabled = 1 AND COALESCE(json_extract(e.config, '$.effect'), '') != 'rain'
         AND (p.id IN (SELECT playlist_id FROM screens WHERE playlist_id IS NOT NULL)
           OR p.id IN (SELECT playlist_id FROM timeslots WHERE playlist_id IS NOT NULL AND enabled = 1))`
   ).all();
 
+  const common = await commonFeatures(env);
   const targets = new Map();
   for (const r of results ?? []) {
     let cfg = {};
@@ -58,6 +77,8 @@ async function webTargets(env, slug) {
     } catch {
       continue;
     }
+    // Tegner alle TV-ene widgeten selv, trengs ikke noe bilde.
+    if (rendersNatively({ kind: r.kind, config: cfg }, r.app_kind, common)) continue;
     const [bw, bh] = BASE[r.orientation === 'portrait' ? 'portrait' : 'landscape'];
     const pxW = (Number(r.w) / 100) * bw;
     const pxH = (Number(r.h) / 100) * bh;
