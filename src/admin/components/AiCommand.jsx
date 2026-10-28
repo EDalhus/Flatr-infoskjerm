@@ -45,6 +45,18 @@ function Spark({ className }) {
   );
 }
 
+/** Merket til valgt assistent: Cursor-ikonet (egen logo fra app-katalogen) eller Claude-gnisten. */
+function AgentMark({ kind, icon }) {
+  if (kind !== 'cursor') return <Spark className="h-10 w-10 shrink-0 text-[#d97757]" />;
+  if (icon) return <img src={icon} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover" />;
+  return (
+    <svg viewBox="0 0 24 24" className="h-10 w-10 shrink-0 text-ink" aria-hidden="true">
+      <path d="M12 2 21 7v10l-9 5-9-5V7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M12 12 21 7M12 12v10M12 12 3 7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function AiCommand({ go, me }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
@@ -56,6 +68,7 @@ export default function AiCommand({ go, me }) {
   const [assistant, setAssistant] = useState(undefined); // undefined = laster, null = ikke aktivert
   const [assistants, setAssistants] = useState([]); // alle aktiverte (velger når flere)
   const [plus, setPlus] = useState(false);
+  const [icons, setIcons] = useState({}); // egne app-ikoner (Cursor-logoen)
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -91,6 +104,10 @@ export default function AiCommand({ go, me }) {
         setAssistants(r?.apps || []);
       })
       .catch(() => setAssistant(null));
+    api.appMarket
+      .list()
+      .then((r) => setIcons(r?.official_icons || {}))
+      .catch(() => {});
     api.playlists
       .list()
       .then((rows) => setPlaylists(Array.isArray(rows) ? rows : []))
@@ -146,7 +163,7 @@ export default function AiCommand({ go, me }) {
           <Icon name="x" className="h-5 w-5" />
         </button>
         <h1 className="m-0 mb-8 flex items-center justify-center gap-3 text-center text-ink" style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontWeight: 400, fontSize: 'clamp(30px, 4vw, 44px)' }}>
-          <Spark className="h-10 w-10 shrink-0 text-[#d97757]" />
+          <AgentMark kind={assistant?.kind} icon={icons.cursor} />
           {greeting(me?.name)}
         </h1>
         {children}
@@ -176,6 +193,7 @@ export default function AiCommand({ go, me }) {
       </div>
     );
 
+  const cursorChosen = assistant?.kind === 'cursor';
   const recent = [...playlists].sort((a, b) => (b.updated_at || b.created_at || '').localeCompare(a.updated_at || a.created_at || '')).slice(0, 3);
   const context = assistant?.context || [];
 
@@ -232,7 +250,7 @@ export default function AiCommand({ go, me }) {
             type="button"
             onClick={submit}
             disabled={busy || !text.trim()}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#d97757] text-white transition-opacity hover:opacity-90 disabled:opacity-30"
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full transition-opacity hover:opacity-90 disabled:opacity-30 ${cursorChosen ? 'bg-ink text-paper' : 'bg-[#d97757] text-white'}`}
             aria-label="Start"
           >
             {busy ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <span className="text-lg leading-none">↑</span>}
@@ -314,7 +332,7 @@ export default function AiCommand({ go, me }) {
                     setTarget(selected ? NEW : String(p.id));
                     inputRef.current?.focus();
                   }}
-                  className={`rounded-2xl border bg-card p-2 text-left transition-colors hover:bg-zone/60 ${selected ? 'border-[#d97757] ring-1 ring-[#d97757]' : 'border-line'}`}
+                  className={`rounded-2xl border bg-card p-2 text-left transition-colors hover:bg-zone/60 ${selected ? (cursorChosen ? 'border-ink ring-1 ring-ink' : 'border-[#d97757] ring-1 ring-[#d97757]') : 'border-line'}`}
                   title={selected ? 'Valgt – klikk for å velge ny presentasjon i stedet' : 'Bruk denne presentasjonen'}
                 >
                   <div className="pointer-events-none">
