@@ -166,7 +166,8 @@ export default function LoginForm({ onDone, defaultEmail = '' }) {
   return (
     <form onSubmit={submitPassword} className="space-y-4">
       {/* Kundens /admin kommer tilbake hit; på flatr.no til /login (velg organisasjon). */}
-      <SocialButtons callbackURL={window.location.pathname.startsWith('/admin') ? window.location.href : `${window.location.origin}/login`} />
+      {/* Tilbake til samme side (flatr.no/login?next=…), så man kommer dit man skulle. */}
+      <SocialButtons callbackURL={window.location.pathname.startsWith('/admin') || window.location.pathname === '/login' ? window.location.href : `${window.location.origin}/login`} />
       <Field label="E-post">
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" placeholder="deg@firma.no" required autoFocus={!defaultEmail} />
       </Field>

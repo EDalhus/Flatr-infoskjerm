@@ -89,7 +89,7 @@ function useDismiss(open, setOpen) {
 // `context` kommer fra /api/context (Node-serveren). Mangler den, kjører vi
 // som Worker uten e-postinnlogging, og admin vises som før.
 export default function Admin({ context }) {
-  if (context?.mode === 'tenant' && !context.signed_in) return <Login tenant={context.tenant} account={context.account} />;
+  if (context?.mode === 'tenant' && !context.signed_in) return <Login tenant={context.tenant} account={context.account} baseDomain={context.base_domain} />;
   if (context?.needs_2fa) return <Require2fa tenant={context.tenant} />;
   return <AdminShell context={context} />;
 }
@@ -409,6 +409,15 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, setOpen);
   const accountItems = nav.filter((n) => n.group === 'account');
+  // De andre organisasjonene brukeren er med i (samme innlogging via flatr.no).
+  const [orgs, setOrgs] = useState(null);
+  useEffect(() => {
+    if (!open || orgs || !tenant) return;
+    api
+      .orgs()
+      .then((r) => setOrgs(r?.orgs || []))
+      .catch(() => setOrgs([]));
+  }, [open, orgs, tenant]);
   const name = me?.name || 'Bruker';
 
   const popPos =
@@ -474,6 +483,27 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
                   />
                 ))}
               </div>
+            </div>
+          )}
+
+          {orgs?.length > 1 && (
+            <div className="border-t border-line px-1 py-2">
+              <div className="mb-1 px-1 text-xs font-semibold text-muted">Bytt organisasjon</div>
+              {orgs.map((o) => {
+                const current = o.slug === tenant?.slug;
+                return (
+                  <a
+                    key={o.slug}
+                    href={current ? undefined : o.url}
+                    aria-current={current ? 'true' : undefined}
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${current ? 'text-ink' : 'text-muted hover:bg-hair hover:text-ink'}`}
+                  >
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-zone text-[10px] font-bold text-ink">{initials(o.name)}</span>
+                    <span className="min-w-0 flex-1 truncate">{o.name}</span>
+                    {current && <Icon name="check" className="h-3.5 w-3.5 text-brand" />}
+                  </a>
+                );
+              })}
             </div>
           )}
 

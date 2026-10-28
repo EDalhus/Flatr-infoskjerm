@@ -204,7 +204,7 @@ async function handleTenant(request, tenant) {
   const ctx = { ...ctxBase, tenant, user };
 
   // Tofaktorkravet gjelder også team, henvisning og forespørsler (håndteres under).
-  if (user && !user.two_factor && url.pathname.startsWith('/api/') && !ALWAYS_ALLOWED.has(apiKey(url.pathname)) && !/^\/api\/(auth|prefs|invite)(\/|$)/.test(url.pathname) && (await requires2fa(tenant))) {
+  if (user && !user.two_factor && url.pathname.startsWith('/api/') && !ALWAYS_ALLOWED.has(apiKey(url.pathname)) && !/^\/api\/(auth|prefs|invite|orgs)(\/|$)/.test(url.pathname) && (await requires2fa(tenant))) {
     return new Response(JSON.stringify({ error: 'Kontoen krever tofaktor. Slå det på under Konto og sikkerhet.', code: 'needs_2fa' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json; charset=utf-8' }

@@ -30,7 +30,8 @@ const platformRouter = (ctx) =>
     { path: '/', element: <Landing /> },
     { path: '/apps', element: <AppsPage /> },
     { path: '/signup', element: <Signup baseDomain={ctx.base_domain} /> },
-    { path: '/login', element: <PlatformLogin /> },
+    { path: '/login', element: <PlatformLogin baseDomain={ctx.base_domain} /> },
+    { path: '/invite', element: <InvitePage platform baseDomain={ctx.base_domain} /> },
     { path: '/forgot-password', element: <ForgotPassword /> },
     { path: '/reset-password', element: <ResetPassword /> },
     { path: '/admin', element: <PlatformAdminRedirect baseDomain={ctx.base_domain} /> },
@@ -45,7 +46,7 @@ const appRouter = (ctx) =>
   createBrowserRouter([
     { path: '/', element: <Navigate to="/admin" replace /> },
     { path: '/admin', element: <Admin context={ctx} /> },
-    { path: '/invite', element: <InvitePage /> },
+    { path: '/invite', element: <InvitePage baseDomain={ctx?.base_domain} /> },
     { path: '/forgot-password', element: <ForgotPassword /> },
     { path: '/reset-password', element: <ResetPassword /> },
     { path: '/display/:screenId', element: <Viewer /> },

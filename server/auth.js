@@ -7,6 +7,7 @@
 //                                       (organisasjonen opprettes når e-posten er bekreftet)
 //   POST /api/platform/orgs           – { org_name, slug } – innlogget: ny organisasjon
 //   GET  /api/platform/me             – innlogget bruker + organisasjonene den er med i
+//   GET  /api/orgs (kundens subdomene) – det samme, til «bytt organisasjon» i admin
 //   GET  /auth/welcome                – etter e-postbekreftelse: videre til den nye organisasjonen
 //
 // Kundens subdomene (<slug>.flatr.no):
@@ -15,6 +16,7 @@
 //   GET/POST/PUT/DELETE /api/team     – medlemmer (endring krever rollen owner)
 
 import {
+  getTenantById,
   platformDb,
   tenantResources,
   tenantLimits,
@@ -162,6 +164,10 @@ export async function handlePlatformRoute(request, ctx) {
   }
 
   // Ny bruker + ny organisasjon. Better Auth sender bekreftelses-e-post; selve
+  // Invitasjoner på hoveddomenet (nye lenker går hit).
+  if (p === '/api/platform/invite' && request.method === 'GET') return inviteInfo(url.searchParams.get('token'), null);
+  if (p === '/api/platform/invite/accept' && request.method === 'POST') return acceptInvite(request, null, ctx);
+
   // organisasjonen opprettes først når adressen er bekreftet (se onEmailVerified).
   if (p === '/api/platform/signup' && request.method === 'POST') {
     const b = (await readJson(request)) || {};
@@ -266,6 +272,54 @@ export async function handlePlatformRoute(request, ctx) {
   return null;
 }
 
+/* ------------------------------ invitasjoner ----------------------------- */
+// Brukes både på flatr.no/invite (nye lenker: passordet lagres på hoveddomenet,
+// som all annen innlogging) og på kundens adresse (eldre lenker). tenant = null:
+// organisasjonen leses fra invitasjonen.
+
+function inviteTenant(token, tenant) {
+  const row = peekLoginToken(String(token || ''), 'invite');
+  if (!row) return { row: null };
+  if (tenant) return { row: row.tenant_id === tenant.id ? row : null, tenant };
+  return { row, tenant: getTenantById(row.tenant_id) };
+}
+
+function inviteInfo(token, only) {
+  const { row, tenant } = inviteTenant(token, only);
+  if (!row || !tenant) return json({ error: 'Invitasjonen er utløpt eller allerede brukt.' }, 410);
+  const member = getMembership(tenant.id, row.email);
+  const name = member?.name && member.name !== row.email.split('@')[0] ? member.name : '';
+  return json({ email: row.email, name, org: tenant.name, needs_password: !hasPassword(row.email) });
+}
+
+/** Godta invitasjonen: velg passord (første gang) og bli logget inn. */
+async function acceptInvite(request, only, ctx) {
+  const b = (await readJson(request)) || {};
+  if (tooMany(request, null)) return json({ error: 'For mange forsøk. Prøv igjen senere.' }, 429);
+  const { row: peek, tenant } = inviteTenant(b.token, only);
+  if (!peek || !tenant) return json({ error: 'Invitasjonen er utløpt eller allerede brukt.' }, 410);
+  if (!getMembership(tenant.id, peek.email)) return json({ error: 'Invitasjonen er trukket tilbake.' }, 410);
+  const adminUrl = `${ctx.origin(tenant.slug)}/admin`;
+  if (hasPassword(peek.email)) {
+    // Har allerede passord (f.eks. med i en annen organisasjon) – bare logg inn som vanlig.
+    consumeLoginToken(String(b.token), 'invite');
+    return json({ ok: true, login: true, redirect: adminUrl });
+  }
+  const pwProblem = passwordProblem(b.password);
+  if (pwProblem) return json({ error: pwProblem }, 400);
+  if (!consumeLoginToken(String(b.token), 'invite')) return json({ error: 'Invitasjonen er utløpt eller allerede brukt.' }, 410);
+
+  const name = String(b.name || '').trim().slice(0, 100);
+  await ensureAuthUser(peek.email, name);
+  await setPassword(peek.email, b.password);
+  if (name) {
+    platformDb.prepare('UPDATE auth_user SET name = ? WHERE email = ?').bind(name, peek.email).runSync();
+    platformDb.prepare('UPDATE users SET name = ? WHERE email = ?').bind(name, peek.email).runSync();
+  }
+  const signIn = await auth.api.signInEmail({ body: { email: peek.email, password: b.password }, headers: request.headers, asResponse: true });
+  return withCookies(json({ ok: true, redirect: `${adminUrl}?welcome=1` }), signIn);
+}
+
 /* --------------------------- kundens subdomene -------------------------- */
 
 export async function handleTenantAuthRoute(request, ctx) {
@@ -273,41 +327,16 @@ export async function handleTenantAuthRoute(request, ctx) {
   const p = url.pathname.replace(/\/+$/, '');
   const { tenant } = ctx;
 
-  // Invitasjon: vis hvem den gjelder (uten å bruke den opp).
-  if (p === '/api/invite' && request.method === 'GET') {
-    const row = peekLoginToken(url.searchParams.get('token') || '', 'invite');
-    if (!row || row.tenant_id !== tenant.id) return json({ error: 'Invitasjonen er utløpt eller allerede brukt.' }, 410);
-    const member = getMembership(tenant.id, row.email);
-    const name = member?.name && member.name !== row.email.split('@')[0] ? member.name : '';
-    return json({ email: row.email, name, org: tenant.name, needs_password: !hasPassword(row.email) });
+  // Organisasjonene innlogget bruker er med i (bytt organisasjon i brukermenyen).
+  if (p === '/api/orgs' && request.method === 'GET') {
+    const s = await authSession(request);
+    if (!s?.user) return json({ error: 'Ikke innlogget' }, 401);
+    return json({ current: tenant.slug, orgs: orgsFor(s.user.email, ctx) });
   }
 
-  // Godta invitasjonen: velg passord (første gang) og bli logget inn.
-  if (p === '/api/invite/accept' && request.method === 'POST') {
-    const b = (await readJson(request)) || {};
-    if (tooMany(request, null)) return json({ error: 'For mange forsøk. Prøv igjen senere.' }, 429);
-    const peek = peekLoginToken(String(b.token || ''), 'invite');
-    if (!peek || peek.tenant_id !== tenant.id) return json({ error: 'Invitasjonen er utløpt eller allerede brukt.' }, 410);
-    if (!getMembership(tenant.id, peek.email)) return json({ error: 'Invitasjonen er trukket tilbake.' }, 410);
-    if (hasPassword(peek.email)) {
-      // Har allerede passord (f.eks. med i en annen organisasjon) – bare logg inn som vanlig.
-      consumeLoginToken(String(b.token), 'invite');
-      return json({ ok: true, login: true });
-    }
-    const pwProblem = passwordProblem(b.password);
-    if (pwProblem) return json({ error: pwProblem }, 400);
-    if (!consumeLoginToken(String(b.token), 'invite')) return json({ error: 'Invitasjonen er utløpt eller allerede brukt.' }, 410);
-
-    const name = String(b.name || '').trim().slice(0, 100);
-    await ensureAuthUser(peek.email, name);
-    await setPassword(peek.email, b.password);
-    if (name) {
-      platformDb.prepare('UPDATE auth_user SET name = ? WHERE email = ?').bind(name, peek.email).runSync();
-      platformDb.prepare('UPDATE users SET name = ? WHERE email = ?').bind(name, peek.email).runSync();
-    }
-    const signIn = await auth.api.signInEmail({ body: { email: peek.email, password: b.password }, headers: request.headers, asResponse: true });
-    return withCookies(json({ ok: true, redirect: '/admin?welcome=1' }), signIn);
-  }
+  // Invitasjon: vis hvem den gjelder / godta den (se inviteInfo og acceptInvite).
+  if (p === '/api/invite' && request.method === 'GET') return inviteInfo(url.searchParams.get('token'), tenant);
+  if (p === '/api/invite/accept' && request.method === 'POST') return acceptInvite(request, tenant, ctx);
 
   // Planen: bruk og grenser (vises på Skjermer-siden).
   if (p === '/api/plan' && request.method === 'GET') {
@@ -426,7 +455,8 @@ async function handleTeam(request, ctx) {
           ? `${from} har gitt deg tilgang til infoskjermene til ${tenant.name}. Klikk for å velge passord – lenken virker i 7 dager.`
           : `${from} har gitt deg tilgang til infoskjermene til ${tenant.name}. Logg inn med e-posten og passordet ditt.`,
         button: newUser ? 'Velg passord og bli med' : `Åpne ${tenant.name}`,
-        url: newUser ? `${ctx.origin(tenant.slug)}/invite?token=${token}` : `${ctx.origin(tenant.slug)}/admin`
+        // Passordet velges på flatr.no (der all innlogging skjer), så passordbehandlere har én adresse.
+        url: newUser ? `${ctx.origin('')}/invite?token=${token}` : `${ctx.origin(tenant.slug)}/admin`
       })
     }).catch(() => {});
     return json(listMembers(tenant.id), 201);

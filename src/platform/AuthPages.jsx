@@ -263,9 +263,28 @@ export function Signup({ baseDomain }) {
 }
 
 /** flatr.no/login – logg inn, så videre til organisasjonen (eller velg blant flere). */
-export function PlatformLogin() {
+/**
+ * Hvor man kan sendes etter innlogging: en sti her, eller en adresse på
+ * flatr.no / et kunde-subdomene (aldri andre domener). null = ugyldig.
+ */
+function safeNext(raw, baseDomain) {
+  if (!raw) return null;
+  if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
+  try {
+    const u = new URL(raw);
+    const host = u.host.toLowerCase();
+    const base = String(baseDomain || window.location.host).toLowerCase();
+    if (!/^https?:$/.test(u.protocol)) return null;
+    return host === base || host.endsWith(`.${base}`) ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function PlatformLogin({ baseDomain }) {
   const [params] = useSearchParams();
-  const next = params.get('next');
+  const next = safeNext(params.get('next'), baseDomain);
+  const nextHost = next && !next.startsWith('/') ? new URL(next).host : null;
   const [orgs, setOrgs] = useState(null);
   const [me, setMe] = useState(null);
 
@@ -277,7 +296,7 @@ export function PlatformLogin() {
   }, []);
 
   function choose(r) {
-    if (next && next.startsWith('/')) return void (window.location.href = next);
+    if (next) return void (window.location.href = next);
     setMe(r.user);
     setOrgs(r.orgs);
     if (r.orgs.length === 1) window.location.href = r.orgs[0].url;
@@ -312,7 +331,13 @@ export function PlatformLogin() {
   return (
     <AuthShell
       title="Logg inn"
-      subtitle={params.get('verified') ? 'E-postadressen er bekreftet. Logg inn for å fortsette.' : null}
+      subtitle={
+        params.get('verified')
+          ? 'E-postadressen er bekreftet. Logg inn for å fortsette.'
+          : nextHost && nextHost !== window.location.host
+            ? `Logg inn for å fortsette til ${nextHost}.`
+            : 'Én innlogging for alle organisasjonene dine.'
+      }
       footer={
         <>
           Ny hos oss?{' '}
@@ -383,9 +408,11 @@ export function ForgotPassword() {
 }
 
 /** Felles felter for nytt passord (to ganger). */
-function NewPasswordFields({ value, setValue, again, setAgain }) {
+function NewPasswordFields({ value, setValue, again, setAgain, username }) {
   return (
     <>
+      {/* Passordbehandlere lagrer passordet på e-postadressen (skjult felt). */}
+      {username && <input type="email" name="username" autoComplete="username" value={username} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />}
       <Field label="Nytt passord" hint="Minst 10 tegn. En setning du husker er både sterk og lett å huske.">
         <Input type="password" value={value} onChange={(e) => setValue(e.target.value)} autoComplete="new-password" minLength={10} required autoFocus />
       </Field>
@@ -454,10 +481,22 @@ export function ResetPassword() {
   );
 }
 
-/** /invite?token= på kundens adresse – velg navn og passord, og bli med. */
-export function InvitePage() {
+/**
+ * /invite?token= – velg navn og passord, og bli med. Nye lenker går til flatr.no
+ * (platform), så passordet lagres der som all annen innlogging; på kundens adresse
+ * (eldre lenker) sendes man videre dit.
+ */
+export function InvitePage({ platform = false, baseDomain }) {
   const [params] = useSearchParams();
   const token = params.get('token') || '';
+  if (!platform && baseDomain) {
+    window.location.replace(`${window.location.protocol}//${baseDomain}/invite?token=${encodeURIComponent(token)}`);
+    return <div className="h-full bg-paper" />;
+  }
+  return <InviteForm token={token} platform={platform} />;
+}
+
+function InviteForm({ token, platform }) {
   const [invite, setInvite] = useState(null);
   const [name, setName] = useState('');
   const [pw, setPw] = useState('');
@@ -468,7 +507,7 @@ export function InvitePage() {
   useEffect(() => {
     document.title = 'Invitasjon – Flatr';
     api.invite
-      .get(token)
+      .get(token, platform)
       .then((r) => {
         setInvite(r);
         setName(r.name || '');
@@ -482,8 +521,8 @@ export function InvitePage() {
     setError('');
     setBusy(true);
     try {
-      const r = await api.invite.accept({ token, name, password: pw });
-      window.location.href = r.login ? '/admin' : r.redirect;
+      const r = await api.invite.accept({ token, name, password: pw }, platform);
+      window.location.href = r.redirect || '/admin';
     } catch (err) {
       setError(err.message);
     } finally {
@@ -517,7 +556,7 @@ export function InvitePage() {
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kari Nordmann" autoComplete="name" required />
             </Field>
             <input type="email" value={invite.email} readOnly hidden autoComplete="username" />
-            <NewPasswordFields value={pw} setValue={setPw} again={again} setAgain={setAgain} />
+            <NewPasswordFields value={pw} setValue={setPw} again={again} setAgain={setAgain} username={invite.email} />
           </>
         ) : (
           <p className="m-0 text-sm text-muted">Du har allerede en Flatr-konto. Logg inn med passordet ditt for å komme inn.</p>
@@ -538,6 +577,20 @@ export function InvitePage() {
 export function PlatformAdminRedirect({ baseDomain }) {
   const [params] = useSearchParams();
   const code = params.get('code');
+  // Innlogget: organisasjonene dine (med f.eks. TV-koden videre) i stedet for å skrive adressen.
+  const [orgs, setOrgs] = useState(null);
+  useEffect(() => {
+    api.platform
+      .me()
+      .then((r) => {
+        const q = params.toString();
+        const list = (r?.orgs || []).map((o) => ({ ...o, url: q ? `${o.url}?${q}` : o.url }));
+        if (list.length === 1) window.location.replace(list[0].url);
+        else setOrgs(list);
+      })
+      .catch(() => setOrgs([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [slug, setSlug] = useState(() => {
     try {
       return localStorage.getItem('flatr.lastSlug') || '';
@@ -561,6 +614,21 @@ export function PlatformAdminRedirect({ baseDomain }) {
     }
     window.location.href = target;
   };
+
+  if (orgs?.length > 1) {
+    return (
+      <AuthShell title={code ? 'Koble til en TV' : 'Velg organisasjon'} subtitle={code ? `Hvilken organisasjon skal skjermen med koden ${code} høre til?` : null}>
+        <div className="grid gap-2">
+          {orgs.map((o) => (
+            <a key={o.slug} href={o.url} className="flex items-center justify-between rounded-xl border border-line px-4 py-3 hover:bg-zone">
+              <span className="font-semibold text-ink">{o.name}</span>
+              <Icon name="chevron" className="h-4 w-4 text-muted" />
+            </a>
+          ))}
+        </div>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell

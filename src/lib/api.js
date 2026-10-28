@@ -120,6 +120,8 @@ export const api = {
     restore: (id) => req(`/versions?id=${encodeURIComponent(id)}&restore=1`, { method: 'POST', body: {} })
   },
   // AI-assistenten (src/api/ai.js). send() gir rå Response (SSE) til AiPanel.
+  // Organisasjonene innlogget bruker er med i (bytt organisasjon i brukermenyen).
+  orgs: () => req('/orgs'),
   ai: {
     // agent: 'claude' | 'cursor' når flere assistenter er aktivert (ellers den første).
     app: (agent) => req(`/ai${agent ? `?agent=${agent}` : ''}`),
@@ -304,9 +306,10 @@ export const api = {
     get: () => req('/plan'),
     request: (extra, message) => req('/plan/request', { method: 'POST', body: { extra, message } })
   },
+  // platform = true: flatr.no/invite (nye lenker), ellers kundens adresse (eldre lenker).
   invite: {
-    get: (token) => req(`/invite?token=${encodeURIComponent(token)}`),
-    accept: (body) => req('/invite/accept', { method: 'POST', body })
+    get: (token, platform) => req(`${platform ? '/platform' : ''}/invite?token=${encodeURIComponent(token)}`),
+    accept: (body, platform) => req(`${platform ? '/platform' : ''}/invite/accept`, { method: 'POST', body })
   },
   team: {
     list: () => req('/team'),

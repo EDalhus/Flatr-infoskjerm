@@ -1,16 +1,23 @@
-// Innlogging på kundens subdomene (<slug>.flatr.no/admin) – e-post og passord
-// (+ kode ved tofaktor) via Better Auth. Én innlogging gjelder alle
-// organisasjonene man er medlem av.
+// Kundens subdomene (<slug>.flatr.no/admin) uten innlogging. All innlogging skjer
+// på flatr.no/login (én adresse for passordbehandlere, ett sett med passord);
+// derfra sendes man tilbake hit. Innloggingen gjelder alle organisasjonene man
+// er medlem av. Innlogget, men ikke medlem her: «Ingen tilgang».
 import { useEffect } from 'react';
 import { authClient } from '../lib/authClient.js';
 import { AuthShell } from '../platform/AuthPages.jsx';
-import LoginForm from '../platform/LoginForm.jsx';
 import { Button } from './components/ui.jsx';
 
-export default function Login({ tenant, account }) {
+/** flatr.no/login med retur hit. */
+export function platformLoginUrl(baseDomain, next = window.location.href) {
+  const base = baseDomain || window.location.host.split('.').slice(1).join('.');
+  return `${window.location.protocol}//${base}/login?next=${encodeURIComponent(next)}`;
+}
+
+export default function Login({ tenant, account, baseDomain }) {
   useEffect(() => {
     document.title = `Logg inn – ${tenant?.name ?? 'Flatr'}`;
-  }, [tenant]);
+    if (!account) window.location.replace(platformLoginUrl(baseDomain));
+  }, [tenant, account, baseDomain]);
 
   // Innlogget i Flatr, men ikke medlem av denne organisasjonen.
   if (account) {
@@ -29,9 +36,5 @@ export default function Login({ tenant, account }) {
     );
   }
 
-  return (
-    <AuthShell title={`Logg inn på ${tenant?.name ?? 'Flatr'}`}>
-      <LoginForm onDone={() => window.location.reload()} />
-    </AuthShell>
-  );
+  return <div className="h-full bg-paper" />;
 }
