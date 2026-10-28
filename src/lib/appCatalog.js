@@ -141,7 +141,7 @@ export const OFFICIAL_APPS = [
     requires: 'API-nøkkel fra Cursor',
     guide: {
       title: 'Slik kobler du til Cursor',
-      intro: 'Cursor AI bruker Cursors Cloud Agents med en API-nøkkel fra Cursor-kontoen deres. Det krever et betalt Cursor-abonnement.',
+      intro: 'Cursor AI bruker Cursors Cloud Agents med en API-nøkkel fra Cursor-kontoen deres. Det krever et betalt Cursor-abonnement. Nøkkelen er alt dere trenger: Flatr kobler agenten til presentasjonen selv (via MCP) hver gang, så dere skal ikke sette opp noe i Cursor.',
       steps: [
         {
           title: 'Logg inn på Cursor',
