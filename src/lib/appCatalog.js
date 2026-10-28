@@ -179,6 +179,18 @@ export const OFFICIAL_APPS = [
     views: ['Dagens meny', 'Hele uka']
   },
   {
+    key: 'stock',
+    name: 'Lagerbeholdning',
+    tagline: 'Hva dere har på lager nå – skrevet inn for hånd, vist på skjermene.',
+    description:
+      'Legg inn varene med mengde og enhet (tonn, big bags, paller …), gjerne med detaljer som silo eller lagerplass. Skjermene viser beholdningen med en gang du lagrer, og når den sist ble oppdatert.\n\nSett en minstebeholdning, så markeres varer som er i ferd med å gå tomme.',
+    category: 'transport',
+    icon: 'layers',
+    color: '#0f766e',
+    element: 'app',
+    views: ['Beholdning per vare', 'Detaljer (silo, lagerplass)', 'Varsel ved lav beholdning']
+  },
+  {
     key: 'tides',
     name: 'Tidevann og sjø',
     tagline: 'Høyvann og lavvann fra Kartverket, bølgehøyde og sjøtemperatur fra MET.',

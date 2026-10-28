@@ -21,13 +21,13 @@ function AppFields({ c, set }) {
   useEffect(() => {
     api.apps
       .list()
-      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football'].includes(a.kind))))
+      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'stock'].includes(a.kind))))
       .catch(() => setApps([]));
   }, []);
   const app = (apps || []).find((a) => a.id === c.appId);
   const isCustom = app?.kind === 'custom';
   const isBirthdays = app?.kind === 'birthdays';
-  const isOther = ['menu', 'tides', 'football'].includes(app?.kind);
+  const isOther = ['menu', 'tides', 'football', 'stock'].includes(app?.kind);
   const fleet = app?.config?.fleet || [];
   const quays = app?.config?.quays || [];
   const picked = new Set((c.mmsi || []).map(String));
@@ -160,6 +160,16 @@ function AppFields({ c, set }) {
           </Field>
           <Check label="Vis priser" checked={c.showPrice !== false} onChange={(v) => set({ showPrice: v })} />
           <Check label="Vis merking (allergener, vegetar …)" checked={c.showTags !== false} onChange={(v) => set({ showTags: v })} />
+        </>
+      )}
+      {app?.kind === 'stock' && (
+        <>
+          <Field label="Overskrift">
+            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} placeholder={app.config?.title || 'Lagerbeholdning'} />
+          </Field>
+          <Check label="Vis detaljer (silo, lagerplass …)" checked={c.showDetails !== false} onChange={(v) => set({ showDetails: v })} />
+          <Check label="Vis når den sist ble oppdatert" checked={c.showUpdated !== false} onChange={(v) => set({ showUpdated: v })} />
+          <p className="m-0 text-xs text-muted">Varer og mengder skriver du inn under Flatr Apps → Lagerbeholdning.</p>
         </>
       )}
       {app?.kind === 'tides' && (

@@ -7,6 +7,7 @@ import CakeRain from './CakeRain.jsx';
 import MenuView from './MenuView.jsx';
 import TidesView from './TidesView.jsx';
 import FootballView from './FootballView.jsx';
+import StockView from './StockView.jsx';
 import { statusLabel, etaTo, etaText, ago, hasPosition, isMoving, vesselColor } from '../../lib/ais.js';
 import { currentCalls, cargoLine, callTimeText, callDate, hasClock } from '../../lib/portCalls.js';
 
@@ -258,12 +259,13 @@ export default function AppSlide({ slide, chromeless }) {
   }
 
   // Dagens meny, tidevann og fotball: ferdige visninger med kort/ramme som standard.
-  if (['menu', 'tides', 'football'].includes(data.app?.kind)) {
+  if (['menu', 'tides', 'football', 'stock'].includes(data.app?.kind)) {
     const card = c.frame === false ? 'flex h-full w-full flex-col overflow-hidden' : 'flex h-full w-full flex-col overflow-hidden rounded-xl bg-black/30 p-[4%]';
     return (
       <div className={card} style={style}>
         {data.app.kind === 'menu' && <MenuView data={data} view={c.menuView || 'today'} title={c.title} showPrice={c.showPrice !== false} showTags={c.showTags !== false} />}
         {data.app.kind === 'tides' && <TidesView place={data.places?.[c.placeId] || Object.values(data.places || {})[0]} view={c.tideView || 'both'} title={c.title} now={now} />}
+        {data.app.kind === 'stock' && <StockView data={data} title={c.title} showUpdated={c.showUpdated !== false} showDetails={c.showDetails !== false} />}
         {data.app.kind === 'football' && <FootballView data={data} view={c.footballView || 'next'} teamId={c.teamId} leagueId={c.leagueId} title={c.title} max={c.max} />}
       </div>
     );

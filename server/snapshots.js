@@ -58,7 +58,7 @@ async function commonFeatures(env) {
 
 async function webTargets(env, slug) {
   const { results } = await env.DB.prepare(
-    `SELECT e.id, e.kind, e.config, e.w, e.h, p.orientation, a.kind AS app_kind
+    `SELECT e.id, e.kind, e.config, e.w, e.h, p.orientation, a.kind AS app_kind, a.updated_at AS app_updated
        FROM deck_elements e
        JOIN deck_slides d ON d.id = e.slide_id
        JOIN playlists p ON p.id = d.playlist_id
@@ -91,7 +91,7 @@ async function webTargets(env, slug) {
       const w = pxW * scale;
       const h = Math.max(40, pxH * scale);
       const zoom = Math.max(1, Math.min(2, Math.sqrt(8_000_000 / (w * h))));
-      targets.set(widgetSnapshotKey(r.id, cfg, r.w, r.h), {
+      targets.set(widgetSnapshotKey(r.id, cfg, r.w, r.h, r.app_updated), {
         fetchUrl: `${origin(slug)}/widget/${r.id}?scale=${zoom.toFixed(2)}`,
         minutes: WIDGET_MINUTES[r.kind],
         width: Math.round(w * zoom),

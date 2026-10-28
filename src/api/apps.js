@@ -7,6 +7,7 @@ import { cleanCalls } from '../lib/portCalls.js';
 import { verifyUnsplashKey, searchPhotos, importPhoto } from './photos.js';
 import { tidesData, footballData, verifyFootballKey, searchFootball } from './datasources.js';
 import { cleanMenu, weekdayIn } from '../lib/menu.js';
+import { cleanStock } from '../lib/stock.js';
 
 // Flatr Apps – aktiverte apper for kunden. En rad = én aktivert app fra
 // markedsplassen: offisiell (kind = ais | weather | rss | calendar) eller egen
@@ -349,6 +350,8 @@ export async function appData(env, appId) {
             ? await birthdaysData(env, row)
             : row.kind === 'menu'
               ? await menuData(env, row)
+              : row.kind === 'stock'
+                ? cleanStock(safeJson(row.config, {}))
               : row.kind === 'tides'
                 ? await tidesData(safeJson(row.config, {}))
                 : row.kind === 'football'
@@ -458,6 +461,7 @@ export async function onRequestPost(context) {
     if (AGENTS[kind]) config = { effort: 'medium' };
     if (kind === 'unsplash') config = {};
     if (kind === 'menu') config = cleanMenu({});
+    if (kind === 'stock') config = cleanStock({});
     if (kind === 'tides') config = cleanTidesConfig({});
     if (kind === 'football') config = cleanFootballConfig({});
   }
@@ -511,6 +515,9 @@ export async function onRequestPut(context) {
       }
     } else if (row.kind === 'menu') {
       if (b.config !== undefined) config = cleanMenu({ ...prevConfig, ...b.config });
+    } else if (row.kind === 'stock') {
+      // Tidspunktet vises på skjermen («Oppdatert …») – settes av serveren ved hver lagring.
+      if (b.config !== undefined) config = cleanStock({ ...prevConfig, ...b.config, updated_at: new Date().toISOString() });
     } else if (row.kind === 'tides') {
       if (b.config !== undefined) config = cleanTidesConfig({ ...prevConfig, ...b.config });
     } else if (row.kind === 'football') {

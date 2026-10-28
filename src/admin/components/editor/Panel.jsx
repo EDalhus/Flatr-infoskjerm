@@ -176,6 +176,7 @@ function describe(el, apps) {
     const from = app ? `fra ${app.name}` : c.appId ? 'App som ikke er aktivert' : 'Ingen app valgt';
     if (app?.kind === 'birthdays') return { title: c.effect === 'rain' ? 'Kakeregn' : 'Bursdager', sub: from, icon: c.effect === 'rain' ? 'sparkle' : 'calendar' };
     if (app?.kind === 'custom') return { title: 'Egen visning', sub: from, icon: 'sparkle' };
+    if (app?.kind === 'stock') return { title: 'Lagerbeholdning', sub: from, icon: 'layers' };
     if (app?.kind === 'menu') return { title: c.menuView === 'week' ? 'Ukens meny' : 'Dagens meny', sub: from, icon: 'calendar' };
     if (app?.kind === 'tides') return { title: { tide: 'Tidevann', sea: 'Sjø' }[c.tideView] || 'Tidevann og sjø', sub: from, icon: 'sun' };
     if (app?.kind === 'football') return { title: { last: 'Resultater', table: 'Tabell' }[c.footballView] || 'Neste kamper', sub: from, icon: 'chart' };

@@ -706,7 +706,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const NEEDS_APP = { weather: 'weather', rss: 'rss', calendar: 'calendar', program: 'events', countdown: 'events', button: 'touch' };
   const activeKinds = new Set(installedApps.map((a) => a.kind));
   const others = ELEMENT_KINDS.filter((k) => !PRIMARY.includes(k.kind) && k.kind !== 'app' && (!NEEDS_APP[k.kind] || activeKinds.has(NEEDS_APP[k.kind])));
-  const dataApps = installedApps.filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football'].includes(a.kind));
+  const dataApps = installedApps.filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'stock'].includes(a.kind));
   // AI-fanen finnes når en assistent-app (Claude AI) er aktivert.
   const aiEnabled = installedApps.some((a) => AI_APP_KINDS.includes(a.kind)) || panelTab === 'ai';
 

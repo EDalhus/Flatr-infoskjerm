@@ -496,15 +496,15 @@ export function rendersNatively(e, appKind, features) {
   return features.has('apps') && NATIVE_APP_KINDS.includes(appKind);
 }
 
-/** app-id -> kind for appene lysbildene bruker. */
+/** app-id -> { kind, updated_at } for appene lysbildene bruker. */
 async function appKindsIn(env, deck) {
   const ids = [...new Set(deck.flatMap((s) => s.elements.filter((e) => e.kind === 'app').map((e) => Number(e.config?.appId))))].filter(Boolean);
   if (!ids.length) return {};
   try {
-    const { results } = await env.DB.prepare(`SELECT id, kind FROM apps WHERE id IN (${ids.map(() => '?').join(',')})`)
+    const { results } = await env.DB.prepare(`SELECT id, kind, updated_at FROM apps WHERE id IN (${ids.map(() => '?').join(',')})`)
       .bind(...ids)
       .all();
-    return Object.fromEntries((results ?? []).map((r) => [r.id, r.kind]));
+    return Object.fromEntries((results ?? []).map((r) => [r.id, { kind: r.kind, updated_at: r.updated_at }]));
   } catch {
     return {}; // ingen apps-tabell
   }
@@ -514,18 +514,21 @@ async function appKindsIn(env, deck) {
  * Skjermbildet av en widget hører til innstillingene og størrelsen den har:
  * endres de, trengs et nytt bilde med en gang (ikke ved neste faste runde).
  */
-export function widgetSnapshotKey(id, config, w, h) {
-  const text = `${JSON.stringify(config || {})}|${Math.round(Number(w) * 10)}|${Math.round(Number(h) * 10)}`;
+export function widgetSnapshotKey(id, config, w, h, appVersion = '') {
+  // appVersion: når appen sist ble lagret (f.eks. nye mengder i Lagerbeholdning).
+  const text = `${JSON.stringify(config || {})}|${Math.round(Number(w) * 10)}|${Math.round(Number(h) * 10)}|${appVersion || ''}`;
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
   return `widget:${id}:${(hash >>> 0).toString(36)}`;
 }
 
-const snapshotKey = (e) => (e.kind === 'web' ? e.config?.url : DEVICE_WIDGETS.includes(e.kind) ? widgetSnapshotKey(e.id, e.config, e.w, e.h) : null);
+const snapshotKey = (e, apps = {}) =>
+  e.kind === 'web' ? e.config?.url : DEVICE_WIDGETS.includes(e.kind) ? widgetSnapshotKey(e.id, e.config, e.w, e.h, apps[Number(e.config?.appId)]?.updated_at) : null;
 
 async function adaptForDevices(env, deck) {
   const urls = new Set();
-  for (const s of deck) for (const e of s.elements) if (snapshotKey(e)) urls.add(snapshotKey(e));
+  const appKinds = await appKindsIn(env, deck);
+  for (const s of deck) for (const e of s.elements) if (snapshotKey(e, appKinds)) urls.add(snapshotKey(e, appKinds));
 
   const shots = {};
   if (urls.size) {
@@ -553,7 +556,6 @@ async function adaptForDevices(env, deck) {
   // TV-apper som tegner widgeten selv (se rendersNatively) får elementet med en
   // datalenke i stedet for skjermbilde – live, ikke et bilde hvert par minutt.
   const features = parseFeatures(env.DEVICE_FEATURES);
-  const appKinds = await appKindsIn(env, deck);
 
   // Widgeter uten skjermbilde ennå: TV-appen kjenner ikke typen og ville blitt
   // stående og laste. Hopp over dem nå, og be serveren lage skjermbildet med en gang.
@@ -574,11 +576,11 @@ async function adaptForDevices(env, deck) {
       if (e.kind === 'app' && e.config?.effect === 'rain') {
         return features.has('effects') ? [{ ...e, kind: 'effect', config: { type: 'rain', amount: e.config.amount || 'normal', opacity: Math.min(1, Math.max(0.1, Number(e.config.opacity) || 1)) } }] : [];
       }
-      const appKind = e.kind === 'app' ? appKinds[Number(e.config?.appId)] : undefined;
+      const appKind = e.kind === 'app' ? appKinds[Number(e.config?.appId)]?.kind : undefined;
       if (rendersNatively(e, appKind, features)) {
         return [{ ...e, config: { ...e.config, data_url: `/api/feeds?element=${e.id}`, ...(appKind ? { app_kind: appKind } : {}) } }];
       }
-      const key = snapshotKey(e);
+      const key = snapshotKey(e, appKinds);
       if (key && !shots[key] && e.kind !== 'web') missing = true;
       const shot = key && (shots[key] || (e.kind !== 'web' && shots[`widget:${e.id}`]));
       if (key && !shot && e.kind !== 'web') return [];
