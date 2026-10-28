@@ -4,7 +4,60 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../admin/components/ui.jsx';
 import { OFFICIAL_APPS } from '../lib/appCatalog.js';
+import AppIcon from '../admin/components/apps/AppIcon.jsx';
 import { SiteHeader, SiteFooter, SectionHead, AppTile, usePublicApps } from './Landing.jsx';
+
+// De offisielle appene gruppert etter hva kunden vil oppnå. Nye apper som ikke
+// står her, havner under «Mer» av seg selv.
+const THEMES = [
+  { id: 'drift', title: 'Drift og logistikk', text: 'Flåten, kaiene og lageret – oppdatert av seg selv.', keys: ['ais', 'stock'] },
+  { id: 'vaer', title: 'Vær og sjø', text: 'Fra Yr, Kartverket og MET – ingen nøkler, ingen oppsett.', keys: ['weather', 'tides'] },
+  { id: 'arbeidsplass', title: 'Arbeidsplassen', text: 'Det som gjør skjermen i lunsjrommet verdt å se på.', keys: ['birthdays', 'menu', 'calendar'] },
+  { id: 'nyheter', title: 'Nyheter og sport', text: 'Nyhetene og lagene dere følger med på.', keys: ['rss', 'football'] },
+  { id: 'arrangement', title: 'Arrangementer og styring', text: 'Program, tidsstyring og skjermer folk kan trykke på.', keys: ['events', 'timetable', 'touch'] },
+  { id: 'innhold', title: 'Innhold og AI', text: 'Lag presentasjoner raskere, med bilder som passer.', keys: ['claude', 'unsplash'] }
+];
+
+function themed() {
+  const byKey = Object.fromEntries(OFFICIAL_APPS.map((a) => [a.key, a]));
+  const used = new Set(THEMES.flatMap((t) => t.keys));
+  const rest = OFFICIAL_APPS.filter((a) => !used.has(a.key));
+  return [
+    ...THEMES.map((t) => ({ ...t, apps: t.keys.map((k) => byKey[k]).filter(Boolean) })),
+    ...(rest.length ? [{ id: 'mer', title: 'Mer', text: 'Flere apper fra Flatr.', apps: rest }] : [])
+  ].filter((t) => t.apps.length);
+}
+
+/** Kort for en offisiell app: ikon, navn, kort beskrivelse og hva den kan – like høye i rutenettet. */
+function OfficialAppCard({ app, image }) {
+  return (
+    <article className="flex h-full flex-col rounded-xl border border-line bg-card p-5 transition-colors hover:border-brand/40">
+      <div className="flex items-center gap-3">
+        <AppIcon icon={app.icon} color={app.color} size={40} image={image} />
+        <h4 className="m-0 min-w-0 truncate text-base font-semibold">{app.name}</h4>
+      </div>
+      <p className="m-0 mt-3 text-sm leading-relaxed text-muted">{app.tagline}</p>
+      {app.requires && (
+        <p className="m-0 mt-2 inline-flex items-center gap-1.5 text-xs text-muted">
+          <Icon name="lock" className="h-3 w-3" />
+          Trenger {app.requires}
+        </p>
+      )}
+      {/* Punktlistene står nederst, så de flukter i rutenettet. */}
+      <div className="flex-1" />
+      {app.views?.length > 0 && (
+        <ul className="m-0 mt-4 list-none space-y-1.5 border-t border-line p-0 pt-4 text-sm">
+          {app.views.map((v) => (
+            <li key={v} className="flex items-start gap-2">
+              <Icon name="check" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" />
+              <span>{v}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </article>
+  );
+}
 
 const BUILDER_STEPS = [
   { icon: 'link', title: 'Koble til et API', text: 'Lim inn adressen til et hvilket som helst JSON-API over https. Nøkler lagres kryptert.' },
@@ -15,6 +68,7 @@ const BUILDER_STEPS = [
 
 export default function AppsPage() {
   const { official_icons: icons, community } = usePublicApps();
+  const groups = themed();
 
   useEffect(() => {
     document.title = 'Flatr Apps – live data på infoskjermene';
@@ -51,21 +105,26 @@ export default function AppsPage() {
 
       <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <SectionHead kicker="Offisielle apper" title="Klare til bruk" text="Laget og vedlikeholdt av Flatr. Aktiver dem i Flatr Apps og legg dem på et lysbilde." />
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {OFFICIAL_APPS.map((a) => (
-              <div key={a.key} className="flex flex-col">
-                <AppTile app={a} image={icons[a.key]} />
-                {a.views?.length > 0 && (
-                  <ul className="m-0 mt-2 list-none space-y-1 px-1 text-xs text-muted">
-                    {a.views.map((v) => (
-                      <li key={v} className="flex items-center gap-1.5">
-                        <Icon name="check" className="h-3 w-3 text-brand" />
-                        {v}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+          <SectionHead kicker="Offisielle apper" title="Klare til bruk" text="Laget og vedlikeholdt av Flatr. Aktiver dem med ett klikk og legg dem på et lysbilde." />
+          <nav aria-label="Temaer" className="mt-8 flex flex-wrap gap-2">
+            {groups.map((t) => (
+              <a key={t.id} href={`#${t.id}`} className="rounded-full border border-line bg-card px-3.5 py-1.5 text-sm font-medium text-muted transition-colors hover:border-brand/40 hover:text-ink">
+                {t.title}
+              </a>
+            ))}
+          </nav>
+          <div className="mt-12 space-y-14">
+            {groups.map((t) => (
+              <div key={t.id} id={t.id} className="scroll-mt-24">
+                <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-line pb-3">
+                  <h3 className="m-0 text-xl font-semibold tracking-tight">{t.title}</h3>
+                  <p className="m-0 text-sm text-muted">{t.text}</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {t.apps.map((a) => (
+                    <OfficialAppCard key={a.key} app={a} image={icons[a.key]} />
+                  ))}
+                </div>
               </div>
             ))}
           </div>

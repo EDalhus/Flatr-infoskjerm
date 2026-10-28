@@ -35,7 +35,7 @@ export const OFFICIAL_APPS = [
     icon: 'pin',
     color: '#0b6bcb',
     element: 'app',
-    views: ['Kart over flåten', 'Båtkort med status og ETA', 'Ankomsttavle for en kai', 'Anløpsplan med varer (tillegget Anløp)'],
+    views: ['Kart over flåten i sanntid', 'Båtkort med status og ankomsttid', 'Ankomsttavle og anløpsplan med last'],
     requires: 'BarentsWatch API-klient (AIS)',
     // Steg-for-steg under «Om appen». link = { href, label } (valgfri).
     guide: {
@@ -86,7 +86,7 @@ export const OFFICIAL_APPS = [
     icon: 'users',
     color: '#d6409f',
     element: 'app',
-    views: ['De neste bursdagene (antall velger du)']
+    views: ['De neste bursdagene på jobben', 'Kakeregn på selve dagen']
   },
   {
     key: 'claude',
@@ -98,7 +98,7 @@ export const OFFICIAL_APPS = [
     icon: 'sparkle',
     color: '#d97757',
     element: 'assistant',
-    views: ['⌘K: ny presentasjon fra en beskrivelse', 'AI-fane i editoren med historikk og tankegang', 'Endrer bare presentasjoner'],
+    views: ['Lag en presentasjon fra en kort beskrivelse', 'Be om endringer med vanlige ord', 'Bruker deres egen Claude-nøkkel'],
     requires: 'API-nøkkel fra Anthropic (Claude)',
     guide: {
       title: 'Slik kobler du til Claude',
@@ -137,7 +137,7 @@ export const OFFICIAL_APPS = [
     icon: 'calendar',
     color: '#7c3aed',
     element: 'feature',
-    views: ['Program-siden i menyen', 'Widgeten Program (agenda / nå)', 'Widgeten Nedtelling', 'QR til programmet på mobil'],
+    views: ['Program per scene og dag', 'Nedtelling til neste post', 'QR-kode til programmet på mobilen'],
     ready: 'Klar til bruk. Program finner du nå i menyen, og Program og Nedtelling under Widgeter i editoren.'
   },
   {
@@ -150,7 +150,7 @@ export const OFFICIAL_APPS = [
     icon: 'clock',
     color: '#0ea5e9',
     element: 'feature',
-    views: ['Tidsplan-siden i menyen', 'Presentasjon per tidsrom og ukedag', 'Skjerm av i perioder'],
+    views: ['Riktig innhold til riktig tid', 'Ulike presentasjoner per ukedag', 'Skjermene av utenom åpningstid'],
     ready: 'Klar til bruk. Tidsplan finner du nå i menyen.'
   },
   {
@@ -163,7 +163,7 @@ export const OFFICIAL_APPS = [
     icon: 'link',
     color: '#db2777',
     element: 'feature',
-    views: ['Knapper som navigerer', 'Sveip mellom lysbilder', 'Nettside over skjermen'],
+    views: ['Knapper som åpner andre lysbilder', 'Sveip mellom lysbildene', 'Går tilbake til start av seg selv'],
     ready: 'Klar til bruk. Legg til en knapp fra Widgeter i editoren.'
   },
   {
@@ -176,7 +176,7 @@ export const OFFICIAL_APPS = [
     icon: 'calendar',
     color: '#f76b15',
     element: 'app',
-    views: ['Dagens meny', 'Hele uka']
+    views: ['Dagens retter med pris', 'Allergener og vegetar', 'Hele ukens meny']
   },
   {
     key: 'stock',
@@ -188,7 +188,7 @@ export const OFFICIAL_APPS = [
     icon: 'layers',
     color: '#0f766e',
     element: 'app',
-    views: ['Beholdning per vare', 'Detaljer (silo, lagerplass)', 'Varsel ved lav beholdning']
+    views: ['Bulk, big bags og paller', 'Detaljer som silo og lagerplass', 'Varsel ved lav beholdning']
   },
   {
     key: 'tides',
@@ -200,7 +200,7 @@ export const OFFICIAL_APPS = [
     icon: 'sun',
     color: '#0e7490',
     element: 'app',
-    views: ['Tidevann', 'Sjø (bølger og temperatur)', 'Begge']
+    views: ['Neste flo og fjære', 'Bølgehøyde og sjøtemperatur', 'Data fra Kartverket og MET']
   },
   {
     key: 'football',
@@ -212,7 +212,7 @@ export const OFFICIAL_APPS = [
     icon: 'chart',
     color: '#15803d',
     element: 'app',
-    views: ['Neste kamper', 'Siste resultater', 'Tabell'],
+    views: ['Neste kamper', 'Resultater, også live', 'Tabellen i ligaen'],
     requires: 'API-Football-nøkkel (gratis)',
     guide: {
       title: 'Slik får du en API-Football-nøkkel',
@@ -236,7 +236,7 @@ export const OFFICIAL_APPS = [
     icon: 'image',
     color: '#111111',
     element: 'images',
-    views: ['Bildesøk i bildevelgeren', 'Bilder til Claude AI'],
+    views: ['Millioner av gratis bilder', 'Søk rett fra editoren', 'Claude AI kan finne bilder selv'],
     requires: 'Unsplash Access Key (gratis)',
     guide: {
       title: 'Slik får du en Unsplash-nøkkel',
@@ -259,7 +259,7 @@ export const OFFICIAL_APPS = [
     icon: 'sun',
     color: '#f59e0b',
     element: 'weather',
-    views: ['Været nå', 'Neste timer', 'Neste dager']
+    views: ['Været nå', 'Time for time', 'De neste dagene']
   },
   {
     key: 'rss',
@@ -270,7 +270,7 @@ export const OFFICIAL_APPS = [
     icon: 'megaphone',
     color: '#e5484d',
     element: 'rss',
-    views: ['Rullende linje', 'Én sak av gangen', 'Liste med overskrifter']
+    views: ['Rullende nyhetslinje', 'Én sak av gangen med bilde', 'Liste med overskrifter']
   },
   {
     key: 'calendar',
@@ -281,7 +281,7 @@ export const OFFICIAL_APPS = [
     icon: 'calendar',
     color: '#46a758',
     element: 'calendar',
-    views: ['Liste over kommende hendelser']
+    views: ['Google, Outlook eller iCal', 'Kommende hendelser per dag', 'Oppdateres av seg selv']
   }
 ];
 export const OFFICIAL_BY_KEY = Object.fromEntries(OFFICIAL_APPS.map((a) => [a.key, a]));
