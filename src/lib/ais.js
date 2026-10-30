@@ -110,11 +110,11 @@ export function etaText(e) {
 
 /**
  * Rapportert ankomst til destinasjonen (AIS-ETA fra mannskapet). null hvis den
- * mangler eller åpenbart er utdatert (mer enn et døgn siden) eller tull.
+ * mangler, er utdatert (mer enn 6 timer siden – da er båten fremme) eller tull.
  */
 export function reportedEta(v, now = Date.now()) {
   const t = v?.ais_eta ? Date.parse(v.ais_eta) : NaN;
-  if (!Number.isFinite(t) || t < now - 86_400_000 || t > now + 60 * 86_400_000) return null;
+  if (!Number.isFinite(t) || t < now - 6 * 3600_000 || t > now + 60 * 86_400_000) return null;
   return new Date(t);
 }
 

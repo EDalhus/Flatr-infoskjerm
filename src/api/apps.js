@@ -235,13 +235,22 @@ async function fetchAis(env, row) {
     if (!prev || Date.parse(r.msgtime) > Date.parse(prev.msgtime)) byMmsi.set(String(r.mmsi), r);
   }
   const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
-  // Rapportert ankomst til destinasjonen (satt av mannskapet, alltid UTC i AIS).
-  // Kommer ofte uten tidssone – gjøres om til ISO med Z, så alle klienter tolker likt.
+  // Rapportert ankomst til destinasjonen (satt av mannskapet). BarentsWatch gir den
+  // rå fra AIS som «MMDDHHmm» i UTC uten år («10310600» = 31. okt 06:00 UTC);
+  // 0-måned/-dag, time 24 og minutt 60 betyr «ikke oppgitt». Året velges så
+  // tidspunktet havner nærmest nå. Gjøres om til ISO med Z, så alle klienter tolker likt.
   const aisEta = (v) => {
-    if (!v) return null;
-    const s = String(v);
-    const t = Date.parse(/(Z|[+-]\d\d:?\d\d)$/i.test(s) ? s : `${s}Z`);
-    return Number.isFinite(t) ? new Date(t).toISOString() : null;
+    const m = /^(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(String(v ?? '').trim());
+    if (!m) {
+      const t = v ? Date.parse(/(Z|[+-]\d\d:?\d\d)$/i.test(v) ? v : `${v}Z`) : NaN;
+      return Number.isFinite(t) ? new Date(t).toISOString() : null;
+    }
+    const [mo, d, h, mi] = m.slice(1).map(Number);
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59) return null;
+    const now = Date.now();
+    const y = new Date(now).getUTCFullYear();
+    const t = [y - 1, y, y + 1].map((yy) => Date.UTC(yy, mo - 1, d, h, mi)).sort((a, b) => Math.abs(a - now) - Math.abs(b - now))[0];
+    return new Date(t).toISOString();
   };
   const vessels = fleet.map((b) => {
     const r = byMmsi.get(String(b.mmsi));

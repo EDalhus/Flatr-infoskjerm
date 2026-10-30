@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../../lib/api.js';
-import { etaTo, etaText } from '../../../lib/ais.js';
+import { etaTo, etaText, reportedEta, reportedEtaText } from '../../../lib/ais.js';
 import { CARGO_DIRS, UNITS, currentCalls, cargoText, callTimeText, callDate, hasClock, parseCallTable, cleanCalls } from '../../../lib/portCalls.js';
 import { Icon, Field, Input, Select, Button, IconButton } from '../ui.jsx';
 import { Section } from './parts.jsx';
@@ -523,7 +523,10 @@ export default function AisCalls({ app, onSaved }) {
 
 function CallRow({ c, vessel, boat, quay, now, onEdit }) {
   const live = vessel && !vessel.missing && quay ? etaTo(vessel, quay, now) : null;
-  const late = hasClock(c.eta) && live?.state === 'eta' && live.eta.getTime() - callDate(c.eta).getTime() > 3600_000;
+  // Ankomsttiden båten selv har meldt i AIS (som på MarineTraffic/BarentsWatch).
+  const reported = vessel && !vessel.missing ? reportedEta(vessel, now) : null;
+  const planned = callDate(c.eta).getTime();
+  const late = hasClock(c.eta) && reported && live?.state !== 'arrived' && reported.getTime() < planned + 3 * 86_400_000 && reported.getTime() - planned > 3600_000;
   return (
     <li>
       <button type="button" onClick={onEdit} className="flex w-full items-center gap-4 px-5 py-3 text-left hover:bg-zone/50">
@@ -544,11 +547,18 @@ function CallRow({ c, vessel, boat, quay, now, onEdit }) {
           </div>
         </div>
         <div className="w-40 shrink-0 text-right text-xs">
-          {live ? (
-            <span className={`font-semibold ${live.state === 'arrived' ? 'text-ok' : late ? 'text-warn' : 'text-ink'}`}>
-              {live.state === 'arrived' ? 'Ved kai nå' : `Live: ${etaText(live)}`}
-              {late && ' · forsinket'}
+          {live?.state === 'arrived' ? (
+            <span className="font-semibold text-ok">Ved kai nå</span>
+          ) : reported ? (
+            <span className="grid">
+              <span className={`font-semibold ${late ? 'text-warn' : 'text-ink'}`}>
+                ETA {reportedEtaText(reported, now)}
+                {late && ' · forsinket'}
+              </span>
+              {vessel.destination && <span className="truncate text-muted">→ {vessel.destination}</span>}
             </span>
+          ) : live ? (
+            <span className="font-semibold text-ink">Live: {etaText(live)}</span>
           ) : (
             <span className="text-muted">{c.mmsi ? 'Venter på AIS' : 'Ingen live data'}</span>
           )}
