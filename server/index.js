@@ -112,13 +112,14 @@ const EMBEDDABLE = /^\/(display|s|widget)(\/|$)/;
 function contentSecurityPolicy(pathname) {
   return [
     "default-src 'self'",
-    `script-src 'self' ${INLINE_SCRIPTS}`.trim(),
+    // stats.dalhus.net = besøksstatistikk (Umami) på forsiden.
+    `script-src 'self' https://stats.dalhus.net ${INLINE_SCRIPTS}`.trim(),
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     'img-src * data: blob:',
     'media-src * data: blob:',
     // Kartfliser (mørkt sjøkart fargelegges i nettleseren) og live-samarbeid.
-    "connect-src 'self' https://cache.kartverket.no",
+    "connect-src 'self' https://cache.kartverket.no https://stats.dalhus.net",
     // Nettside-widgeter, YouTube og Vimeo.
     "frame-src 'self' https:",
     "worker-src 'self' blob:",

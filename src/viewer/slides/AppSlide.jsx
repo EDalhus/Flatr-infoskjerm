@@ -8,7 +8,7 @@ import MenuView from './MenuView.jsx';
 import TidesView from './TidesView.jsx';
 import FootballView from './FootballView.jsx';
 import StockView from './StockView.jsx';
-import { statusLabel, etaTo, etaText, ago, hasPosition, isMoving, vesselColor } from '../../lib/ais.js';
+import { statusLabel, etaTo, etaText, reportedEta, reportedEtaText, ago, hasPosition, isMoving, vesselColor } from '../../lib/ais.js';
 import { currentCalls, cargoLine, callTimeText, callDate, hasClock } from '../../lib/portCalls.js';
 
 // Flatr App – viser data fra en app kunden har satt opp under «Flatr Apps».
@@ -26,7 +26,9 @@ function useNow(ms = 30_000) {
 const knots = (v) => (v.sog == null ? '–' : `${v.sog.toFixed(1).replace('.', ',')} kn`);
 
 function VesselCard({ v, quay, now }) {
+  // Ved vår kai vises det; ellers neste havn og ankomsttiden båten selv har meldt (AIS).
   const e = quay ? etaTo(v, quay, now) : null;
+  const eta = reportedEta(v, now);
   return (
     <div className="flex min-h-0 flex-col gap-[0.35em] overflow-hidden rounded-[0.6em] p-[0.8em] [&>*]:shrink-0" style={{ background: 'rgba(0,0,0,0.32)', borderLeft: `0.3em solid ${v.color}` }}>
       <div className="truncate pb-[0.1em] font-bold leading-snug" style={{ fontSize: '1.35em' }}>
@@ -37,13 +39,25 @@ function VesselCard({ v, quay, now }) {
         {statusLabel(v)}
         {!v.missing && <span className="ml-auto tabular-nums">{knots(v)}</span>}
       </div>
-      {!v.missing && v.destination && <div className="truncate opacity-75">→ {v.destination}</div>}
-      {e && e.state !== 'unknown' && (
+      {e?.state === 'arrived' ? (
         <div className="min-w-0">
           <div className="truncate opacity-60" style={{ fontSize: '0.8em' }}>
             {quay.name}
           </div>
           <div className="truncate font-semibold">{etaText(e)}</div>
+        </div>
+      ) : null}
+      {!v.missing && v.destination && (
+        <div className="min-w-0">
+          <div className="truncate opacity-75">→ {v.destination}</div>
+          {eta && (
+            <div className="truncate font-semibold">
+              <span className="font-normal opacity-60" style={{ fontSize: '0.8em' }}>
+                Ankomst{' '}
+              </span>
+              {reportedEtaText(eta, now)}
+            </div>
+          )}
         </div>
       )}
       <div className="mt-auto opacity-50" style={{ fontSize: '0.8em' }}>
@@ -130,9 +144,12 @@ function CallsBoard({ calls, vessels, quays, quayId, days, title, groups, now })
           const live = v && !v.missing && q ? etaTo(v, q, now) : null;
           const planned = callDate(c.eta).getTime();
           const atQuay = live?.state === 'arrived';
-          // Forsinket kan bare sies når det planlagte klokkeslettet er kjent.
-          const late = hasClock(c.eta) && live?.state === 'eta' && live.eta.getTime() - planned > 3600_000;
-          const status = atQuay ? 'Ved kai' : live?.state === 'eta' ? etaText(live) : null;
+          // Neste havn og ankomsttiden båten selv har meldt (AIS); ellers neste havn fra planen.
+          const reported = v && !v.missing ? reportedEta(v, now) : null;
+          const dest = (v && !v.missing && v.destination) || c.next;
+          // Forsinket kan bare sies når det planlagte klokkeslettet er kjent, og meldt tid gjelder vår havn.
+          const late = !atQuay && hasClock(c.eta) && reported && reported.getTime() < planned + 3 * 86_400_000 && reported.getTime() - planned > 3600_000;
+          const status = atQuay ? 'Ved kai' : reported ? reportedEtaText(reported, now) : null;
           return (
             <div key={c.id} className="flex shrink-0 items-center gap-[0.8em] rounded-[0.5em] px-[0.7em] py-[0.45em]" style={{ background: atQuay ? 'rgba(34,197,94,0.22)' : 'rgba(0,0,0,0.28)' }}>
               <div className="w-[8.2em] shrink-0 whitespace-nowrap leading-tight">
@@ -165,9 +182,10 @@ function CallsBoard({ calls, vessels, quays, quayId, days, title, groups, now })
                     {status}
                   </div>
                 )}
-                {c.next && (
+                {dest && (
                   <div className="truncate opacity-70" style={{ fontSize: '0.75em' }}>
-                    → {c.next}
+                    → {dest}
+                    {atQuay && reported ? ` · ${reportedEtaText(reported, now)}` : ''}
                   </div>
                 )}
               </div>

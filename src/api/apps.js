@@ -234,6 +234,14 @@ async function fetchAis(env, row) {
     if (!prev || Date.parse(r.msgtime) > Date.parse(prev.msgtime)) byMmsi.set(String(r.mmsi), r);
   }
   const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+  // Rapportert ankomst til destinasjonen (satt av mannskapet, alltid UTC i AIS).
+  // Kommer ofte uten tidssone – gjøres om til ISO med Z, så alle klienter tolker likt.
+  const aisEta = (v) => {
+    if (!v) return null;
+    const s = String(v);
+    const t = Date.parse(/(Z|[+-]\d\d:?\d\d)$/i.test(s) ? s : `${s}Z`);
+    return Number.isFinite(t) ? new Date(t).toISOString() : null;
+  };
   const vessels = fleet.map((b) => {
     const r = byMmsi.get(String(b.mmsi));
     if (!r) return { mmsi: b.mmsi, name: b.name, color: b.color, group: b.group || null, missing: true };
@@ -250,7 +258,7 @@ async function fetchAis(env, row) {
       heading: r.trueHeading != null && r.trueHeading !== 511 ? num(r.trueHeading) : null,
       navStatus: num(r.navigationalStatus),
       destination: r.destination ? String(r.destination).trim() : null,
-      ais_eta: r.eta || null,
+      ais_eta: aisEta(r.eta),
       length: num(r.shipLength),
       shipType: num(r.shipType),
       msgtime: r.msgtime || null

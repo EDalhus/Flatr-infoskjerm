@@ -156,6 +156,18 @@ export default function Landing() {
     };
   }, []);
 
+  // Besøksstatistikk (Umami, uten cookies) – bare for den offentlige forsiden på flatr.no.
+  useEffect(() => {
+    if (document.getElementById('umami')) return;
+    const s = document.createElement('script');
+    s.id = 'umami';
+    s.defer = true;
+    s.src = 'https://stats.dalhus.net/script.js';
+    s.dataset.websiteId = '3d075c1f-66f7-42e2-a1cf-1d924b373a96';
+    s.dataset.domains = 'flatr.no';
+    document.head.appendChild(s);
+  }, []);
+
   return (
     <div data-theme="presis" className="min-h-full overflow-y-auto bg-paper font-sans text-ink antialiased">
       <SiteHeader />

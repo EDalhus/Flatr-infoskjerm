@@ -108,5 +108,24 @@ export function etaText(e) {
   return '–';
 }
 
+/**
+ * Rapportert ankomst til destinasjonen (AIS-ETA fra mannskapet). null hvis den
+ * mangler eller åpenbart er utdatert (mer enn et døgn siden) eller tull.
+ */
+export function reportedEta(v, now = Date.now()) {
+  const t = v?.ais_eta ? Date.parse(v.ais_eta) : NaN;
+  if (!Number.isFinite(t) || t < now - 86_400_000 || t > now + 60 * 86_400_000) return null;
+  return new Date(t);
+}
+
+/** «i dag 14:30» / «i morgen 06:00» / «fre 2 nov 14:30» */
+export function reportedEtaText(date, now = Date.now()) {
+  if (!date) return '–';
+  const clock = formatClock(date);
+  if (date.toDateString() === new Date(now).toDateString()) return `i dag ${clock}`;
+  if (date.toDateString() === new Date(now + 86_400_000).toDateString()) return `i morgen ${clock}`;
+  return `${date.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')} ${clock}`;
+}
+
 /** Gyldig MMSI: 9 siffer. */
 export const validMmsi = (m) => /^\d{9}$/.test(String(m ?? '').trim());
