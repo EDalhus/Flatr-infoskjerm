@@ -8,6 +8,7 @@ import { verifyUnsplashKey, searchPhotos, importPhoto } from './photos.js';
 import { tidesData, footballData, verifyFootballKey, searchFootball } from './datasources.js';
 import { cleanMenu, weekdayIn } from '../lib/menu.js';
 import { cleanStock } from '../lib/stock.js';
+import { portName } from './ports.js';
 
 // Flatr Apps – aktiverte apper for kunden. En rad = én aktivert app fra
 // markedsplassen: offisiell (kind = ais | weather | rss | calendar) eller egen
@@ -257,7 +258,7 @@ async function fetchAis(env, row) {
       cog: num(r.courseOverGround),
       heading: r.trueHeading != null && r.trueHeading !== 511 ? num(r.trueHeading) : null,
       navStatus: num(r.navigationalStatus),
-      destination: r.destination ? String(r.destination).trim() : null,
+      destination: portName(r.destination),
       ais_eta: aisEta(r.eta),
       length: num(r.shipLength),
       shipType: num(r.shipType),
@@ -299,7 +300,7 @@ async function shipList(env, row) {
     callSign: r.callSign ? String(r.callSign).trim() : null,
     shipType: Number.isFinite(Number(r.shipType)) ? Number(r.shipType) : null,
     length: Number.isFinite(Number(r.shipLength)) ? Number(r.shipLength) : null,
-    destination: r.destination ? String(r.destination).trim() : null,
+    destination: portName(r.destination),
     msgtime: r.msgtime || null
   }));
   shipListCache.set(c.client_id, { at: Date.now(), ships });
