@@ -67,6 +67,8 @@ function parseLine(line) {
 }
 
 const unescape = (s) => String(s || '').replace(/\\n/gi, ' ').replace(/\\([,;\\])/g, '$1').trim();
+// Som unescape, men beholder linjeskift (beskrivelser).
+const unescapeLines = (s) => String(s || '').replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1').trim();
 
 export function parseIcs(text) {
   const events = [];
@@ -81,6 +83,8 @@ export function parseIcs(text) {
     } else if (cur) {
       if (l.name === 'SUMMARY') cur.title = unescape(l.value);
       else if (l.name === 'LOCATION') cur.location = unescape(l.value);
+      else if (l.name === 'DESCRIPTION') cur.description = unescapeLines(l.value);
+      else if (l.name === 'URL') cur.url = l.value.trim();
       else if (l.name === 'DTSTART') cur.start = parseStamp(l.value, l.params);
       else if (l.name === 'DTEND') cur.end = parseStamp(l.value, l.params);
       else if (l.name === 'RRULE') cur.rrule = Object.fromEntries(l.value.split(';').map((kv) => kv.split('=')));
@@ -144,8 +148,18 @@ function occurrences(ev, tz, untilMs) {
   return out;
 }
 
-/** Kommende forekomster innen `days` dager, sortert, maks `max`. */
-export function upcomingEvents(events, { tz = DEFAULT_TZ, days = 14, max = 8, now = Date.now() } = {}) {
+/** Navnet på kalenderen (X-WR-CALNAME), f.eks. «Fredrikstad Menn Senior A» på fotball.no. */
+export function calendarName(text) {
+  for (const raw of unfold(text)) {
+    const l = parseLine(raw);
+    if (l?.name === 'X-WR-CALNAME') return unescape(l.value).trim() || null;
+    if (l?.name === 'BEGIN' && l.value === 'VEVENT') break;
+  }
+  return null;
+}
+
+/** Kommende forekomster innen `days` dager, sortert, maks `max`. `details` tar med beskrivelse og lenke. */
+export function upcomingEvents(events, { tz = DEFAULT_TZ, days = 14, max = 8, now = Date.now(), details = false } = {}) {
   const horizon = now + days * 86_400_000;
   const list = [];
   for (const ev of events) {
@@ -162,7 +176,8 @@ export function upcomingEvents(events, { tz = DEFAULT_TZ, days = 14, max = 8, no
         location: ev.location || null,
         start: new Date(s).toISOString(),
         end: new Date(e).toISOString(),
-        allDay: !!ev.start.allDay
+        allDay: !!ev.start.allDay,
+        ...(details ? { description: ev.description || null, url: ev.url || null } : {})
       });
     }
   }

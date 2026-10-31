@@ -7,6 +7,9 @@
 //  2. Offline-varsel: e-post til eierne når en skjerm har vært borte i
 //     `offline_minutes` (standard 5), og når den er tilbake.
 //     Slås av med innstillingen offline_alerts = '0'.
+//     Ikke mens skjermen skal være av (utenfor åpningstid eller «Skjerm av» i
+//     tidsplanen): da slår folk ofte av TV-en, og Apple TV går i dvale. Tiden
+//     telles først fra skjermen skulle vært på igjen.
 
 import { platformDb, tenantResources } from './platform.js';
 import { resolveScreenContent, getTimezone } from '../src/api/_shared.js';
@@ -21,6 +24,10 @@ const MAX_ALERT_AGE_MS = 24 * 3600_000;
 
 const ORIGIN = () => `${process.env.PUBLIC_PROTOCOL || 'https'}://`;
 const BASE = () => process.env.BASE_DOMAIN || 'flatr.no';
+
+// Sist gang hver TV sin skjerm skulle være av («slug:device_id» -> ms). Holdes i
+// minnet: etter en omstart teller vi fra sist sett, som før.
+const offAt = new Map();
 
 function tenantsWithDevices() {
   return platformDb
@@ -94,8 +101,22 @@ export async function monitorTenant(t) {
   const limitMs = Math.max(2, Number(await setting(env, 'offline_minutes', '5')) || 5) * 60_000;
   const wentOffline = [];
   const cameBack = [];
+  const content = new Map(); // screen_id -> det skjermen skal vise nå (også for frakoblede)
   for (const d of devices) {
-    const since = d.last_seen ? now - Date.parse(d.last_seen) : Infinity;
+    const lastSeen = d.last_seen ? Date.parse(d.last_seen) : -Infinity;
+    const key = `${t.slug}:${d.device_id}`;
+    if (d.screen_id && !d.offline_notified_at && now - lastSeen >= ONLINE_MS) {
+      if (!content.has(d.screen_id)) {
+        const screen = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(d.screen_id).first();
+        content.set(d.screen_id, screen ? await resolveScreenContent(env, screen) : null);
+      }
+      if (content.get(d.screen_id)?.off) {
+        offAt.set(key, now);
+        continue;
+      }
+    }
+    // Frakoblet-tiden teller fra sist sett, eller fra skjermen skulle vært på igjen.
+    const since = now - Math.max(lastSeen, offAt.get(key) ?? -Infinity);
     if (since >= limitMs && since < MAX_ALERT_AGE_MS && !d.offline_notified_at) {
       wentOffline.push(d);
       await env.DB.prepare('UPDATE pairings SET offline_notified_at = ? WHERE id = ?').bind(new Date().toISOString(), d.id).run();
@@ -124,7 +145,9 @@ export async function monitorTenant(t) {
       intro: lines.join(' · '),
       button: 'Se enhetene',
       url,
-      outro: 'Varslingen kan slås av under Skjermer i Flatr.'
+      outro: wentOffline.length
+        ? `Starter ikke Flatr av seg selv etter strømbrudd? Se ${ORIGIN()}${BASE()}/hjelp/apple-tv. Varslingen kan slås av under Skjermer i Flatr.`
+        : 'Varslingen kan slås av under Skjermer i Flatr.'
     })
   }).catch((err) => console.error('[monitor] e-post feilet:', err.message));
 

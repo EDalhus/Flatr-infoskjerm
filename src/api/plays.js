@@ -1,9 +1,10 @@
 import { json, badRequest, noContent, handleOptions, readJson, toIntOrNull, getTimezone } from './_shared.js';
 import { localParts } from '../lib/timeslots.js';
 
-// POST /api/plays?screen=<id>  { items: [{ at, playlist_id, slide_id?, sponsor_id?, seconds }] }
+// POST /api/plays?screen=<id>  { items: [{ at, playlist_id, slide_id?, sponsor_id?, media_id?, seconds }] }
 // Skjermene (Apple TV og nettleser) melder hva som faktisk ble vist: ett punkt
-// per gang et lysbilde eller en sponsor var på skjermen. Lagres samlet per dag
+// per gang et lysbilde, en sponsor eller et bilde i en bildekarusell (media_id)
+// var på skjermen. Lagres samlet per dag
 // (play_stats), så tabellen holder seg liten. Rapporten ligger i reports.js.
 
 const MAX_ITEMS = 2000;
@@ -30,11 +31,13 @@ export async function onRequestPost({ request, env }) {
     if (!Number.isFinite(at) || at > now + 60_000 || at < now - WEEK_MS) continue;
     if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 3600) continue;
     const sponsor = Math.max(0, toIntOrNull(it.sponsor_id) ?? 0);
+    const media = sponsor ? 0 : Math.max(0, toIntOrNull(it.media_id) ?? 0);
     const key = [
       localParts(new Date(at), tz).date,
       Math.max(0, toIntOrNull(it.playlist_id) ?? 0),
-      sponsor ? 0 : Math.max(0, toIntOrNull(it.slide_id) ?? 0),
-      sponsor
+      sponsor || media ? 0 : Math.max(0, toIntOrNull(it.slide_id) ?? 0),
+      sponsor,
+      media
     ].join('|');
     const s = sums.get(key) ?? { shows: 0, seconds: 0 };
     s.shows += 1;
@@ -45,12 +48,12 @@ export async function onRequestPost({ request, env }) {
 
   await env.DB.batch(
     [...sums].map(([key, s]) => {
-      const [day, playlist, slide, sponsor] = key.split('|');
+      const [day, playlist, slide, sponsor, media] = key.split('|');
       return env.DB.prepare(
-        `INSERT INTO play_stats (day, screen_id, playlist_id, slide_id, sponsor_id, shows, seconds) VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(day, screen_id, playlist_id, slide_id, sponsor_id)
+        `INSERT INTO play_stats (day, screen_id, playlist_id, slide_id, sponsor_id, media_id, shows, seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(day, screen_id, playlist_id, slide_id, sponsor_id, media_id)
          DO UPDATE SET shows = shows + excluded.shows, seconds = seconds + excluded.seconds`
-      ).bind(day, screenId, Number(playlist), Number(slide), Number(sponsor), s.shows, Math.round(s.seconds * 10) / 10);
+      ).bind(day, screenId, Number(playlist), Number(slide), Number(sponsor), Number(media), s.shows, Math.round(s.seconds * 10) / 10);
     })
   );
   return noContent();

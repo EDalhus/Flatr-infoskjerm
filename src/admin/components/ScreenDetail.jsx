@@ -61,6 +61,9 @@ function Row({ label, value, sub, pct, mono }) {
   );
 }
 
+// flatr.no fra kundens adresse (dalhus.flatr.no -> flatr.no).
+const platformHost = () => location.host.split('.').slice(1).join('.');
+
 /** Det Apple TV-en faktisk viser (skjermbilde fra appen), med knapp for et ferskt bilde. */
 function TvScreenshot({ device, screenId, orientation }) {
   const [version, setVersion] = useState(device.screenshot_at || '');
@@ -338,6 +341,12 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
                   Koble fra TV-en
                 </Button>
               </div>
+              <p className="m-0 mt-3 text-xs text-muted">
+                Starter ikke Flatr av seg selv etter strømbrudd?{' '}
+                <a href={`${location.protocol}//${platformHost()}/hjelp/apple-tv`} target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">
+                  Lås Apple TV til Flatr
+                </a>
+              </p>
             </>
           ) : pairing ? (
             <PairTv

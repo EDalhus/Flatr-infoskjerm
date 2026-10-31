@@ -475,6 +475,12 @@ export default function ScreensManager({ onChange, onNavigate }) {
                 <span className="font-semibold text-ink">Daglig helsesjekk kl. 07</span> – e-post{alerts.webhook ? ' og Slack/Teams' : ''} med frakoblede TV-er, skjermer uten innhold, widgeter som feiler og lysbilder som utløper. Sendes bare når noe bør sjekkes.
               </span>
             </label>
+            <label className="flex w-full items-center gap-2 border-t border-hair pt-3 text-muted">
+              <input type="checkbox" checked={alerts.weekly_reminder !== false} onChange={(e) => saveAlerts({ weekly_reminder: e.target.checked })} />
+              <span>
+                <span className="font-semibold text-ink">Ukentlig påminnelse mandag kl. 08</span> – e-post til eiere og redaktører når en skjerm har vist det samme lenge, lysbilder går ut på dato eller noe venter på godkjenning. Sendes bare når noe bør gjøres.
+              </span>
+            </label>
           </section>
         )}
 

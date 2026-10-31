@@ -265,6 +265,30 @@ export const OFFICIAL_APPS = [
     }
   },
   {
+    key: 'fixtures',
+    name: 'Kampprogram',
+    tagline: 'Neste kamper for lagene deres, rett fra fotball.no og handball.no.',
+    description:
+      'Lim inn kalenderlenken til lagene deres fra fotball.no eller handball.no, så viser skjermen de neste kampene med motstander, tid, bane og turnering – og om laget spiller hjemme eller borte. Gratis og uten nøkkel, for alle lag fra A-laget til G10.',
+    category: 'sport',
+    icon: 'calendar',
+    color: '#0e7490',
+    element: 'app',
+    views: ['Neste kamper for alle lagene', 'Stor visning av neste (hjemme)kamp', 'Hjemme og borte markert'],
+    guide: {
+      title: 'Slik finner du kalenderlenken',
+      intro: 'Hvert lag på fotball.no og handball.no har en kalender du kan abonnere på. Det er den lenken Flatr bruker – den oppdateres når kampoppsettet endres.',
+      steps: [
+        { title: 'Finn laget', body: 'Søk opp laget på fotball.no (eller handball.no) og åpne lagets side.', link: { href: 'https://www.fotball.no/', label: 'Åpne fotball.no' } },
+        { title: 'Åpne kampene', body: 'Velg «Kamper» øverst på lagets side.' },
+        { title: 'Kopier kalenderlenken', body: 'Trykk «Abonner på kalender» og kopier lenken. Den ser slik ut: https://www.fotball.no/footballapi/Calendar/GetCalendar?teamId=…' },
+        { title: 'Lim den inn i Flatr', body: 'Aktiver Kampprogram, gå til Oppsett og lim inn lenken. Legg til så mange lag du vil (opptil ti).' },
+        { title: 'Vis det på skjermene', body: 'Åpne en presentasjon og velg Widgeter → Kampprogram. Velg liste over neste kamper, eller stor visning av neste kamp.' }
+      ],
+      troubleshooting: 'Står det at lenken ikke er en kalender? Bruk lenken fra «Abonner på kalender», ikke adressen til lagets nettside.'
+    }
+  },
+  {
     key: 'unsplash',
     name: 'Unsplash bildebank',
     tagline: 'Søk blant millioner av gratis bilder rett fra editoren – og la Claude AI finne bilder til presentasjonene.',

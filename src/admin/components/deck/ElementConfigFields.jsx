@@ -22,13 +22,13 @@ function AppFields({ c, set }) {
   useEffect(() => {
     api.apps
       .list()
-      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'stock'].includes(a.kind))))
+      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'fixtures', 'stock'].includes(a.kind))))
       .catch(() => setApps([]));
   }, []);
   const app = (apps || []).find((a) => a.id === c.appId);
   const isCustom = app?.kind === 'custom';
   const isBirthdays = app?.kind === 'birthdays';
-  const isOther = ['menu', 'tides', 'football', 'stock'].includes(app?.kind);
+  const isOther = ['menu', 'tides', 'football', 'fixtures', 'stock'].includes(app?.kind);
   const fleet = app?.config?.fleet || [];
   const quays = app?.config?.quays || [];
   const picked = new Set((c.mmsi || []).map(String));
@@ -198,6 +198,40 @@ function AppFields({ c, set }) {
           </Field>
           <Field label="Vis">
             <Segmented value={c.tideView || 'both'} onChange={(v) => set({ tideView: v })} options={[{ value: 'tide', label: 'Tidevann' }, { value: 'sea', label: 'Sjø' }, { value: 'both', label: 'Begge' }]} />
+          </Field>
+        </>
+      )}
+      {app?.kind === 'fixtures' && (
+        <>
+          <Field label="Visning">
+            <Segmented value={c.fixturesView || 'list'} onChange={(v) => set({ fixturesView: v })} options={[{ value: 'list', label: 'Neste kamper' }, { value: 'next', label: 'Neste kamp, stor' }]} />
+          </Field>
+          <Field label="Lag" hint={(app.config?.teams || []).length ? 'Ingen valgt = alle lagene.' : 'Legg til lag under Flatr Apps → Kampprogram.'}>
+            <div className="flex flex-wrap gap-1.5">
+              {(app.config?.teams || []).map((t) => {
+                const on = (c.teams || []).includes(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => set({ teams: on ? (c.teams || []).filter((x) => x !== t.id) : [...(c.teams || []), t.id] })}
+                    className={`h-8 rounded-full px-3 text-xs font-semibold transition-colors ${on ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'}`}
+                  >
+                    {t.name}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+          <Check label="Bare hjemmekamper" checked={!!c.homeOnly} onChange={(v) => set({ homeOnly: v })} />
+          {(c.fixturesView || 'list') === 'list' && (
+            <Field label="Antall kamper">
+              <Input type="number" min={1} max={12} value={c.max ?? 6} onChange={(e) => set({ max: Number(e.target.value) || undefined })} />
+            </Field>
+          )}
+          <Field label="Overskrift (valgfritt)">
+            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
           </Field>
         </>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFeed } from './useFeed.jsx';
+import { logPlay } from '../playLog.js';
 
 // Bildekarusell: roterer gjennom alle bildene i en mappe i mediebiblioteket.
 // Skjermene får bildelista i config.images (se buildState); editoren henter
@@ -32,6 +33,14 @@ export default function CarouselSlide({ slide, ctx }) {
     const t = setInterval(() => setI((n) => (n + 1) % images.length), secs * 1000);
     return () => clearInterval(t);
   }, [images.length, secs]);
+
+  // Visningsloggen: hvert bilde meldes når det går av skjermen (sponsorrapporten under Rapporter).
+  const currentId = images.length ? images[i % images.length]?.id : null;
+  useEffect(() => {
+    if (!currentId) return undefined;
+    const at = Date.now();
+    return () => logPlay({ mediaId: currentId }, at);
+  }, [currentId]);
 
   if (!c.folder || !images.length) {
     // På en skjerm (ctx.screenId) vises ingenting; i editoren en tydelig plassholder.

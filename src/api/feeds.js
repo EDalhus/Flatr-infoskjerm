@@ -1,6 +1,7 @@
 import { json, badRequest, notFound, handleOptions, toIntOrNull, safeJson, getTimezone, folderImages } from './_shared.js';
 import { parseIcs, upcomingEvents } from '../lib/icsParse.js';
 import { appData } from './apps.js';
+import { UA, MAX_BYTES, assertPublicUrl, fetchText } from './safeFetch.js';
 
 // Data til widgetene vær, nyheter (RSS), kalender (iCal) og Flatr Apps.
 //
@@ -10,10 +11,8 @@ import { appData } from './apps.js';
 // Eksterne kilder hentes ut fra ELEMENTETS lagrede innstilling – aldri fra en
 // adresse i forespørselen – og mellomlagres, så skjermene ikke belaster kildene.
 
-const UA = 'Flatr-infoskjerm/1.0 (+https://flatr.no)';
 export const WIDGET_KINDS = ['weather', 'rss', 'calendar', 'app'];
 const TTL = { weather: 30 * 60_000, rss: 10 * 60_000, calendar: 10 * 60_000, places: 24 * 3600_000 };
-const MAX_BYTES = 3 * 1024 * 1024;
 const cache = new Map(); // key -> { at, data }
 
 async function cached(key, ttl, fn) {
@@ -28,47 +27,6 @@ async function cached(key, ttl, fn) {
     if (hit) return hit.data; // vis siste kjente data hvis kilden er nede
     throw err;
   }
-}
-
-/** Avviser adresser som peker inn i private nett (bare på Node, der vi kan slå opp DNS). */
-async function assertPublicUrl(raw) {
-  let url;
-  try {
-    url = new URL(String(raw).replace(/^webcal:/i, 'https:'));
-  } catch {
-    throw new Error('Ugyldig adresse');
-  }
-  if (!/^https?:$/.test(url.protocol)) throw new Error('Bare http(s)-adresser');
-  if (/^(localhost|.*\.local|.*\.internal)$/i.test(url.hostname) || !url.hostname.includes('.')) {
-    throw new Error('Adressen er ikke tillatt');
-  }
-  let lookup;
-  try {
-    ({ lookup } = await import('node:dns/promises'));
-  } catch {
-    return url; // Worker: ingen DNS-oppslag, men Workers når uansett ikke interne nett
-  }
-  const addrs = await lookup(url.hostname, { all: true });
-  const privateIp = (ip) =>
-    /^(10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/.test(ip) ||
-    /^(::1|fc|fd|fe80)/i.test(ip);
-  if (addrs.some((a) => privateIp(a.address))) throw new Error('Adressen er ikke tillatt');
-  return url;
-}
-
-async function fetchText(raw) {
-  const url = await assertPublicUrl(raw);
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA, Accept: '*/*' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(10_000)
-  });
-  if (!res.ok) throw new Error(`Kilden svarte ${res.status}`);
-  const len = Number(res.headers.get('content-length'));
-  if (len > MAX_BYTES) throw new Error('Kilden er for stor');
-  const text = await res.text();
-  if (text.length > MAX_BYTES) throw new Error('Kilden er for stor');
-  return text;
 }
 
 /**

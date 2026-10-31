@@ -10,6 +10,7 @@ import Landing from './platform/Landing.jsx';
 import AppsPage from './platform/AppsPage.jsx';
 import SuperAdmin from './platform/SuperAdmin.jsx';
 import { Privacy, Terms } from './platform/Legal.jsx';
+import HelpAppleTv from './platform/HelpAppleTv.jsx';
 import { Signup, PlatformLogin, PlatformAdminRedirect, ForgotPassword, ResetPassword, InvitePage } from './platform/AuthPages.jsx';
 
 const NotFound = () => (
@@ -38,6 +39,7 @@ const platformRouter = (ctx) =>
     { path: '/superadmin', element: <SuperAdmin /> },
     { path: '/personvern', element: <Privacy /> },
     { path: '/vilkar', element: <Terms /> },
+    { path: '/hjelp/apple-tv', element: <HelpAppleTv /> },
     { path: '*', element: <NotFound /> }
   ]);
 

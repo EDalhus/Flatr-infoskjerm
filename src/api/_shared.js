@@ -4,6 +4,8 @@ import { isOpen } from '../lib/hours.js';
 import { upcomingBirthdays, todayIn } from '../lib/birthdays.js';
 import { getUser } from './_access.js';
 import { activeSlot, DEFAULT_TZ } from '../lib/timeslots.js';
+import { isLive } from '../lib/alerts.js';
+import { metAlertsNow } from './metAlerts.js';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -319,11 +321,15 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
       )
       .all()
   ]);
-  // Varsler til alle, til denne skjermen, eller til en gruppe (tagg) skjermen er med i.
+  // Varsler som gjelder nå (planlagte og utløpte holdes unna), til alle, til
+  // denne skjermen, eller til en gruppe (tagg) skjermen er med i – og
+  // farevarsler fra MET for stedet kunden har valgt.
   const screenTags = String(screen?.tags || '').split(',').map((t) => t.trim()).filter(Boolean);
-  alerts.results = (alerts.results ?? []).filter((a) =>
-    a.target_tag ? screenTags.includes(a.target_tag) : !a.target_screen_id || a.target_screen_id === id
+  const nowMs = Date.now();
+  alerts.results = (alerts.results ?? []).filter(
+    (a) => isLive(a, nowMs) && (a.target_tag ? screenTags.includes(a.target_tag) : !a.target_screen_id || a.target_screen_id === id)
   );
+  alerts.results.push(...(await metAlertsNow(env, await getTimezone(env), nowMs)));
 
   const scheduleRows = (schedule.results ?? []).map((row) => ({
     ...row,
@@ -420,7 +426,7 @@ export async function folderImages(env, folder) {
   )
     .bind(folder)
     .all();
-  return (results ?? []).map((m) => ({ url: `/api/media?id=${m.id}&raw=1`, name: m.name }));
+  return (results ?? []).map((m) => ({ id: m.id, url: `/api/media?id=${m.id}&raw=1`, name: m.name }));
 }
 
 /**

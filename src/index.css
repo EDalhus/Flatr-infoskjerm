@@ -243,3 +243,23 @@ body {
 .flatr-anim-up { animation: flatr-in-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .flatr-anim-left { animation: flatr-in-left 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .flatr-anim-zoom { animation: flatr-in-zoom 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Sponsorrapporten (SponsorReport.jsx): bare rapporten skrives ut. */
+@media print {
+  @page {
+    margin: 16mm;
+  }
+  body.print-report * {
+    visibility: hidden;
+  }
+  body.print-report .sponsor-report,
+  body.print-report .sponsor-report * {
+    visibility: visible;
+  }
+  body.print-report .sponsor-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

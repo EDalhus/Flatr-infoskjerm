@@ -59,7 +59,7 @@ export function buttonMail({ heading, intro, button, url, outro }) {
 <table role="presentation" width="100%" style="max-width:480px;background:#fff;border-radius:16px;padding:32px" cellpadding="0" cellspacing="0">
 <tr><td style="font-size:20px;font-weight:700;padding-bottom:4px">Flatr</td></tr>
 <tr><td style="font-size:18px;font-weight:600;padding:16px 0 8px">${escapeHtml(heading)}</td></tr>
-<tr><td style="font-size:15px;line-height:1.5;color:#3b3f48;padding-bottom:24px">${escapeHtml(intro)}</td></tr>
+<tr><td style="font-size:15px;line-height:1.5;color:#3b3f48;padding-bottom:24px">${escapeHtml(intro).replace(/\n/g, '<br>')}</td></tr>
 <tr><td><a href="${escapeHtml(url)}" style="display:inline-block;background:#027353;color:#fff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">${escapeHtml(button)}</a></td></tr>
 <tr><td style="font-size:13px;line-height:1.5;color:#6b7080;padding-top:24px">${escapeHtml(outro ?? '')}</td></tr>
 </table></td></tr></table></body></html>`;

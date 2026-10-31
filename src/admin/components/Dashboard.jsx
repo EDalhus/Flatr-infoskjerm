@@ -3,11 +3,14 @@
 // i gang ennå, vises oppstartsveiviseren i stedet.
 // Visningen er kort (standard i Varm) eller tabell (standard i Presis).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
-import { Icon, Button, Input, Select, PageHeader, ErrorText } from './ui.jsx';
+import { Icon, Button, PageHeader, ErrorText } from './ui.jsx';
 import LiveScreenView from './LiveScreenView.jsx';
+import SlideThumb from './deck/SlideThumb.jsx';
 import Onboarding from './Onboarding.jsx';
+import AlertComposer from './AlertComposer.jsx';
+import { alertColors, alertHeading } from '../../lib/alerts.js';
 import { screenState, StatusPill, showing } from './screenStatus.jsx';
 import { timeAgo } from './pairingHelpers.js';
 
@@ -39,20 +42,70 @@ function SummaryCard({ tone, label, value, sub }) {
   );
 }
 
-function Preview({ s }) {
-  return <LiveScreenView screenId={s.id} orientation={s.orientation} />;
+// Første lysbilde per presentasjon, delt mellom kortene (hentes på nytt etter et minutt).
+const deckCache = new Map(); // playlist_id -> { at, promise }
+function useFirstSlide(playlistId) {
+  const [slide, setSlide] = useState(null);
+  useEffect(() => {
+    if (!playlistId) return undefined;
+    let alive = true;
+    const hit = deckCache.get(playlistId);
+    if (!hit || Date.now() - hit.at > 60_000) deckCache.set(playlistId, { at: Date.now(), promise: api.deck.get(playlistId).catch(() => []) });
+    deckCache.get(playlistId).promise.then((slides) => alive && setSlide((slides || []).find((x) => x.enabled !== 0) || null));
+    return () => {
+      alive = false;
+    };
+  }, [playlistId]);
+  return slide;
+}
+
+/**
+ * Stillbilde av skjermen: TV-ens siste skjermbilde (tas jevnlig), ellers første
+ * lysbilde i presentasjonen. Live-visningen (en hel spiller i en iframe) vises
+ * først når `live` er satt – så Hjem er rask også med mange skjermer.
+ */
+function Preview({ s, live = false }) {
+  const shotAt = s.device?.screenshot_at;
+  const shot = shotAt && Date.now() - Date.parse(shotAt) < 30 * 60_000;
+  const slide = useFirstSlide(shot || live ? null : s.playlist_id);
+  if (live) return <LiveScreenView screenId={s.id} orientation={s.orientation} />;
+  const ratio = s.orientation === 'portrait' ? '9 / 16' : '16 / 9';
+  if (shot)
+    return (
+      <div className="overflow-hidden rounded-xl border border-hair bg-black" style={{ aspectRatio: ratio }}>
+        <img src={api.pairing.screenshotUrl(s.device.device_id, shotAt)} alt="" loading="lazy" className="h-full w-full object-contain" />
+      </div>
+    );
+  if (slide) return <SlideThumb slide={slide} orientation={s.orientation} />;
+  return <div className="rounded-xl border border-hair bg-zone" style={{ aspectRatio: ratio }} />;
 }
 
 function ScreenCard({ s, onOpen }) {
   const st = screenState(s);
+  // Live-visning når musepekeren har vært over kortet en liten stund.
+  const [live, setLive] = useState(false);
+  const timer = useRef(null);
+  const enter = () => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setLive(true), 400);
+  };
+  const leave = () => {
+    clearTimeout(timer.current);
+    setLive(false);
+  };
+  useEffect(() => () => clearTimeout(timer.current), []);
   return (
     <button
       type="button"
       onClick={() => onOpen(s.id)}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
+      onFocus={enter}
+      onBlur={leave}
       className="group flex flex-col gap-3 rounded-2xl border border-hair bg-card p-2.5 text-left shadow-card transition-shadow hover:shadow-pop"
     >
       <div className={st === 'offline' ? 'opacity-60 grayscale' : ''}>
-        <Preview s={s} />
+        <Preview s={s} live={live && st !== 'offline'} />
       </div>
       <div className="flex flex-col gap-1 px-1.5 pb-1.5">
         <div className="flex items-center gap-2">
@@ -133,6 +186,26 @@ function ViewToggle({ view, setView }) {
   );
 }
 
+const clock = (iso) => new Date(iso).toLocaleString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\./g, '');
+
+function alertMeta(a, screens) {
+  const where = a.target_tag
+    ? `Gruppe: ${a.target_tag}`
+    : a.target_screen_id
+      ? screens.find((s) => s.id === a.target_screen_id)?.name || 'Én skjerm'
+      : 'Alle skjermer';
+  const when =
+    a.state === 'scheduled'
+      ? `starter ${clock(a.starts_at)}`
+      : a.source === 'met'
+        ? 'farevarsel'
+        : a.created_at
+          ? `sendt ${timeAgo(a.starts_at || a.created_at)}`
+          : '';
+  const until = a.ends_at ? `til ${clock(a.ends_at)}` : '';
+  return [where, when, until].filter(Boolean).join(' · ');
+}
+
 export default function Dashboard({ onChange, onNavigate, me, theme }) {
   const [screens, setScreens] = useState(null);
   const [playlists, setPlaylists] = useState([]);
@@ -140,10 +213,6 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
   const [activeAlerts, setActiveAlerts] = useState([]);
   const [filter, setFilter] = useState('all');
   const [composer, setComposer] = useState(false);
-  const [message, setMessage] = useState('');
-  const [target, setTarget] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [view, setViewState] = useState(() => {
     try {
@@ -188,6 +257,9 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
   const live = all.filter((s) => ['online', 'browser'].includes(screenState(s)));
   const offline = all.filter((s) => screenState(s) === 'offline');
   const inUse = all.filter((s) => screenState(s) !== 'idle');
+  const liveAlerts = activeAlerts.filter((a) => a.state !== 'scheduled');
+  const scheduledAlerts = activeAlerts.filter((a) => a.state === 'scheduled');
+  const ownLive = liveAlerts.filter((a) => a.source !== 'met');
 
   // Veiviseren vises til minst én skjerm er koblet til og viser noe.
   const running = all.some((s) => (s.device || s.online) && s.playlist_id && s.slide_count > 0);
@@ -222,31 +294,6 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
       onChange?.();
     } catch (err) {
       setError(err.message);
-    }
-  };
-
-  const sendAlert = async (e) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-    setError('');
-    setBusy(true);
-    try {
-      const body = { message: message.trim() };
-      if (target.startsWith('tag:')) body.target_tag = target.slice(4);
-      else if (target) body.target_screen_id = Number(target);
-      await api.alerts.create(body);
-      setMessage('');
-      setSent(true);
-      setTimeout(() => {
-        setSent(false);
-        setComposer(false);
-      }, 1800);
-      await load();
-      onChange?.();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -291,67 +338,45 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
 
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         {composer && (
-          <form
-            onSubmit={sendAlert}
-            className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-4 shadow-card sm:flex-row sm:items-center"
-          >
-            <label className="flex min-w-0 flex-1 items-center gap-2">
-              <Icon name="megaphone" className="h-4 w-4 shrink-0 text-danger" />
-              <span className="sr-only">Varsel til alle skjermer</span>
-              <Input
-                autoFocus
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Skriv en melding, f.eks. «Brannøvelse – forlat lokalet rolig.»"
-              />
-            </label>
-            <label className="shrink-0">
-              <span className="sr-only">Hvilke skjermer</span>
-              <Select value={target} onChange={(e) => setTarget(e.target.value)} className="!w-48">
-                <option value="">Alle skjermer</option>
-                {[...new Set(all.flatMap((s) => s.tags || []))].sort().map((t) => (
-                  <option key={`tag:${t}`} value={`tag:${t}`}>
-                    Gruppe: {t}
-                  </option>
-                ))}
-                {all.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <Button type="submit" variant="danger" disabled={busy || !message.trim()} className="shrink-0">
-              {busy ? 'Sender …' : sent ? 'Sendt ✓' : 'Send nå'}
-            </Button>
-          </form>
+          <AlertComposer
+            screens={all}
+            onSent={() => {
+              load();
+              onChange?.();
+            }}
+          />
         )}
         <ErrorText>{error}</ErrorText>
 
-        {activeAlerts.length > 0 && (
+        {liveAlerts.length + scheduledAlerts.length > 0 && (
           <section className="rounded-2xl border border-danger/30 bg-danger-tint/40 p-4">
             <div className="mb-2 flex items-center gap-2">
               <Icon name="megaphone" className="h-4 w-4 text-danger" />
-              <h2 className="m-0 flex-1 text-sm font-bold text-ink">Vises på skjermene nå</h2>
-              {activeAlerts.length > 1 && (
+              <h2 className="m-0 flex-1 text-sm font-bold text-ink">{liveAlerts.length ? 'Vises på skjermene nå' : 'Planlagte varsler'}</h2>
+              {ownLive.length > 1 && (
                 <button type="button" onClick={() => dismissAlert(null)} className="text-sm font-semibold text-danger hover:underline">
                   Avslutt alle
                 </button>
               )}
             </div>
             <ul className="m-0 list-none space-y-1.5 p-0">
-              {activeAlerts.map((a) => (
+              {[...liveAlerts, ...scheduledAlerts].map((a) => (
                 <li key={a.id} className="flex items-center gap-3 rounded-xl bg-card px-3 py-2">
+                  <span className="h-8 w-1.5 shrink-0 rounded-full" style={{ background: alertColors(a).bg }} aria-hidden="true" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold text-ink">{a.message}</span>
-                    <span className="block text-xs text-muted">
-                      {a.target_tag ? `Gruppe: ${a.target_tag}` : a.target_screen_id ? all.find((s) => s.id === a.target_screen_id)?.name || 'Én skjerm' : 'Alle skjermer'}
-                      {a.created_at ? ` · sendt ${timeAgo(a.created_at)}` : ''}
+                    <span className="block truncate font-semibold text-ink">
+                      {a.title ? `${a.title}: ` : ''}
+                      {a.message}
                     </span>
+                    <span className="block text-xs text-muted">{alertMeta(a, all)}</span>
                   </span>
-                  <Button variant="outline" size="sm" onClick={() => dismissAlert(a.id)}>
-                    Avslutt
-                  </Button>
+                  {a.source === 'met' ? (
+                    <span className="shrink-0 text-xs font-semibold text-muted">Fra MET</span>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => dismissAlert(a.id)}>
+                      {a.state === 'scheduled' ? 'Avlys' : 'Avslutt'}
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -370,7 +395,12 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
           ) : (
             <SummaryCard tone="plain" label="Presentasjoner" value={playlists.length} sub={playlists.map((p) => p.name).slice(0, 3).join(', ') || 'Ingen ennå'} />
           )}
-          <SummaryCard tone="plain" label="Aktive varsler" value={activeAlerts.length} sub={activeAlerts[0]?.message || 'Ingen varsler vises nå'} />
+          <SummaryCard
+            tone="plain"
+            label="Aktive varsler"
+            value={liveAlerts.length}
+            sub={liveAlerts[0] ? alertHeading(liveAlerts[0]) + ': ' + liveAlerts[0].message : scheduledAlerts.length ? `${plural(scheduledAlerts.length, 'planlagt varsel', 'planlagte varsler')}` : 'Ingen varsler vises nå'}
+          />
         </section>
 
         {all.length > 0 && (

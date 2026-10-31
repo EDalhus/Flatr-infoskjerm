@@ -284,7 +284,36 @@ const MIGRATIONS = [
   CREATE INDEX IF NOT EXISTS play_stats_day ON play_stats (day);
   `,
   // 15: Vær-appen heter nå bare «Yr» (aktiverte apper beholder ellers navnet sitt).
-  `UPDATE apps SET name = 'Yr' WHERE kind = 'weather' AND name = 'Vær (Yr)';`
+  `UPDATE apps SET name = 'Yr' WHERE kind = 'weather' AND name = 'Vær (Yr)';`,
+  // 16: Hastemeldinger med alvorlighet (info | warning | critical), visning
+  //     (banner | full | flash), tittel, og planlagt start og automatisk slutt.
+  `
+  ALTER TABLE alerts ADD COLUMN severity TEXT;
+  ALTER TABLE alerts ADD COLUMN display TEXT;
+  ALTER TABLE alerts ADD COLUMN title TEXT;
+  ALTER TABLE alerts ADD COLUMN starts_at TEXT;
+  ALTER TABLE alerts ADD COLUMN ends_at TEXT;
+  `,
+  // 17: Visninger per bilde i bildekarusellen (sponsorlogoer o.l.): media_id i
+  //     play_stats. SQLite kan ikke endre primærnøkkelen, så tabellen bygges om.
+  `
+  CREATE TABLE play_stats_new (
+    day TEXT NOT NULL,
+    screen_id INTEGER NOT NULL,
+    playlist_id INTEGER NOT NULL DEFAULT 0,
+    slide_id INTEGER NOT NULL DEFAULT 0,
+    sponsor_id INTEGER NOT NULL DEFAULT 0,
+    media_id INTEGER NOT NULL DEFAULT 0,
+    shows INTEGER NOT NULL DEFAULT 0,
+    seconds REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, screen_id, playlist_id, slide_id, sponsor_id, media_id)
+  );
+  INSERT INTO play_stats_new (day, screen_id, playlist_id, slide_id, sponsor_id, shows, seconds)
+    SELECT day, screen_id, playlist_id, slide_id, sponsor_id, shows, seconds FROM play_stats;
+  DROP TABLE play_stats;
+  ALTER TABLE play_stats_new RENAME TO play_stats;
+  CREATE INDEX IF NOT EXISTS play_stats_day ON play_stats (day);
+  `
 ];
 
 export const TENANT_SCHEMA_VERSION = MIGRATIONS.length;

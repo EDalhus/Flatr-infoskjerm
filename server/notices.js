@@ -6,6 +6,10 @@
 //  2. Daglig helsesjekk kl. 07 (innstillingen daily_digest = '1'): frakoblede
 //     TV-er, skjermer uten innhold, widgeter som feiler, NAIS-feil og
 //     lysbilder som utløper – til eierne på e-post og til Slack/Teams.
+//  3. Ukentlig påminnelse mandag fra kl. 08 (weekly_reminder, på som standard):
+//     skjermer som har vist det samme lenge, lysbilder som går ut på dato eller
+//     allerede har gjort det, og presentasjoner som venter på godkjenning –
+//     til eiere og redaktører. Sendes bare når noe bør gjøres.
 
 import { platformDb, tenantResources } from './platform.js';
 import { getTimezone } from '../src/api/_shared.js';
@@ -17,6 +21,10 @@ import { sendMail, buttonMail } from './mail.js';
 
 const TICK_MS = 5 * 60_000;
 const DIGEST_HOUR = 7;
+const WEEKLY_HOUR = 8;
+const STALE_DAYS = 30;
+// Lysbilder med disse elementene viser ferske data av seg selv (vær, nyheter, apper …).
+const LIVE_KINDS = ['weather', 'rss', 'calendar', 'app', 'program', 'carousel', 'web', 'countdown'];
 
 const ORIGIN = () => `${process.env.PUBLIC_PROTOCOL || 'https'}://`;
 const BASE = () => process.env.BASE_DOMAIN || 'flatr.no';
@@ -213,6 +221,135 @@ async function digest(t, env, tz, hook) {
   if (hook) await sendWebhook(hook, { title, lines: issues, link: { url, label: 'Åpne Flatr' } }).catch(() => {});
 }
 
+/* -------------------------- ukentlig påminnelse --------------------------- */
+
+const editorEmails = (tenantId) =>
+  platformDb
+    .prepare(`SELECT u.email FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.tenant_id = ? AND m.role IN ('owner', 'editor')`)
+    .bind(tenantId)
+    .allSync()
+    .results.map((r) => r.email);
+
+/** ISO-uke («2026-W45») for en lokal dato "YYYY-MM-DD". */
+export function isoWeek(date) {
+  const [y, m, d] = date.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const week = Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86_400_000 + 1) / 7);
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+const days = (ms) => Math.floor(ms / 86_400_000);
+
+/** Det som bør gjøres denne uka. Tom liste = ingenting å si fra om. */
+export async function weeklyItems(env, tz) {
+  const items = [];
+  const now = Date.now();
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+  const inWeek = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date(now + 7 * 86_400_000));
+  const fmt = (iso) => new Date(iso).toLocaleDateString('nb-NO', { timeZone: tz, day: 'numeric', month: 'long' });
+
+  // 1. Skjermer i bruk (sett siste uka) som har vist samme presentasjon uendret lenge.
+  //    Presentasjoner der minst halvparten av lysbildene har ferske data (vær, apper …) teller ikke.
+  const weekAgo = new Date(now - 7 * 86_400_000).toISOString();
+  const { results: screens } = await env.DB.prepare(
+    `SELECT s.id, s.name, s.playlist_id, p.name AS playlist, p.created_at,
+            (SELECT MAX(v.created_at) FROM playlist_versions v WHERE v.playlist_id = s.playlist_id) AS changed_at
+       FROM screens s JOIN playlists p ON p.id = s.playlist_id
+      WHERE s.last_seen > ? OR EXISTS (SELECT 1 FROM pairings d WHERE d.screen_id = s.id AND d.status = 'paired' AND d.last_seen > ?)`
+  )
+    .bind(weekAgo, weekAgo)
+    .all()
+    .catch(() => ({ results: [] }));
+  const live = new Map(); // playlist_id -> har mest ferske data
+  for (const s of screens || []) {
+    const changed = Date.parse(s.changed_at || s.created_at);
+    if (!Number.isFinite(changed) || now - changed < STALE_DAYS * 86_400_000) continue;
+    if (!live.has(s.playlist_id)) {
+      const row = await env.DB.prepare(
+        `SELECT COUNT(*) AS total,
+                SUM(EXISTS (SELECT 1 FROM deck_elements e WHERE e.slide_id = d.id AND e.kind IN (${LIVE_KINDS.map(() => '?').join(',')}))) AS fresh
+           FROM deck_slides d WHERE d.playlist_id = ? AND d.enabled = 1`
+      )
+        .bind(...LIVE_KINDS, s.playlist_id)
+        .first();
+      live.set(s.playlist_id, !row?.total || (row.fresh || 0) * 2 >= row.total);
+    }
+    if (live.get(s.playlist_id)) continue;
+    items.push(`«${s.name}» har vist «${s.playlist}» uendret i ${days(now - changed)} dager. Noe nytt å fortelle?`);
+  }
+
+  // 2. Lysbilder som går ut på dato denne uka, og utløpte som fortsatt ligger i presentasjonene.
+  const { results: expiring } = await env.DB.prepare(
+    `SELECT d.name, d.active_to_date, p.name AS playlist FROM deck_slides d JOIN playlists p ON p.id = d.playlist_id
+      WHERE d.enabled = 1 AND d.active_to_date IS NOT NULL AND d.active_to_date >= ? AND d.active_to_date <= ?
+      ORDER BY d.active_to_date`
+  )
+    .bind(today, inWeek)
+    .all()
+    .catch(() => ({ results: [] }));
+  for (const d of expiring || []) items.push(`Lysbildet «${d.name || 'uten navn'}» i «${d.playlist}» går ut på dato ${fmt(d.active_to_date)}.`);
+  const { results: expired } = await env.DB.prepare(
+    `SELECT p.name AS playlist, COUNT(*) AS n FROM deck_slides d JOIN playlists p ON p.id = d.playlist_id
+      WHERE d.enabled = 1 AND d.active_to_date IS NOT NULL AND d.active_to_date < ? GROUP BY p.id ORDER BY n DESC`
+  )
+    .bind(today)
+    .all()
+    .catch(() => ({ results: [] }));
+  for (const e of expired || [])
+    items.push(`${e.n === 1 ? 'Ett lysbilde' : `${e.n} lysbilder`} i «${e.playlist}» har gått ut på dato og vises ikke lenger. Slett ${e.n === 1 ? 'det' : 'dem'} eller gi ny dato.`);
+
+  // 3. Presentasjoner som har ventet på godkjenning i mer enn et døgn.
+  const { results: waiting } = await env.DB.prepare(
+    `SELECT name, review_requested_at, review_requested_by FROM playlists WHERE review_requested_at IS NOT NULL AND review_requested_at < ?`
+  )
+    .bind(new Date(now - 86_400_000).toISOString())
+    .all()
+    .catch(() => ({ results: [] }));
+  for (const w of waiting || [])
+    items.push(`«${w.name}» har ventet på godkjenning siden ${fmt(w.review_requested_at)}${w.review_requested_by ? ` (sendt av ${w.review_requested_by})` : ''}.`);
+
+  // 4. TV-er som har vært borte i mer enn et døgn.
+  const { results: gone } = await env.DB.prepare(
+    `SELECT p.label, p.last_seen, s.name AS screen_name FROM pairings p LEFT JOIN screens s ON s.id = p.screen_id
+      WHERE p.status = 'paired' AND p.last_seen IS NOT NULL AND p.last_seen < ?`
+  )
+    .bind(new Date(now - 86_400_000).toISOString())
+    .all()
+    .catch(() => ({ results: [] }));
+  for (const d of gone || []) items.push(`TV-en ${d.screen_name ? `på «${d.screen_name}» ` : ''}har vært frakoblet siden ${fmt(d.last_seen)}.`);
+
+  return items;
+}
+
+async function weekly(t, env, tz) {
+  if ((await setting(env, 'weekly_reminder', '1')) === '0') return;
+  const { date, hour } = localNow(tz);
+  const weekday = new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short' }).format(new Date());
+  // Mandag fra kl. 08 (tirsdag eller onsdag hvis serveren var nede på mandag).
+  if (!['Mon', 'Tue', 'Wed'].includes(weekday) || (weekday === 'Mon' && hour < WEEKLY_HOUR)) return;
+  const week = isoWeek(date);
+  if ((await setting(env, 'weekly_sent', '')) === week) return;
+  await setSetting(env, 'weekly_sent', week);
+
+  const items = await weeklyItems(env, tz);
+  if (!items.length) return;
+  const to = editorEmails(t.id);
+  if (!to.length) return;
+  const title = `Ukens påminnelse for ${t.name}: ${items.length === 1 ? 'én ting' : `${items.length} ting`} å se på`;
+  await sendMail({
+    to,
+    subject: title,
+    ...buttonMail({
+      heading: 'Hold skjermene ferske',
+      intro: items.map((i) => `• ${i}`).join('\n'),
+      button: 'Åpne Flatr',
+      url: `${ORIGIN()}${t.slug}.${BASE()}/admin`,
+      outro: 'Skjermer med nytt innhold blir lagt merke til. Påminnelsen kan slås av under Skjermer i Flatr.'
+    })
+  }).catch((err) => console.error('[notices] ukentlig e-post feilet:', err.message));
+}
+
 /* ---------------------------------- løkke --------------------------------- */
 
 let running = false;
@@ -227,6 +364,7 @@ async function tick() {
         const hook = await setting(env, 'webhook_url', '');
         if (hook) await callNotices(t, env, tz, hook);
         await digest(t, env, tz, hook);
+        await weekly(t, env, tz);
       } catch (err) {
         console.error(`[notices] ${t.slug}:`, err.message);
       }

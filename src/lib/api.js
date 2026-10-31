@@ -96,6 +96,7 @@ export const api = {
     remove: (id) => req(`/timeslots?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
   reports: (from, to) => req(`/reports?${new URLSearchParams({ from, to })}`),
+  sponsorReport: ({ media, sponsor, from, to }) => req(`/reports?${new URLSearchParams({ from, to, ...(media ? { media } : { sponsor }) })}`),
   settings: {
     get: () => req('/settings'),
     update: (body) => req('/settings', { method: 'PUT', body }),

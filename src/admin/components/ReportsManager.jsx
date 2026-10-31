@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { addDays, localParts } from '../../lib/timeslots.js';
 import { Icon, Input, Button, PageHeader, ErrorText } from './ui.jsx';
+import SponsorReport from './SponsorReport.jsx';
 
 const PRESETS = [
   { id: 'today', label: 'I dag', days: 1 },
@@ -53,7 +54,7 @@ function BarList({ title, rows, total }) {
 const fmtSeconds = (sec) => (sec < 90 ? `${Math.round(sec)} s` : fmtMinutes(sec / 60));
 
 /** Visninger skjermene selv har meldt: hvor mange ganger, hvor lenge og på hvor mange skjermer. */
-function PlaysTable({ title, hint, rows, empty }) {
+function PlaysTable({ title, hint, rows, empty, onReport }) {
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-5">
       <div>
@@ -70,6 +71,7 @@ function PlaysTable({ title, hint, rows, empty }) {
               <th className="w-24 pb-2 text-right font-semibold">Visninger</th>
               <th className="w-24 pb-2 text-right font-semibold">Tid</th>
               <th className="w-20 pb-2 text-right font-semibold">Skjermer</th>
+              {onReport && <th className="w-20 pb-2" />}
             </tr>
           </thead>
           <tbody>
@@ -82,6 +84,13 @@ function PlaysTable({ title, hint, rows, empty }) {
                 <td className="py-2 text-right tabular-nums text-ink">{r.shows.toLocaleString('nb-NO')}</td>
                 <td className="py-2 text-right tabular-nums text-muted">{fmtSeconds(r.seconds)}</td>
                 <td className="py-2 text-right tabular-nums text-muted">{r.screens}</td>
+                {onReport && (
+                  <td className="py-2 pl-2 text-right">
+                    <button type="button" onClick={() => onReport(r)} className="text-xs font-semibold text-brand hover:underline">
+                      Rapport
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -98,6 +107,7 @@ function downloadCsv(report) {
   for (const d of report.days) rows.push(['Dag', d.day, d.minutes]);
   rows.push([], ['Type', 'Navn', 'Visninger', 'Sekunder', 'Skjermer']);
   for (const s of report.sponsors || []) rows.push(['Sponsor', s.name, s.shows, s.seconds, s.screens]);
+  for (const s of report.logos || []) rows.push(['Bilde i karusell', `${s.folder ? `${s.folder} – ` : ''}${s.name}`, s.shows, s.seconds, s.screens]);
   for (const s of report.slides || []) rows.push(['Lysbilde', `${s.playlist ? `${s.playlist} – ` : ''}${s.name}`, s.shows, s.seconds, s.screens]);
   const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
   const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' });
@@ -113,6 +123,7 @@ export default function ReportsManager() {
   const [range, setRange] = useState({ preset: '7', from: addDays(today, -6), to: today });
   const [report, setReport] = useState(null);
   const [error, setError] = useState('');
+  const [sponsorReport, setSponsorReport] = useState(null); // { media } | { sponsor }
 
   useEffect(() => {
     setError('');
@@ -234,10 +245,14 @@ export default function ReportsManager() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <PlaysTable
-                title="Sponsorer"
-                hint="Hvor mange ganger hver sponsor faktisk ble vist."
-                empty="Ingen sponsorvisninger i perioden."
-                rows={(report.sponsors || []).map((s) => ({ key: s.sponsor_id, name: s.name, shows: s.shows, seconds: s.seconds, screens: s.screens }))}
+                title="Sponsorer og logoer"
+                hint="Bilder i bildekaruseller og sponsorer: hvor mange ganger de faktisk ble vist. «Rapport» lager en rapport du kan sende sponsoren."
+                empty="Ingen visninger i perioden. Legg sponsorlogoene i en egen mappe i biblioteket og vis dem med en bildekarusell."
+                onReport={(r) => setSponsorReport(r.target)}
+                rows={[
+                  ...(report.logos || []).map((s) => ({ key: `m${s.media_id}`, name: s.name, sub: s.folder ? `Mappe: ${s.folder}` : null, shows: s.shows, seconds: s.seconds, screens: s.screens, target: { media: s.media_id } })),
+                  ...(report.sponsors || []).map((s) => ({ key: `s${s.sponsor_id}`, name: s.name, sub: 'Sponsor', shows: s.shows, seconds: s.seconds, screens: s.screens, target: { sponsor: s.sponsor_id } }))
+                ]}
               />
               <PlaysTable
                 title="Lysbilder"
@@ -255,6 +270,7 @@ export default function ReportsManager() {
           </>
         )}
       </div>
+      {sponsorReport && <SponsorReport target={sponsorReport} today={today} current={range} onClose={() => setSponsorReport(null)} />}
     </>
   );
 }

@@ -8,6 +8,7 @@ import { verifyUnsplashKey, searchPhotos, importPhoto } from './photos.js';
 import { tidesData, footballData, verifyFootballKey, searchFootball } from './datasources.js';
 import { cleanMenu, weekdayIn } from '../lib/menu.js';
 import { cleanStock } from '../lib/stock.js';
+import { cleanFixturesConfig, fixturesData } from './fixtures.js';
 import { portName } from './ports.js';
 
 // Flatr Apps – aktiverte apper for kunden. En rad = én aktivert app fra
@@ -356,7 +357,9 @@ export async function appData(env, appId) {
         ? 30 * 60_000
         : row.kind === 'football'
           ? (hit?.data?.live ? 10 : 120) * 60_000
-          : DATA_TTL_MS;
+          : row.kind === 'fixtures'
+            ? 30 * 60_000
+            : DATA_TTL_MS;
   if (hit && Date.now() - hit.at < ttl) return hit.data;
   try {
     const data =
@@ -374,7 +377,9 @@ export async function appData(env, appId) {
                 ? await tidesData(safeJson(row.config, {}))
                 : row.kind === 'football'
                   ? await footballData((await readSecrets(env, row)).api_key, safeJson(row.config, {}))
-                  : {};
+                  : row.kind === 'fixtures'
+                    ? await fixturesData(safeJson(row.config, {}), await getTimezone(env))
+                    : {};
     const out = { app: { id: row.id, name: row.name, kind: row.kind }, ...data };
     dataCache.set(key, { at: Date.now(), data: out });
     if (dataCache.size > 300) dataCache.delete(dataCache.keys().next().value);
@@ -494,6 +499,7 @@ export async function onRequestPost(context) {
     if (kind === 'stock') config = cleanStock({});
     if (kind === 'tides') config = cleanTidesConfig({});
     if (kind === 'football') config = cleanFootballConfig({});
+    if (kind === 'fixtures') config = { teams: [] };
   }
 
   const exists = await env.DB.prepare('SELECT id FROM apps WHERE kind = ? AND COALESCE(app_ref, 0) = ?').bind(kind, ref ?? 0).first();
@@ -561,6 +567,8 @@ export async function onRequestPut(context) {
       if (b.config !== undefined) config = cleanStock({ ...prevConfig, ...b.config, updated_at: new Date().toISOString() });
     } else if (row.kind === 'tides') {
       if (b.config !== undefined) config = cleanTidesConfig({ ...prevConfig, ...b.config });
+    } else if (row.kind === 'fixtures') {
+      if (b.config !== undefined) config = await cleanFixturesConfig({ ...prevConfig, ...b.config }, prevConfig);
     } else if (row.kind === 'football') {
       if (b.config !== undefined) config = cleanFootballConfig({ ...prevConfig, ...b.config });
       if (typeof b.api_key === 'string' && b.api_key.trim()) {
