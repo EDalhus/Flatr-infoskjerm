@@ -81,7 +81,7 @@ function QuotaEditor({ t, onSaved, onClose }) {
           Lukk
         </Button>
       </div>
-      <p className="m-0 text-xs text-muted sm:col-span-4">Tomt felt = gratisplanen (1 skjerm, 2 GB, ingen video). En skjerm = én TV eller nettleser.</p>
+      <p className="m-0 text-xs text-muted sm:col-span-4">Tomt felt = gratisplanen (1 skjerm, 5 GB, ingen video). En skjerm = én TV eller nettleser.</p>
       {error && (
         <div className="sm:col-span-4">
           <ErrorText>{error}</ErrorText>

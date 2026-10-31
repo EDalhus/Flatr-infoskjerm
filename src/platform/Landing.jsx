@@ -43,13 +43,24 @@ const FEATURES = [
 
 const FREE_PLAN = [
   '1 skjerm',
-  '2 GB lagring til bilder',
+  '5 GB lagring til bilder',
   'Flatr Apps, live-varsler og program',
   'Inviter kollegaene dine',
   'Egen adresse på flatr.no'
 ];
 
-const PRO_PLAN = ['Flere skjermer', 'Video på skjermene', 'Mer lagring', 'Prioritert hjelp'];
+const PRO_PLAN = ['Så mange skjermer du vil', 'Video på skjermene', '20 GB lagring', 'Alt i gratisplanen', 'Prioritert hjelp'];
+
+const CLUB_PLAN = ['Alt i Pro', '15 GB lagring', 'For lag, foreninger og korps i Frivillighetsregisteret'];
+
+// Ekstra lagring (begge betalte planer): GB -> kr per måned.
+const STORAGE_ADDONS = [
+  [10, 5],
+  [20, 9],
+  [30, 13],
+  [40, 16],
+  [50, 19]
+];
 
 const FAQ = [
   {
@@ -59,7 +70,7 @@ const FAQ = [
   },
   {
     q: 'Hva koster Flatr?',
-    a: 'Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro med flere skjermer og video kommer senere – du velger selv om du vil oppgradere.'
+    a: 'Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro kommer snart: 29 kr per skjerm i måneden (24 kr fra skjerm nr. 20), og halv pris for lag og frivillige. Alle funksjoner bortsett fra video er med i gratisplanen – du betaler bare for skjermene. Du velger selv om du vil oppgradere.'
   },
   {
     q: 'Hva slags skjerm trenger jeg?',
@@ -251,7 +262,7 @@ export default function Landing() {
             text="Ingen kort, ingen binding. Gratisplanen holder for de fleste små lag, arrangementer og bedrifter."
             center
           />
-          <div className="mx-auto mt-12 grid max-w-4xl gap-4 md:grid-cols-2">
+          <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-3">
             <div className="flex flex-col rounded-xl border border-brand/40 bg-card p-7">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Gratis</h3>
@@ -272,23 +283,44 @@ export default function Landing() {
               </Link>
             </div>
 
-            <div className="flex flex-col rounded-xl border border-line bg-card p-7">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Pro</h3>
-                <span className="rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted">
-                  Kommer snart
-                </span>
-              </div>
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight text-muted">–</span>
-              </div>
-              <PlanList items={PRO_PLAN} muted />
-              <div className="mt-8 rounded-md border border-dashed border-line px-5 py-4 text-center text-sm text-muted">
-                <p className="m-0">Trenger du flere skjermer nå? Ta kontakt – i betaperioden får du gjerne en eller to til, gratis.</p>
-                <button type="button" onClick={() => setContactOpen(true)} className="mt-3 font-semibold text-brand hover:underline">
+            <PaidPlan
+              name="Pro"
+              price="29 kr"
+              note="24 kr per skjerm fra skjerm nr. 20"
+              items={PRO_PLAN}
+            />
+            <PaidPlan
+              name="Lag og frivillige"
+              price="15 kr"
+              note="Halv pris for frivilligheten"
+              items={CLUB_PLAN}
+            />
+          </div>
+
+          <div className="mx-auto mt-4 grid max-w-5xl gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <div className="rounded-xl border border-line bg-card p-6 text-sm">
+              <h3 className="m-0 font-semibold">Trenger du mer lagring?</h3>
+              <p className="mt-1 text-muted">Legg til ekstra lagring på Pro eller Lag og frivillige.</p>
+              <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 tabular-nums">
+                {STORAGE_ADDONS.map(([gb, kr]) => (
+                  <div key={gb} className="contents">
+                    <dt className="text-muted">+{gb} GB</dt>
+                    <dd className="m-0 text-right font-medium">{kr} kr / mnd</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <div className="flex flex-col justify-center rounded-xl border border-dashed border-line px-6 py-5 text-sm text-muted">
+              <p className="m-0">
+                Alle funksjoner er med i alle planer, bortsett fra video – du betaler bare for skjermene. Betal årlig og få to måneder
+                gratis. Alle priser er eks. mva.
+              </p>
+              <p className="mt-3">
+                Trenger du flere skjermer nå? Ta kontakt – i betaperioden får du gjerne en eller to til, gratis.{' '}
+                <button type="button" onClick={() => setContactOpen(true)} className="font-semibold text-brand hover:underline">
                   Ta kontakt →
                 </button>
-              </div>
+              </p>
             </div>
           </div>
         </div>
@@ -421,6 +453,24 @@ export function SectionHead({ kicker, title, text, center = false }) {
       <p className="font-mono text-xs uppercase tracking-[0.16em] text-brand">{kicker}</p>
       <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">{title}</h2>
       {text && <p className="mt-4 leading-relaxed text-muted">{text}</p>}
+    </div>
+  );
+}
+
+/** Betalt plan (kommer snart): pris per skjerm og hva som er med. */
+function PaidPlan({ name, price, note, items }) {
+  return (
+    <div className="flex flex-col rounded-xl border border-line bg-card p-7">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-semibold">{name}</h3>
+        <span className="shrink-0 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted">Kommer snart</span>
+      </div>
+      <div className="mt-4 flex items-baseline gap-1">
+        <span className="text-4xl font-bold tracking-tight">{price}</span>
+        <span className="text-sm text-muted">/ skjerm / mnd</span>
+      </div>
+      <p className="mt-1 text-xs text-muted">{note}</p>
+      <PlanList items={items} />
     </div>
   );
 }

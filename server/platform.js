@@ -127,14 +127,14 @@ for (const sql of [
 const envInt = (name, fallback) => Number.parseInt(process.env[name], 10) || fallback;
 
 /** Kvotene for en kunde: egne verdier på kunden, ellers standard (beta). */
-// Gratisplanen (det som står på flatr.no): 1 skjerm, 2 GB, ingen video.
+// Gratisplanen (det som står på flatr.no): 1 skjerm, 5 GB, ingen video.
 // Kan overstyres per konto i superadmin (NULL = standard). En skjerm er en TV
 // (eller nettleser), så TV-grensen følger alltid skjermgrensen.
 export function tenantLimits(tenant) {
   // + én skjerm per aktiv henvisning (maks REFERRAL_MAX), se referralStats.
   const screens = (tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 1)) + referralStats(tenant.id).bonus;
   return {
-    storageBytes: (tenant.max_storage_mb ?? envInt('BETA_STORAGE_MB', 2048)) * 1024 * 1024,
+    storageBytes: (tenant.max_storage_mb ?? envInt('BETA_STORAGE_MB', 5120)) * 1024 * 1024,
     devices: screens,
     screens,
     video: tenant.allow_video === 1 || process.env.FREE_ALLOW_VIDEO === 'true'
