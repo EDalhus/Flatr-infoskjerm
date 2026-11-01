@@ -180,12 +180,12 @@ export async function checkLimit(env, kind, extraBytes = 0) {
     );
   }
   const more = L.billing ? 'Legg til flere under Abonnement.' : 'Trenger du flere? Be om det under Skjermer.';
-  if (kind === 'devices' && u.devices >= L.devices) {
-    return json({ error: `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. ${more}` }, { status: 403 });
-  }
-  if (kind === 'screens' && u.screens >= L.screens) {
-    return json({ error: `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. ${more}` }, { status: 403 });
-  }
+  // Avtale gjennom en gruppe (kjede/kommune): skjermene deles med de andre medlemmene.
+  const full = L.groupMax
+    ? `Alle de ${L.groupMax} skjermene i avtalen til ${L.groupName} er i bruk. Kontakt den som har avtalen for flere.`
+    : `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. ${more}`;
+  if (kind === 'devices' && u.devices >= L.devices) return json({ error: full }, { status: 403 });
+  if (kind === 'screens' && u.screens >= L.screens) return json({ error: full }, { status: 403 });
   if (kind === 'video' && !L.video) {
     return json({ error: `Video er med i Pro. Gratisplanen har plass til bilder.${L.billing ? ' Oppgrader under Abonnement.' : ''}` }, { status: 403 });
   }

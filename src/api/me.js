@@ -12,7 +12,9 @@ export async function onRequestGet({ request, env }) {
     role: user.role ?? null,
     prefs: user.prefs ?? {},
     palette: userColorPalette(),
-    tenant: env.TENANT ?? null
+    tenant: env.TENANT ?? null,
+    // Kjeder/kommuner: gruppene brukeren administrerer (lenke til oversikten på flatr.no).
+    groups: env.SESSION_USER?.groups ?? []
   });
 }
 

@@ -133,6 +133,25 @@ for (const sql of [
   `ALTER TABLE tenants ADD COLUMN legal_name TEXT`,
   `ALTER TABLE tenants ADD COLUMN billing_email TEXT`,
   `ALTER TABLE tenants ADD COLUMN volunteer_verified_at TEXT`,
+  // Grupper (kjeder, kommuner, kretser – se server/groups.js): en oversikt over
+  // mange organisasjoner, og eventuelt én avtale (plan + skjermer delt mellom medlemmene).
+  `CREATE TABLE IF NOT EXISTS org_groups (
+     id          INTEGER PRIMARY KEY AUTOINCREMENT,
+     name        TEXT NOT NULL,
+     plan        TEXT,
+     max_screens INTEGER,
+     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+   )`,
+  `CREATE TABLE IF NOT EXISTS org_group_members (
+     group_id  INTEGER NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+     tenant_id INTEGER NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+     PRIMARY KEY (group_id, tenant_id)
+   )`,
+  `CREATE TABLE IF NOT EXISTS org_group_admins (
+     group_id INTEGER NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+     email    TEXT NOT NULL,
+     PRIMARY KEY (group_id, email)
+   )`,
   // Adressene til slettede organisasjoner (se deleteTenant og slugProblem).
   `CREATE TABLE IF NOT EXISTS retired_slugs (
      slug TEXT PRIMARY KEY,
@@ -165,7 +184,37 @@ export function paidPlan(tenant) {
   return null;
 }
 
-/** Kvotene for en kunde: abonnementet, egne verdier på kunden, ellers standard (gratis). */
+/** Gruppen kunden er med i (med avtalen), eller null. */
+export function groupFor(tenantId) {
+  return platformDb
+    .prepare('SELECT g.* FROM org_groups g JOIN org_group_members m ON m.group_id = g.id WHERE m.tenant_id = ?')
+    .bind(tenantId)
+    .firstSync();
+}
+
+// Skjermer i bruk per medlem i en gruppe med felles avtale (mellomlagres et minutt).
+const groupUsage = new Map(); // gruppe-id -> { at, counts: Map(tenant-id -> skjermer) }
+export function groupScreens(groupId) {
+  const hit = groupUsage.get(groupId);
+  if (hit && Date.now() - hit.at < 60_000) return hit.counts;
+  const counts = new Map();
+  const members = platformDb
+    .prepare('SELECT t.id, t.slug FROM org_group_members m JOIN tenants t ON t.id = m.tenant_id WHERE m.group_id = ?')
+    .bind(groupId)
+    .allSync().results;
+  for (const t of members) {
+    try {
+      counts.set(t.id, Number(tenantResources(t.slug).DB.prepare('SELECT COUNT(*) AS c FROM screens').firstSync('c')) || 0);
+    } catch {
+      counts.set(t.id, 0);
+    }
+  }
+  groupUsage.set(groupId, { at: Date.now(), counts });
+  return counts;
+}
+export const forgetGroupUsage = (groupId) => groupUsage.delete(groupId);
+
+/** Kvotene for en kunde: abonnementet, avtalen i gruppen, egne verdier på kunden, ellers standard (gratis). */
 // Gratisplanen (det som står på flatr.no): 1 skjerm, ingen video.
 // Kan overstyres per konto i superadmin (NULL = standard). En skjerm er en TV
 // (eller nettleser), så TV-grensen følger alltid skjermgrensen.
@@ -177,6 +226,20 @@ export function tenantLimits(tenant) {
     const screens = Math.max(tenant.paid_screens || 1, tenant.max_screens ?? 0) + bonus;
     const storageMb = Math.max((plan.storageGb + (tenant.extra_storage_gb || 0)) * 1024, tenant.max_storage_mb ?? 0);
     return { storageBytes: storageMb * 1024 * 1024, devices: screens, screens, video: true, plan: plan.id };
+  }
+  // Avtale gjennom en gruppe: planen for alle medlemmene, og skjermene i avtalen deles.
+  const group = groupFor(tenant.id);
+  const groupPlan = PLANS[group?.plan];
+  if (groupPlan) {
+    let screens = Math.max(1, tenant.max_screens ?? 1);
+    if (group.max_screens) {
+      const counts = groupScreens(group.id);
+      let elsewhere = 0;
+      for (const [id, n] of counts) if (id !== tenant.id) elsewhere += n;
+      screens = Math.max(counts.get(tenant.id) || 0, group.max_screens - elsewhere);
+    }
+    const storageMb = Math.max(groupPlan.storageGb * 1024, tenant.max_storage_mb ?? 0);
+    return { storageBytes: storageMb * 1024 * 1024, devices: screens, screens, video: true, plan: groupPlan.id, group: group.id, groupName: group.name, groupMax: group.max_screens || null };
   }
   const screens = (tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 1)) + bonus;
   return {

@@ -19,7 +19,8 @@ import { getUser } from '../src/api/_access.js';
 import { checkLimit } from '../src/api/_shared.js';
 import { createAssets } from './assets.js';
 import { handleCollabUpgrade } from './collab.js';
-import { getTenantBySlug, tenantResources, memberByEmail, sweepPlatform, tenantLimits, updatePrefs, platformDb } from './platform.js';
+import { getTenantBySlug, tenantResources, memberByEmail, sweepPlatform, tenantLimits, updatePrefs, platformDb, normEmail } from './platform.js';
+import { handleGroupRoute, groupAdminFor, groupsForAdmin } from './groups.js';
 import { auth, authSession, migrateExistingUsers, SOCIAL_PROVIDERS } from './identity.js';
 import { userColorPalette } from '../src/api/_access.js';
 import { handlePlatformRoute, handleTenantAuthRoute } from './auth.js';
@@ -214,12 +215,20 @@ function ensureColor(user, tenant) {
   return { ...user, prefs: JSON.stringify(updatePrefs(user.user_id, { color })) };
 }
 
-/** Innlogget medlem av kunden: Better Auth-økt (bekreftet e-post) + medlemskap. */
+/**
+ * Innlogget medlem av kunden: Better Auth-økt (bekreftet e-post) + medlemskap.
+ * Administratorer for gruppen kunden er med i (kjede/kommune), er redaktører
+ * her uten å stå i teamet. `groups` = gruppene brukeren administrerer.
+ */
 async function currentUser(request, tenant) {
   const s = await authSession(request);
   if (!s?.user?.emailVerified) return null;
+  const groups = groupsForAdmin(s.user.email);
   const member = memberByEmail(tenant.id, s.user.email);
-  return member ? { ...member, two_factor: !!s.user.twoFactorEnabled } : null;
+  if (member) return { ...member, groups, two_factor: !!s.user.twoFactorEnabled };
+  const g = groupAdminFor(tenant.id, s.user.email);
+  const u = g && platformDb.prepare('SELECT id, email, name, prefs FROM users WHERE email = ?').bind(normEmail(s.user.email)).firstSync();
+  return u ? { user_id: u.id, email: u.email, name: u.name, prefs: u.prefs, role: 'editor', group_admin: g.name, groups, two_factor: !!s.user.twoFactorEnabled } : null;
 }
 
 /** Kontoen krever tofaktor for alle (Team → «Krev tofaktor»). */
@@ -379,6 +388,9 @@ async function handlePlatform(request) {
 
   const superadmin = await handleSuperadminRoute(request, ctxBase);
   if (superadmin) return superadmin;
+
+  const groups = await handleGroupRoute(request, ctxBase);
+  if (groups) return groups;
 
   const device = await handleApexDevice(request, {
     // TV-appen: nettsider/YouTube byttes ut med bilder (se buildState).

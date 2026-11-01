@@ -10,6 +10,7 @@ import { marketAdminList, marketAdminSetHidden } from './market.js';
 import { appsAdminList, appsAdminReview } from './appMarket.js';
 import { platformDb, tenantResources, tenantLimits, normEmail, paidPlan } from './platform.js';
 import { authSession } from './identity.js';
+import { handleSuperadminGroups } from './groups.js';
 import { usage } from '../src/api/_shared.js';
 
 const admins = () =>
@@ -91,6 +92,7 @@ export async function handleSuperadminRoute(request, ctx) {
   if (!admin) return json({ error: 'Ikke innlogget' }, 401);
 
   if (p === '/api/superadmin/me') return json({ email: admin, base_domain: ctx.baseDomain });
+  if (p.startsWith('/api/superadmin/groups')) return handleSuperadminGroups(request, ctx);
 
   if (p === '/api/superadmin/tenants' && request.method === 'GET') {
     const tenants = platformDb.prepare('SELECT * FROM tenants ORDER BY created_at DESC').allSync().results;

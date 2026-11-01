@@ -261,6 +261,34 @@ async function install(request, ctx, env) {
   return json({ ok: true, playlist_id: playlistId, slide_id: slideId });
 }
 
+/**
+ * Grupper (server/groups.js): kopierer en presentasjon fra ett medlem til
+ * andre. Lagres som en skjult mal (ikke i markedet), så bildene deles via
+ * markedsmappen, og installeres som en ny presentasjon hos hvert medlem.
+ */
+export async function shareKit(env, tenant, playlistId, title) {
+  const pl = await env.DB.prepare('SELECT * FROM playlists WHERE id = ?').bind(Number(playlistId)).first();
+  if (!pl) throw Object.assign(new Error('Presentasjonen finnes ikke'), { status: 404 });
+  const slides = await playlistSlides(env, pl.id);
+  if (!slides.length) throw Object.assign(new Error('Presentasjonen har ingen lysbilder'), { status: 400 });
+  const { id } = platformDb
+    .prepare(`INSERT INTO market_items (kind, title, orientation, payload, tenant_id, author, hidden) VALUES ('kit', ?, ?, '{}', ?, ?, 1) RETURNING id`)
+    .bind(String(title || pl.name).slice(0, 80), pl.orientation, tenant.id, tenant.name)
+    .firstSync();
+  platformDb.prepare('UPDATE market_items SET payload = ? WHERE id = ?').bind(await detachMedia(env, id, { slides }), id).runSync();
+  return id;
+}
+
+/** Legger en delt presentasjon (shareKit) inn hos et medlem. Gir den nye presentasjonens id. */
+export async function installKit(env, itemId, name) {
+  const item = platformDb.prepare(`SELECT * FROM market_items WHERE id = ? AND kind = 'kit'`).bind(Number(itemId)).firstSync();
+  if (!item) throw Object.assign(new Error('Fant ikke presentasjonen'), { status: 404 });
+  const payload = safeJson(item.payload, {});
+  const pl = await env.DB.prepare('INSERT INTO playlists (name, orientation) VALUES (?, ?) RETURNING id').bind(String(name || item.title).slice(0, 80), item.orientation).first();
+  for (const [i, s] of (payload.slides || []).entries()) await insertSlide(env, pl.id, i, s);
+  return pl.id;
+}
+
 /** Delte filer – åpne, siden TV-er og skjermvisning henter dem uten innlogging. */
 export async function serveMarketFile(request) {
   const m = new URL(request.url).pathname.match(/^\/api\/market\/file\/(\d+)\/(\d+\.([a-z0-9]+))$/);

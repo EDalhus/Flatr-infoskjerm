@@ -17,6 +17,7 @@ const Vote = lazy(() => import('./public/Vote.jsx'));
 const Landing = lazy(() => import('./platform/Landing.jsx'));
 const AppsPage = lazy(() => import('./platform/AppsPage.jsx'));
 const SuperAdmin = lazy(() => import('./platform/SuperAdmin.jsx'));
+const GroupPage = lazy(() => import('./platform/GroupPage.jsx'));
 const HelpAppleTv = lazy(() => import('./platform/HelpAppleTv.jsx'));
 const TvPair = lazy(() => import('./platform/TvPair.jsx'));
 const HelpApi = lazy(() => import('./platform/HelpApi.jsx'));
@@ -53,6 +54,9 @@ const platformRouter = (ctx) =>
     { path: '/reset-password', element: <ResetPassword /> },
     { path: '/admin', element: <PlatformAdminRedirect baseDomain={ctx.base_domain} /> },
     { path: '/superadmin', element: <SuperAdmin /> },
+    // Kjeder, kommuner og kretser: oversikt over alle organisasjonene i gruppen.
+    { path: '/gruppe', element: <GroupPage /> },
+    { path: '/gruppe/:id', element: <GroupPage /> },
     { path: '/personvern', element: <Privacy /> },
     { path: '/vilkar', element: <Terms /> },
     { path: '/hjelp/apple-tv', element: <HelpAppleTv /> },

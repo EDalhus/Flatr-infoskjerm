@@ -271,6 +271,7 @@ export default function SuperAdmin() {
           {tenants && shown.length === 0 && <p className="m-0 p-6 text-center text-muted">Ingen kontoer.</p>}
         </div>
 
+        <GroupsAdmin />
         <AppsAdmin />
         <MarketAdmin />
       </main>
@@ -279,6 +280,155 @@ export default function SuperAdmin() {
 }
 
 const FragmentRow = ({ children }) => <>{children}</>;
+
+/**
+ * Grupper (kjeder, kommuner, kretser): medlemmer, administratorer og avtale.
+ * Administratorene ser alle skjermene på flatr.no/gruppe og kan sende
+ * hastemeldinger og presentasjoner til alle. Med plan i avtalen får alle
+ * medlemmene den planen, og skjermene i avtalen deles mellom dem.
+ */
+function GroupsAdmin() {
+  const [groups, setGroups] = useState(null);
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const run = async (p) => {
+    setError('');
+    try {
+      setGroups(await p);
+      return true;
+    } catch (e) {
+      setError(e.message);
+      return false;
+    }
+  };
+  useEffect(() => {
+    run(call('/groups'));
+  }, []);
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="m-0 text-xl font-bold">Grupper</h2>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (await run(call('/groups', { method: 'POST', body: { name } }))) setName('');
+          }}
+          className="flex gap-2"
+        >
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ny gruppe, f.eks. «Lørenskog kommune»" className="w-72" />
+          <Button type="submit" disabled={!name.trim()}>
+            Opprett
+          </Button>
+        </form>
+      </div>
+      <p className="m-0 text-sm text-muted">
+        Kjeder, kommuner og kretser. Administratorene ser alle skjermene på flatr.no/gruppe og kan sende hastemeldinger og presentasjoner til alle
+        medlemmene. Med en avtale får alle medlemmene planen, og skjermene i avtalen deles mellom dem.
+      </p>
+      <ErrorText>{error}</ErrorText>
+      {(groups || []).map((g) => (
+        <GroupCard key={g.id} g={g} run={run} />
+      ))}
+      {groups && !groups.length && <p className="m-0 rounded-2xl border border-line bg-card p-6 text-center text-sm text-muted">Ingen grupper ennå.</p>}
+    </section>
+  );
+}
+
+function GroupCard({ g, run }) {
+  const [slug, setSlug] = useState('');
+  const [email, setEmail] = useState('');
+  const [plan, setPlan] = useState(g.plan || '');
+  const [max, setMax] = useState(g.max_screens ?? '');
+  const chip = 'flex items-center justify-between gap-2 rounded-lg bg-zone px-2.5 py-1.5';
+  return (
+    <div className="space-y-4 rounded-2xl border border-line bg-card p-5 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-base font-semibold">{g.name}</div>
+        <div className="flex items-center gap-3">
+          <a href={`/gruppe/${g.id}`} className="font-semibold text-brand hover:underline">
+            Åpne oversikten →
+          </a>
+          <Button variant="outline" size="sm" onClick={() => confirm(`Slette gruppen «${g.name}»? Organisasjonene blir ikke slettet.`) && run(call(`/groups?id=${g.id}`, { method: 'DELETE' }))}>
+            Slett
+          </Button>
+        </div>
+      </div>
+      <div className="grid gap-5 md:grid-cols-3">
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-muted">Medlemmer ({g.members.length})</div>
+          {g.members.map((m) => (
+            <div key={m.id} className={chip}>
+              <span className="min-w-0 truncate">
+                {m.name} <span className="text-xs text-muted">{m.slug}</span>
+              </span>
+              <button type="button" aria-label={`Fjern ${m.name}`} onClick={() => run(call(`/groups/members?group_id=${g.id}&tenant_id=${m.id}`, { method: 'DELETE' }))} className="text-muted hover:text-danger">
+                <Icon name="x" className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (await run(call('/groups/members', { method: 'POST', body: { group_id: g.id, slug } }))) setSlug('');
+            }}
+            className="flex gap-2"
+          >
+            <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="adresse, f.eks. skolen" />
+            <Button type="submit" size="sm" variant="outline" disabled={!slug.trim()}>
+              Legg til
+            </Button>
+          </form>
+        </div>
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-muted">Administratorer</div>
+          {g.admins.map((a) => (
+            <div key={a} className={chip}>
+              <span className="min-w-0 truncate">{a}</span>
+              <button type="button" aria-label={`Fjern ${a}`} onClick={() => run(call(`/groups/admins?group_id=${g.id}&email=${encodeURIComponent(a)}`, { method: 'DELETE' }))} className="text-muted hover:text-danger">
+                <Icon name="x" className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (await run(call('/groups/admins', { method: 'POST', body: { group_id: g.id, email } }))) setEmail('');
+            }}
+            className="flex gap-2"
+          >
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e-post" />
+            <Button type="submit" size="sm" variant="outline" disabled={!email.trim()}>
+              Legg til
+            </Button>
+          </form>
+          <p className="m-0 text-xs text-muted">Administratorene er redaktører hos alle medlemmene.</p>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(call(`/groups?id=${g.id}`, { method: 'PUT', body: { plan: plan || null, max_screens: max === '' ? null : Number(max) } }));
+          }}
+          className="space-y-2"
+        >
+          <div className="text-xs font-semibold text-muted">Avtale</div>
+          <Field label="Plan for alle medlemmene">
+            <select value={plan} onChange={(e) => setPlan(e.target.value)} className="h-9 w-full rounded-xl border border-line bg-paper px-3 text-sm">
+              <option value="">Ingen (hver sin plan)</option>
+              <option value="pro">Pro</option>
+              <option value="club">Lag og frivillige</option>
+            </select>
+          </Field>
+          <Field label="Skjermer i avtalen (delt)">
+            <Input type="number" min={1} value={max} onChange={(e) => setMax(e.target.value)} placeholder="Tomt = hver sin grense" disabled={!plan} />
+          </Field>
+          <Button type="submit" size="sm">
+            Lagre avtalen
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 const KIND = { kit: 'Kit', slide: 'Lysbilde', theme: 'Tema' };
 

@@ -44,6 +44,7 @@ import { usage } from '../src/api/_shared.js';
 import { userColorPalette } from '../src/api/_access.js';
 import { auth, authSession, ensureAuthUser, hasPassword, setPassword, onEmailVerified, passwordOk, deleteAccount } from './identity.js';
 import { stripeEnabled } from './stripe.js';
+import { groupsForAdmin } from './groups.js';
 
 const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), {
@@ -236,7 +237,8 @@ export async function handlePlatformRoute(request, ctx) {
     if (!s?.user) return json({ error: 'Ikke innlogget' }, 401);
     return json({
       user: { email: s.user.email, name: s.user.name, twoFactorEnabled: !!s.user.twoFactorEnabled },
-      orgs: orgsFor(s.user.email, ctx)
+      orgs: orgsFor(s.user.email, ctx),
+      groups: groupsForAdmin(s.user.email)
     });
   }
 

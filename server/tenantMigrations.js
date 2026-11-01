@@ -378,7 +378,10 @@ const MIGRATIONS = [
     last_used_at TEXT,
     revoked_at TEXT
   );
-  `
+  `,
+  // 22: Hastemeldinger sendt fra en gruppe (kjede/kommune, se server/groups.js)
+  //     merkes, så gruppen kan avslutte dem hos alle medlemmene.
+  `ALTER TABLE alerts ADD COLUMN source TEXT`
 ];
 
 export const TENANT_SCHEMA_VERSION = MIGRATIONS.length;

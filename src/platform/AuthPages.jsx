@@ -587,14 +587,20 @@ export function PlatformAdminRedirect({ baseDomain }) {
   const code = params.get('code');
   // Innlogget: organisasjonene dine (med f.eks. TV-koden videre) i stedet for å skrive adressen.
   const [orgs, setOrgs] = useState(null);
+  // Kjeder og kommuner: gruppene du administrerer (flatr.no/gruppe/<id>).
+  const [groups, setGroups] = useState([]);
   useEffect(() => {
     api.platform
       .me()
       .then((r) => {
         const q = params.toString();
         const list = (r?.orgs || []).map((o) => ({ ...o, url: q ? `${o.url}?${q}` : o.url }));
-        if (list.length === 1) window.location.replace(list[0].url);
-        else setOrgs(list);
+        const mine = code ? [] : r?.groups || [];
+        if (list.length === 1 && !mine.length) window.location.replace(list[0].url);
+        else {
+          setOrgs(list);
+          setGroups(mine);
+        }
       })
       .catch(() => setOrgs([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -623,10 +629,16 @@ export function PlatformAdminRedirect({ baseDomain }) {
     window.location.href = target;
   };
 
-  if (orgs?.length > 1) {
+  if (orgs?.length > 1 || (orgs && groups.length)) {
     return (
       <AuthShell title={code ? 'Koble til en TV' : 'Velg organisasjon'} subtitle={code ? `Hvilken organisasjon skal skjermen med koden ${code} høre til?` : null}>
         <div className="grid gap-2">
+          {groups.map((g) => (
+            <Link key={`g${g.id}`} to={`/gruppe/${g.id}`} className="flex items-center justify-between rounded-xl border border-brand/40 bg-brand-tint px-4 py-3 hover:bg-zone">
+              <span className="font-semibold text-ink">{g.name}: alle organisasjoner</span>
+              <Icon name="chevron" className="h-4 w-4 text-muted" />
+            </Link>
+          ))}
           {orgs.map((o) => (
             <a key={o.slug} href={o.url} className="flex items-center justify-between rounded-xl border border-line px-4 py-3 hover:bg-zone">
               <span className="font-semibold text-ink">{o.name}</span>

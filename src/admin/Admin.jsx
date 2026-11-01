@@ -520,6 +520,19 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
                 </span>
                 Ny organisasjon
               </a>
+              {/* Kjeder og kommuner: oversikten over alle organisasjonene i gruppen (flatr.no/gruppe). */}
+              {(me?.groups || []).map((g) => (
+                <a
+                  key={g.id}
+                  href={`${window.location.protocol}//${window.location.host.split('.').slice(1).join('.')}/gruppe/${g.id}`}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted hover:bg-hair hover:text-ink"
+                >
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-brand-tint text-brand">
+                    <Icon name="layers" className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{g.name}: alle organisasjoner</span>
+                </a>
+              ))}
             </div>
           )}
 
