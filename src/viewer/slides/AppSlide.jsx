@@ -10,6 +10,7 @@ import FootballView from './FootballView.jsx';
 import FixturesView from './FixturesView.jsx';
 import DeparturesView from './DeparturesView.jsx';
 import SheetView from './SheetView.jsx';
+import PollView from './PollView.jsx';
 import StockView from './StockView.jsx';
 import { statusLabel, etaTo, etaText, reportedEta, reportedEtaText, ago, hasPosition, isMoving, vesselColor } from '../../lib/ais.js';
 import { currentCalls, cargoLine, callTimeText, callDate, hasClock } from '../../lib/portCalls.js';
@@ -207,7 +208,12 @@ function CallsBoard({ calls, vessels, quays, quayId, days, title, groups, now })
 
 export default function AppSlide({ slide, chromeless }) {
   const c = slide.config || {};
-  const { data, error } = useFeed(slide.elementId, `${c.appId}`, 60_000);
+  // Avstemninger oppdateres hvert tredje sekund (stemmene kommer live), resten hvert minutt.
+  const [every, setEvery] = useState(60_000);
+  const { data, error } = useFeed(slide.elementId, `${c.appId}`, every);
+  useEffect(() => {
+    if (data?.app?.kind === 'poll') setEvery(3_000);
+  }, [data?.app?.kind]);
   const now = useNow();
   const bare = chromeless && c.frame !== true;
   const view = c.view || 'map';
@@ -280,7 +286,7 @@ export default function AppSlide({ slide, chromeless }) {
   }
 
   // Dagens meny, tidevann og fotball: ferdige visninger med kort/ramme som standard.
-  if (['menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet'].includes(data.app?.kind)) {
+  if (['menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet', 'poll'].includes(data.app?.kind)) {
     const card = c.frame === false ? 'flex h-full w-full flex-col overflow-hidden' : 'flex h-full w-full flex-col overflow-hidden rounded-xl bg-black/30 p-[4%]';
     return (
       <div className={card} style={style}>
@@ -290,6 +296,7 @@ export default function AppSlide({ slide, chromeless }) {
         {data.app.kind === 'fixtures' && (
           <FixturesView data={data} view={c.fixturesView || 'list'} teams={c.teams} homeOnly={!!c.homeOnly} max={c.max} title={c.title} now={now} />
         )}
+        {data.app.kind === 'poll' && <PollView data={data} pollId={c.pollId} view={c.pollView || 'results'} title={c.title} />}
         {data.app.kind === 'sheet' && (
           <SheetView
             data={data}

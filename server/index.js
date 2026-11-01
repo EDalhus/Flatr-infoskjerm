@@ -76,6 +76,8 @@ function tenantEnv(tenant, user) {
     WAIT_CHANGE: (ms) => waitForChange(tenant.slug, ms),
     SESSION_USER: user ?? null,
     TENANT: { slug: tenant.slug, name: tenant.name },
+    // Kundens adresse (lenker som skal skannes, f.eks. avstemninger).
+    ORIGIN: ctxBase.origin(tenant.slug),
     LIMITS: tenantLimits(tenant),
     // TV-er venter på skjermbilder av widgeter – be om dem med en gang.
     REQUEST_SNAPSHOTS: () => process.env.CONVERTER_URL && requestRefresh(tenant.slug),
@@ -159,6 +161,8 @@ function isPublic(method, key, url) {
   if (key === '/api/context' || key === '/api/health') return true;
   if (key.startsWith('/api/pairing/status/')) return method === 'GET';
   if (key === '/api/pairing/request' || key === '/api/heartbeat' || key === '/api/plays') return method === 'POST';
+  // Avstemninger: publikum stemmer uten innlogging (grense per IP i polls.js).
+  if (key === '/api/vote') return method === 'GET' || method === 'POST';
   // Cursor AI: egen nøkkel per pågående oppgave (src/api/mcp.js).
   if (key === '/api/mcp') return true;
   if (key.startsWith('/api/pairing/screenshot/')) return method === 'POST'; // TV-token sjekkes i pairing.js
@@ -242,7 +246,7 @@ function crossSiteWrite(request) {
 
 // Skriving som ikke endrer det skjermene viser – vekker ikke skjermstrømmene
 // (pulsen fra hver skjerm ville ellers fått alle de andre til å hente på nytt).
-const QUIET_WRITES = /^\/api\/(heartbeat|plays|mcp|comments|prefs|ai|agents|activity|pairing\/screenshot|pairing\/request)/;
+const QUIET_WRITES = /^\/api\/(heartbeat|plays|mcp|comments|prefs|ai|agents|activity|pairing\/screenshot|pairing\/request|vote|polls)/;
 
 async function handleTenant(request, tenant) {
   // Mediefiler på en adresse Cloudflare mellomlagrer (se cdnMediaUrls i src/api/_shared.js).

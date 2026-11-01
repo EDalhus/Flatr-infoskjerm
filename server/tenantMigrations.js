@@ -327,6 +327,43 @@ const MIGRATIONS = [
   ALTER TABLE media ADD COLUMN rev INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE media ADD COLUMN status TEXT;
   ALTER TABLE media ADD COLUMN original_size INTEGER;
+  `,
+  // 20: Avstemninger og spørsmål fra salen (src/api/polls.js). Publikum stemmer
+  //     fra mobilen på /v/<token>; «voter» er en tilfeldig id i nettleseren.
+  `
+  CREATE TABLE IF NOT EXISTS polls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL DEFAULT 'choice',
+    question TEXT NOT NULL,
+    options TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'open',
+    show_results INTEGER NOT NULL DEFAULT 1,
+    moderate INTEGER NOT NULL DEFAULT 0,
+    token TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE TABLE IF NOT EXISTS poll_votes (
+    poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+    voter TEXT NOT NULL,
+    choice INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    PRIMARY KEY (poll_id, voter)
+  );
+  CREATE TABLE IF NOT EXISTS poll_questions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+    voter TEXT NOT NULL,
+    text TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'shown',
+    likes INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_poll_questions ON poll_questions (poll_id, status);
+  CREATE TABLE IF NOT EXISTS poll_likes (
+    question_id INTEGER NOT NULL REFERENCES poll_questions(id) ON DELETE CASCADE,
+    voter TEXT NOT NULL,
+    PRIMARY KEY (question_id, voter)
+  );
   `
 ];
 

@@ -279,6 +279,14 @@ export const api = {
     update: (id, body) => req(`/apps?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
     remove: (id) => req(`/apps?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
+  // Avstemninger (Flatr-appen «Avstemning»).
+  polls: {
+    list: () => req('/polls'),
+    create: (body) => req('/polls', { method: 'POST', body }),
+    update: (id, body) => req(`/polls?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
+    moderate: (id, questionId, status) => req(`/polls?id=${encodeURIComponent(id)}&question=${encodeURIComponent(questionId)}`, { method: 'PUT', body: { status } }),
+    remove: (id) => req(`/polls?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
   // Egne apper i markedsplassen (appbyggeren).
   appMarket: {
     list: () => req('/app-market'),

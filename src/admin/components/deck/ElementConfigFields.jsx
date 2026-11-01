@@ -26,13 +26,22 @@ function AppFields({ c, set }) {
   useEffect(() => {
     api.apps
       .list()
-      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet'].includes(a.kind))))
+      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet', 'poll'].includes(a.kind))))
       .catch(() => setApps([]));
   }, []);
   const app = (apps || []).find((a) => a.id === c.appId);
   const isCustom = app?.kind === 'custom';
   const isBirthdays = app?.kind === 'birthdays';
-  const isOther = ['menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet'].includes(app?.kind);
+  const isOther = ['menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet', 'poll'].includes(app?.kind);
+  // Avstemning: hvilke avstemninger som finnes.
+  const [polls, setPolls] = useState(null);
+  useEffect(() => {
+    if (app?.kind !== 'poll') return;
+    api.polls
+      .list()
+      .then((d) => setPolls(d.polls || []))
+      .catch(() => setPolls([]));
+  }, [app?.id, app?.kind]);
   // Regneark: kolonnenavnene til valgene under (fra siste henting).
   const [sheetData, setSheetData] = useState(null);
   useEffect(() => {
@@ -241,6 +250,27 @@ function AppFields({ c, set }) {
             </Field>
           )}
           <Field label="Overskrift (valgfritt)">
+            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
+          </Field>
+        </>
+      )}
+      {app?.kind === 'poll' && (
+        <>
+          <Field label="Avstemning" hint={polls && !polls.length ? 'Lag en avstemning under Flatr Apps → Avstemning.' : null}>
+            <Select value={c.pollId ?? ''} onChange={(e) => set({ pollId: Number(e.target.value) || null })}>
+              <option value="">Den nyeste åpne</option>
+              {(polls || []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.question}
+                  {p.status === 'closed' ? ' (lukket)' : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Visning">
+            <Segmented value={c.pollView || 'results'} onChange={(v) => set({ pollView: v })} options={[{ value: 'results', label: 'Med resultater' }, { value: 'qr', label: 'Bare QR-kode' }]} />
+          </Field>
+          <Field label="Overskrift (valgfritt)" hint="Står det tomt, vises spørsmålet.">
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
           </Field>
         </>

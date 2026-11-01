@@ -310,6 +310,28 @@ export const OFFICIAL_APPS = [
     }
   },
   {
+    key: 'poll',
+    name: 'Avstemning',
+    tagline: 'Publikum stemmer eller stiller spørsmål fra mobilen – svarene vises live på skjermen.',
+    description:
+      'Lag en avstemning eller åpne for spørsmål fra salen. Skjermen viser spørsmålet med en QR-kode; folk skanner den og svarer fra mobilen, uten app og uten innlogging. Resultatene oppdateres på skjermen mens folk stemmer.\n\nPasser for allmøter, konferanser, kurs og klubbkvelder. Spørsmål fra salen kan godkjennes før de vises, og de som får flest hjerter, kommer øverst.',
+    category: 'people',
+    icon: 'chart',
+    color: '#7c3aed',
+    element: 'app',
+    views: ['Spørsmål med QR-kode og live søyler', 'Spørsmål fra salen, med flest hjerter øverst', 'Bare QR-koden'],
+    guide: {
+      title: 'Slik kjører du en avstemning',
+      intro: 'Avstemningen lages i Flatr og vises på skjermene som et element på et lysbilde. Publikum trenger bare mobilkameraet.',
+      steps: [
+        { title: 'Lag avstemningen', body: 'Aktiver Avstemning, gå til Oppsett og skriv spørsmålet og svaralternativene – eller velg «Spørsmål fra salen».' },
+        { title: 'Vis den på skjermen', body: 'Åpne en presentasjon, velg Widgeter → Avstemning, og velg avstemningen. Skjermen viser QR-koden og resultatene.' },
+        { title: 'Styr den underveis', body: 'Under Oppsett kan du lukke avstemningen, skjule resultatene til den er ferdig, nullstille den og godkjenne spørsmål før de vises.' }
+      ],
+      troubleshooting: 'Hver mobil kan stemme én gang per avstemning, men kan endre stemmen så lenge den er åpen.'
+    }
+  },
+  {
     key: 'sheet',
     name: 'Regneark',
     tagline: 'Tall og lister fra Google Sheets eller Excel – oppdatert av seg selv.',

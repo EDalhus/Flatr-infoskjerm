@@ -11,6 +11,7 @@ import { cleanStock } from '../lib/stock.js';
 import { cleanFixturesConfig, fixturesData } from './fixtures.js';
 import { cleanEnturConfig, enturData, searchStops } from './entur.js';
 import { cleanSheetsConfig, sheetsData } from './sheets.js';
+import { pollsData } from './polls.js';
 import { portName } from './ports.js';
 
 // Flatr Apps – aktiverte apper for kunden. En rad = én aktivert app fra
@@ -365,7 +366,9 @@ export async function appData(env, appId) {
               ? 30_000
               : row.kind === 'sheet'
                 ? 5 * 60_000
-                : DATA_TTL_MS;
+                : row.kind === 'poll'
+                  ? 2_000
+                  : DATA_TTL_MS;
   if (hit && Date.now() - hit.at < ttl) return hit.data;
   try {
     const data =
@@ -389,7 +392,9 @@ export async function appData(env, appId) {
                       ? { ...(await enturData(safeJson(row.config, {}))), tz: await getTimezone(env) }
                       : row.kind === 'sheet'
                         ? await sheetsData(safeJson(row.config, {}))
-                        : {};
+                        : row.kind === 'poll'
+                          ? await pollsData(env)
+                          : {};
     const out = { app: { id: row.id, name: row.name, kind: row.kind }, ...data };
     dataCache.set(key, { at: Date.now(), data: out });
     if (dataCache.size > 300) dataCache.delete(dataCache.keys().next().value);

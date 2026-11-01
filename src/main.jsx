@@ -12,6 +12,7 @@ const Viewer = lazy(() => import('./viewer/Viewer.jsx'));
 const WidgetView = lazy(() => import('./viewer/WidgetView.jsx'));
 const Admin = lazy(() => import('./admin/Admin.jsx'));
 const Schedule = lazy(() => import('./public/Schedule.jsx'));
+const Vote = lazy(() => import('./public/Vote.jsx'));
 const Landing = lazy(() => import('./platform/Landing.jsx'));
 const AppsPage = lazy(() => import('./platform/AppsPage.jsx'));
 const SuperAdmin = lazy(() => import('./platform/SuperAdmin.jsx'));
@@ -72,13 +73,15 @@ const appRouter = (ctx) =>
     { path: '/personvern', element: <Privacy /> },
     { path: '/vilkar', element: <Terms /> },
     { path: '/s', element: <Schedule /> },
+    // Publikum stemmer fra mobilen (QR-kode på skjermen).
+    { path: '/v/:token', element: <Vote /> },
     { path: '/s/:screenId', element: <Schedule /> },
     { path: '*', element: <NotFound /> }
   ]);
 
 // Skjermvisning og offentlig program trenger ikke plattform-konteksten.
 const isPublicPath = (p) =>
-  p.startsWith('/display/') || p.startsWith('/preview/') || p.startsWith('/widget/') || p === '/s' || p.startsWith('/s/');
+  p.startsWith('/display/') || p.startsWith('/preview/') || p.startsWith('/widget/') || p === '/s' || p.startsWith('/s/') || p.startsWith('/v/');
 const isScreenPath = (p) => p.startsWith('/display/') || p.startsWith('/preview/') || p.startsWith('/widget/');
 
 function App() {

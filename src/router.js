@@ -32,6 +32,7 @@ import * as activity from './api/activity.js';
 import * as versions from './api/versions.js';
 import * as review from './api/review.js';
 import * as comments from './api/comments.js';
+import * as polls from './api/polls.js';
 
 export { pairing };
 
@@ -65,7 +66,10 @@ const ROUTES = {
   '/api/activity': activity,
   '/api/versions': versions,
   '/api/review': review,
-  '/api/comments': comments
+  '/api/comments': comments,
+  '/api/polls': polls,
+  // Åpen: publikum stemmer fra mobilen (/v/<token>).
+  '/api/vote': polls.vote
 };
 
 const METHOD_HANDLER = {
