@@ -313,6 +313,12 @@ const MIGRATIONS = [
   DROP TABLE play_stats;
   ALTER TABLE play_stats_new RENAME TO play_stats;
   CREATE INDEX IF NOT EXISTS play_stats_day ON play_stats (day);
+  `,
+  // 18: Fast felt over alle lysbilder: én rad i deck_slides per presentasjon med
+  //     layer = 'overlay'. Elementene (logo, klokke, nyhetslinje …) ligger over
+  //     lysbildene mens de byttes. Vanlige lysbilder har layer = NULL.
+  `
+  ALTER TABLE deck_slides ADD COLUMN layer TEXT;
   `
 ];
 

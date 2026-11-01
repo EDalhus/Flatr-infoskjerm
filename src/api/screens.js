@@ -52,7 +52,7 @@ function decorate(row) {
 }
 
 // Kanalen viser en spilleliste; antall lysbilder og navnet hentes derfra.
-const EXTRA = `(SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = s.playlist_id) AS slide_count,
+const EXTRA = `(SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = s.playlist_id AND d.layer IS NULL) AS slide_count,
   (SELECT p.name FROM playlists p WHERE p.id = s.playlist_id) AS playlist_name,
   (SELECT p.orientation FROM playlists p WHERE p.id = s.playlist_id) AS playlist_orientation,
   d.device_id AS d_device_id, d.code AS d_code, d.paired_at AS d_paired_at, d.last_seen AS d_last_seen, d.client_info AS d_client_info, d.screenshot_at AS d_screenshot_at`;

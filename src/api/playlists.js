@@ -18,9 +18,10 @@ const normOrientation = (v, f = 'landscape') =>
 
 const SELECT = `
   SELECT p.*,
-         (SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = p.id) AS slide_count,
+         (SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = p.id AND d.layer IS NULL) AS slide_count,
          (SELECT COALESCE(SUM(d.duration_seconds), 0) FROM deck_slides d
-            WHERE d.playlist_id = p.id AND d.enabled = 1) AS total_seconds,
+            WHERE d.playlist_id = p.id AND d.enabled = 1 AND d.layer IS NULL) AS total_seconds,
+         EXISTS (SELECT 1 FROM deck_slides d WHERE d.playlist_id = p.id AND d.layer = 'overlay' AND d.enabled = 1) AS has_overlay,
          (SELECT json_group_array(json_object('id', s.id, 'name', s.name))
             FROM screens s WHERE s.playlist_id = p.id) AS used_by
     FROM playlists p`;
@@ -82,8 +83,8 @@ export async function copySlides(env, fromId, toId) {
       .prepare(
         `INSERT INTO deck_slides
            (playlist_id, position, name, duration_seconds, transition, transition_ms, background, enabled,
-            active_from, active_to, active_days, active_from_date, active_to_date)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
+            active_from, active_to, active_days, active_from_date, active_to_date, layer)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
       )
       .bind(
         toId,
@@ -98,7 +99,8 @@ export async function copySlides(env, fromId, toId) {
         s.active_to,
         s.active_days,
         s.active_from_date,
-        s.active_to_date
+        s.active_to_date,
+        s.layer ?? null
       )
       .first();
     const { results: els } = await env.DB.prepare('SELECT * FROM deck_elements WHERE slide_id = ?').bind(s.id).all();

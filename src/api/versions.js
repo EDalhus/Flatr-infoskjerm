@@ -11,7 +11,7 @@ import { json, badRequest, notFound, handleOptions, requireAdmin, toIntOrNull, s
 const KEEP = 60; // versjoner per presentasjon (publiserte beholdes alltid)
 const QUIET_MS = 90_000; // så lenge redigeringen må ha stått stille
 
-const SLIDE_FIELDS = ['id', 'position', 'name', 'duration_seconds', 'transition', 'transition_ms', 'background', 'enabled', 'active_from', 'active_to', 'active_days', 'active_from_date', 'active_to_date'];
+const SLIDE_FIELDS = ['id', 'position', 'name', 'duration_seconds', 'transition', 'transition_ms', 'background', 'enabled', 'active_from', 'active_to', 'active_days', 'active_from_date', 'active_to_date', 'layer'];
 const EL_FIELDS = ['id', 'z', 'kind', 'x', 'y', 'w', 'h', 'rotation', 'config'];
 const pick = (row, fields) => Object.fromEntries(fields.filter((f) => f in row).map((f) => [f, row[f]]));
 

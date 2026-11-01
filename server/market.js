@@ -67,7 +67,7 @@ const cleanSlide = (s) => ({
 /** Lysbildene i en presentasjon, med elementer. */
 async function playlistSlides(env, playlistId) {
   const { results: slides } = await env.DB
-    .prepare('SELECT * FROM deck_slides WHERE playlist_id = ? AND enabled = 1 ORDER BY position, id')
+    .prepare('SELECT * FROM deck_slides WHERE playlist_id = ? AND enabled = 1 AND layer IS NULL ORDER BY position, id')
     .bind(playlistId)
     .all();
   const out = [];

@@ -11,9 +11,11 @@ import { setServerTime } from '../lib/deckClock.js';
 import { startPlayLog } from './playLog.js';
 import { startOffline, rememberState } from './offline.js';
 import DeckPlayer from './DeckPlayer.jsx';
+import SlideCanvas from './SlideCanvas.jsx';
 import AlertOverlay from './components/AlertOverlay.jsx';
 
-const EMPTY = { screen: null, deck: [], categories: [], schedule: [], sponsors: [], alerts: [] };
+const EMPTY = { screen: null, deck: [], overlay: null, categories: [], schedule: [], sponsors: [], alerts: [] };
+const NO_BACKGROUND = { type: 'none' };
 
 // Ny versjon av Flatr: last inn på nytt ved neste lysbildebytte, eller senest etter 15 min.
 const RELOAD_FALLBACK_MS = 15 * 60_000;
@@ -147,7 +149,15 @@ export default function Viewer() {
             </p>
           </div>
         ) : (
-          <DeckPlayer deck={onlySlide ? state.deck.filter((s) => String(s.id) === onlySlide) : state.deck} ctx={ctx} onAdvance={onAdvance} />
+          <>
+            <DeckPlayer deck={onlySlide ? state.deck.filter((s) => String(s.id) === onlySlide) : state.deck} ctx={ctx} onAdvance={onAdvance} />
+            {state.overlay && (
+              // Fast felt: ligger over lysbildene og står stille mens de byttes.
+              <div className="pointer-events-none absolute inset-0">
+                <SlideCanvas slide={{ ...state.overlay, background: NO_BACKGROUND }} ctx={ctx} />
+              </div>
+            )}
+          </>
         )}
       </div>
 

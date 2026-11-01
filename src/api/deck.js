@@ -14,7 +14,8 @@ export async function onRequestGet({ request, env }) {
   if (!playlist) return badRequest('playlist er påkrevd');
 
   const { results: slides } = await env.DB
-    .prepare('SELECT * FROM deck_slides WHERE playlist_id = ? ORDER BY position ASC, id ASC')
+    // Det faste feltet (layer = 'overlay') kommer sist, etter lysbildene.
+    .prepare('SELECT * FROM deck_slides WHERE playlist_id = ? ORDER BY layer IS NOT NULL, position ASC, id ASC')
     .bind(playlist)
     .all();
 

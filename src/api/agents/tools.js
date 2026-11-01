@@ -305,7 +305,7 @@ export function makeTools(env, playlistId, opts = {}) {
     return e;
   };
   const slideIds = async () =>
-    ((await env.DB.prepare('SELECT id FROM deck_slides WHERE playlist_id = ? ORDER BY position ASC, id ASC').bind(playlistId).all()).results ?? []).map(
+    ((await env.DB.prepare('SELECT id FROM deck_slides WHERE playlist_id = ? AND layer IS NULL ORDER BY position ASC, id ASC').bind(playlistId).all()).results ?? []).map(
       (r) => r.id
     );
   const reorder = async (ids) => {
@@ -323,6 +323,8 @@ export function makeTools(env, playlistId, opts = {}) {
           index: i,
           id: s.id,
           name: s.name,
+          // Fast felt: ligger over alle de andre lysbildene (logo, klokke, nyhetslinje).
+          ...(s.layer === 'overlay' ? { fixed_layer_over_all_slides: true } : {}),
           duration_seconds: s.duration_seconds,
           enabled: !!s.enabled,
           background: s.background,

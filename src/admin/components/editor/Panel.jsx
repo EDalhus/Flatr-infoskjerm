@@ -22,6 +22,37 @@ function Section({ title, children, action }) {
   );
 }
 
+/** Det faste feltet er valgt (uten element): forklaring, av/på og fjern. */
+function OverlayInspector({ slide, onChange, onDelete }) {
+  return (
+    <div className="space-y-4 p-4">
+      <div>
+        <h3 className="m-0 flex items-center gap-1.5 text-sm font-bold text-ink">
+          <Icon name="layers" className="h-4 w-4 text-brand" />
+          Fast felt
+        </h3>
+        <p className="m-0 mt-1.5 text-sm leading-relaxed text-muted">
+          Det du legger her, ligger over alle lysbildene i presentasjonen og står stille mens de byttes. Bruk det til logo, klokke, vær eller en
+          nyhetslinje. Lysbildet under vises bare som hjelp.
+        </p>
+      </div>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={slide.enabled !== 0}
+          onChange={(e) => onChange(slide.id, { enabled: e.target.checked ? 1 : 0 }, true)}
+          className="h-4 w-4 rounded border-line text-brand"
+        />
+        Vis på skjermene
+      </label>
+      <p className="m-0 text-xs text-muted">Legg til elementer med knappene øverst, som på et vanlig lysbilde.</p>
+      <Button variant="danger" size="sm" onClick={() => onDelete(slide.id)}>
+        Fjern det faste feltet
+      </Button>
+    </div>
+  );
+}
+
 function NumField({ label, value, onChange, suffix }) {
   return (
     <label className="flex items-center gap-1.5 rounded-lg border border-line bg-paper px-2 focus-within:border-focus">
@@ -474,6 +505,8 @@ export default function Panel(props) {
             </Section>
             <p className="m-0 px-4 py-3 text-xs text-muted">Shift-klikk for å legge til eller fjerne fra utvalget.</p>
           </>
+        ) : slide?.layer === 'overlay' ? (
+          <OverlayInspector slide={slide} onChange={props.onSlidePatch} onDelete={props.onDeleteSlide} />
         ) : slide ? (
           <div className="p-4">
             <SlideInspector

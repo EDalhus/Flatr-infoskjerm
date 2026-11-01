@@ -168,7 +168,7 @@ export async function healthIssues(env, tz) {
     if (ci.restarts >= 3) issues.push(`Visningen på TV-en${where} har startet seg selv på nytt ${ci.restarts} ganger`);
   }
   const { results: screens } = await env.DB.prepare(
-    `SELECT s.name, s.playlist_id, (SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = s.playlist_id AND d.enabled = 1) AS slides FROM screens s`
+    `SELECT s.name, s.playlist_id, (SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = s.playlist_id AND d.enabled = 1 AND d.layer IS NULL) AS slides FROM screens s`
   ).all();
   for (const s of screens || []) {
     if (!s.playlist_id) issues.push(`Skjermen «${s.name}» har ingen presentasjon`);
@@ -269,7 +269,7 @@ export async function weeklyItems(env, tz) {
       const row = await env.DB.prepare(
         `SELECT COUNT(*) AS total,
                 SUM(EXISTS (SELECT 1 FROM deck_elements e WHERE e.slide_id = d.id AND e.kind IN (${LIVE_KINDS.map(() => '?').join(',')}))) AS fresh
-           FROM deck_slides d WHERE d.playlist_id = ? AND d.enabled = 1`
+           FROM deck_slides d WHERE d.playlist_id = ? AND d.enabled = 1 AND d.layer IS NULL`
       )
         .bind(...LIVE_KINDS, s.playlist_id)
         .first();

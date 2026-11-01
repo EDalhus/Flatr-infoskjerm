@@ -13,6 +13,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { BASE_SIZE, backgroundStyle, ELEMENT_LABEL } from '../../../lib/deck.js';
 import ElementView from '../../../viewer/ElementView.jsx';
 import DynamicBackground from '../../../viewer/DynamicBackground.jsx';
+import SlideCanvas from '../../../viewer/SlideCanvas.jsx';
 import { bestSnap, snapCandidates, resizeBox, bbox, intersects, clamp, round } from './geometry.js';
 
 const PAD = 40;
@@ -77,6 +78,8 @@ function TextEditor({ el, onChange, onDone }) {
 
 export default function Stage({
   slide,
+  overlay,
+  underlay,
   orientation,
   zoom,
   ctx,
@@ -309,8 +312,21 @@ export default function Stage({
         {/* ------------------------------ innhold ------------------------------ */}
         <div
           className="pointer-events-none absolute origin-top-left overflow-hidden text-white shadow-pop"
-          style={{ left, top, width: base.w, height: base.h, transform: `scale(${s})`, ...backgroundStyle(slide?.background) }}
+          style={{
+            left,
+            top,
+            width: base.w,
+            height: base.h,
+            transform: `scale(${s})`,
+            ...(underlay ? { backgroundColor: '#111418' } : backgroundStyle(slide?.background))
+          }}
         >
+          {/* Redigeres det faste feltet: første lysbilde svakt under, som hjelp. */}
+          {underlay && (
+            <div className="absolute inset-0 opacity-40">
+              <SlideCanvas slide={underlay} ctx={ctx} />
+            </div>
+          )}
           {slide?.background?.type === 'dynamic' && <DynamicBackground bg={slide.background} />}
           {elements.map((el) => (
             <div
@@ -343,6 +359,8 @@ export default function Stage({
               )}
             </div>
           ))}
+          {/* Det faste feltet ligger over lysbildet, slik det blir på skjermene. */}
+          {overlay && <SlideCanvas slide={{ ...overlay, background: { type: 'none' } }} ctx={ctx} />}
         </div>
 
         {/* ----------------------------- treffsoner ----------------------------- */}

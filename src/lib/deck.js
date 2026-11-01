@@ -161,6 +161,8 @@ export function defaultDynamic(preset = 'aurora') {
 
 export function backgroundStyle(bg) {
   const b = bg && typeof bg === 'object' ? bg : { type: 'color', color: '#0f2733' };
+  // Gjennomsiktig: det faste feltet ligger over lysbildene.
+  if (b.type === 'none') return {};
   if (b.type === 'dynamic') {
     return { backgroundColor: b.base || '#0a1a2f' };
   }

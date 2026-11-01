@@ -155,7 +155,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
         setCategories(cats || []);
         setSelSlide((prev) => {
           const want = keepSlide ?? prev;
-          return want && (deck || []).some((s) => s.id === want) ? want : (deck?.[0]?.id ?? null);
+          return want && (deck || []).some((s) => s.id === want) ? want : ((deck || []).find((s) => s.layer !== 'overlay')?.id ?? null);
         });
       } catch (e) {
         setErr(e.message);
@@ -170,6 +170,9 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   useEffect(() => setSelection([]), [selSlide]);
 
   const slide = slides.find((s) => s.id === selSlide) || null;
+  // Det faste feltet (layer = 'overlay') ligger over alle lysbildene og står for seg i lista.
+  const overlaySlide = slides.find((s) => s.layer === 'overlay') || null;
+  const regular = slides.filter((s) => s.layer !== 'overlay');
   const orientation = playlist?.orientation === 'portrait' ? 'portrait' : 'landscape';
   const selected = (slide?.elements || []).filter((e) => selection.includes(e.id));
   const findEl = (id) => {
@@ -546,6 +549,15 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
       setErr(e.message);
     }
   };
+  const addOverlay = async () => {
+    try {
+      const s = await api.deck.slide.create({ playlist_id: Number(playlistId), layer: 'overlay' });
+      await afterStructural(s.id);
+      say('Fast felt: det du legger her, vises over alle lysbildene');
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
   const dupSlide = async (sid) => {
     try {
       const s = await api.deck.slide.duplicate(sid);
@@ -555,8 +567,9 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
     }
   };
   const deleteSlide = async (sid) => {
-    if (slides.length <= 1) return setErr('En presentasjon må ha minst ett lysbilde.');
-    if (!confirm('Slette lysbildet? Det havner i «Nylig slettet».')) return;
+    const fixed = slides.find((s) => s.id === sid)?.layer === 'overlay';
+    if (!fixed && regular.length <= 1) return setErr('En presentasjon må ha minst ett lysbilde.');
+    if (!confirm(fixed ? 'Fjerne det faste feltet? Det havner i «Nylig slettet».' : 'Slette lysbildet? Det havner i «Nylig slettet».')) return;
     try {
       await api.deck.slide.remove(sid);
       await afterStructural();
@@ -566,10 +579,10 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   };
   const moveSlide = async (from, to) => {
     if (from === to) return;
-    const ordered = [...slides];
+    const ordered = [...regular];
     const [x] = ordered.splice(from, 1);
     ordered.splice(to, 0, x);
-    updateSlides(ordered.map((s, i) => ({ ...s, position: i })));
+    updateSlides([...ordered.map((s, i) => ({ ...s, position: i })), ...(overlaySlide ? [overlaySlide] : [])]);
     try {
       await Promise.all(ordered.map((s, i) => (s.position === i ? null : api.deck.slide.update(s.id, { position: i }))).filter(Boolean));
       sendOp({ k: 'deck.reload' });
@@ -907,7 +920,9 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
       {/* ------------------------------ arbeidsflate ------------------------------ */}
       <div className="flex min-h-0 flex-1">
         <SlideRail
-          slides={slides}
+          slides={regular}
+          overlay={overlaySlide}
+          onAddOverlay={readOnly ? undefined : addOverlay}
           orientation={orientation}
           selectedId={selSlide}
           peers={peers}
@@ -921,7 +936,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onAi={
             aiEnabled
               ? (s, kind) => {
-                  const ref = `lysbilde ${slides.findIndex((x) => x.id === s.id) + 1}${s.name ? ` «${s.name}»` : ''} (id ${s.id})`;
+                  const ref = `lysbilde ${regular.findIndex((x) => x.id === s.id) + 1}${s.name ? ` «${s.name}»` : ''} (id ${s.id})`;
                   const text = {
                     better: `Forbedre designet på ${ref}. Behold innholdet og budskapet, men gjør komposisjonen, hierarkiet og typografien bedre. Se på det før og etter.`,
                     variants: `Lag 3 varianter av ${ref} som nye lysbilder rett etter det, med ulik komposisjon og stil men samme innhold. Gi dem navn som «Variant A/B/C». Ikke endre originalen.`,
@@ -951,6 +966,8 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           {slide ? (
             <Stage
               slide={slide}
+              overlay={slide.layer !== 'overlay' && overlaySlide?.enabled !== 0 ? overlaySlide : null}
+              underlay={slide.layer === 'overlay' ? (regular[0] ?? null) : null}
               orientation={orientation}
               zoom={zoom}
               ctx={ctx}
@@ -1004,7 +1021,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onDeleteSlide={deleteSlide}
           onSaveTemplate={saveTemplate}
           tab={panelTab}
-          slides={slides}
+          slides={regular}
           onSelectSlide={setSelSlide}
           onCommentCount={setCommentCounts}
           openComments={Object.values(commentCounts).reduce((a, b) => a + b, 0)}

@@ -365,19 +365,24 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
       (elsBySlide[e.slide_id] ||= []).push({ ...e, config });
     }
   }
-  const deck = rawSlides.map(({ elements: _e, ...s }) => ({
+  const allSlides = rawSlides.map(({ elements: _e, ...s }) => ({
     ...s,
     // Publiserte versjoner lagrer ikke presentasjonen per lysbilde (visningsloggen trenger den).
     playlist_id: s.playlist_id ?? playlistId ?? null,
     background: safeJson(s.background, { type: 'color', color: '#0f2733' }),
     elements: elsBySlide[s.id] ?? []
   }));
-  await withCarouselImages(env, deck);
-  await withBirthdays(env, deck);
+  await withCarouselImages(env, allSlides);
+  await withBirthdays(env, allSlides);
+  const adapted = env.DEVICE_MODE ? await adaptForDevices(env, allSlides) : allSlides;
+  // Fast felt (layer = 'overlay'): ligger over alle lysbildene mens de byttes,
+  // og er ikke et lysbilde i rekken.
+  const fixed = adapted.find((s) => s.layer === 'overlay' && s.elements.length);
 
   const state = {
     screen: screen || null,
-    deck: env.DEVICE_MODE ? await adaptForDevices(env, deck) : deck,
+    deck: adapted.filter((s) => s.layer !== 'overlay'),
+    overlay: fixed ? { id: fixed.id, playlist_id: fixed.playlist_id, elements: fixed.elements } : null,
     categories: categories.results ?? [],
     schedule: scheduleRows,
     sponsors: sponsors.results ?? [],
@@ -399,7 +404,7 @@ const CDN_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', '
  */
 async function cdnMediaUrls(env, state) {
   const re = /\/api\/media\?id=(\d+)&raw=1/g;
-  const text = JSON.stringify({ deck: state.deck, sponsors: state.sponsors });
+  const text = JSON.stringify({ deck: state.deck, overlay: state.overlay, sponsors: state.sponsors });
   const ids = [...new Set([...text.matchAll(re)].map((m) => Number(m[1])))];
   if (!ids.length) return;
   const { results } = await env.DB.prepare(`SELECT id, content_type FROM media WHERE id IN (${ids.map(() => '?').join(',')})`)
@@ -408,6 +413,7 @@ async function cdnMediaUrls(env, state) {
   const ext = Object.fromEntries((results ?? []).map((r) => [r.id, CDN_EXT[String(r.content_type || '').toLowerCase()] || 'bin']));
   const next = JSON.parse(text.replace(re, (m, id) => (ext[id] ? `/m/${id}.${ext[id]}` : m)));
   state.deck = next.deck;
+  state.overlay = next.overlay;
   state.sponsors = next.sponsors;
 }
 
@@ -621,6 +627,7 @@ export function signature(state) {
   const basis = JSON.stringify({
     screen,
     deck: state.deck,
+    overlay: state.overlay,
     categories: state.categories,
     schedule: state.schedule,
     sponsors: state.sponsors,

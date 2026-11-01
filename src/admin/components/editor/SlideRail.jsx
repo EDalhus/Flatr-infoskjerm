@@ -26,7 +26,10 @@ function period(s) {
   return null;
 }
 
-export default function SlideRail({ slides, orientation, selectedId, peers, onSelect, onAdd, onDuplicate, onDelete, onMove, onCopyTo, onAi, playlistId, commentCounts = {} }) {
+// Miniatyren av det faste feltet tegnes på grå bakgrunn (selve feltet er gjennomsiktig).
+const OVERLAY_THUMB_BG = { type: 'color', color: '#3b4250' };
+
+export default function SlideRail({ slides, overlay, orientation, selectedId, peers, onSelect, onAdd, onAddOverlay, onDuplicate, onDelete, onMove, onCopyTo, onAi, playlistId, commentCounts = {} }) {
   const { rowProps } = useListDnd((from, to) => onMove(from, to));
   // «Kopier til …»: de andre presentasjonene, hentet når menyen åpnes.
   const [copyFor, setCopyFor] = useState(null);
@@ -53,6 +56,41 @@ export default function SlideRail({ slides, orientation, selectedId, peers, onSe
         >
           <Icon name="plus" className="h-4 w-4" />
         </button>
+      </div>
+      {/* Fast felt: ligger over alle lysbildene (logo, klokke, nyhetslinje). */}
+      <div className="px-3 pb-2">
+        {overlay ? (
+          <button
+            type="button"
+            onClick={() => onSelect(overlay.id)}
+            aria-current={overlay.id === selectedId ? 'true' : undefined}
+            className={`block w-full rounded-xl border-2 p-1.5 text-left transition-colors ${
+              overlay.id === selectedId ? 'border-brand bg-brand-tint' : 'border-transparent hover:bg-zone'
+            } ${overlay.enabled === 0 ? 'opacity-50' : ''}`}
+          >
+            <SlideThumb slide={{ ...overlay, background: OVERLAY_THUMB_BG }} orientation={orientation} />
+            <div className="flex items-center gap-1.5 px-0.5 pt-1.5 text-xs">
+              <Icon name="layers" className="h-3.5 w-3.5 shrink-0 text-brand" />
+              <span className="min-w-0 flex-1 truncate font-semibold text-ink">Fast felt</span>
+              <span className="shrink-0 text-muted">{overlay.enabled === 0 ? 'Av' : 'Over alle'}</span>
+            </div>
+          </button>
+        ) : (
+          onAddOverlay && (
+            <button
+              type="button"
+              onClick={onAddOverlay}
+              title="Logo, klokke eller nyhetslinje som ligger over alle lysbildene"
+              className="flex w-full items-center gap-2 rounded-xl border border-dashed border-line px-2.5 py-2 text-left text-xs text-muted hover:bg-zone hover:text-ink"
+            >
+              <Icon name="layers" className="h-4 w-4 shrink-0 text-brand" />
+              <span>
+                <span className="block font-semibold text-ink">Fast felt</span>
+                Over alle lysbildene
+              </span>
+            </button>
+          )
+        )}
       </div>
       <ol className="m-0 min-h-0 flex-1 list-none space-y-2 overflow-y-auto px-3 pb-3">
         {slides.map((s, i) => {

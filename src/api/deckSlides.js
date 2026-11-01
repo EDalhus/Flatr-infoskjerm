@@ -71,6 +71,7 @@ export async function onRequestGet({ request, env }) {
 //   { playlist_id, position? }         -> nytt tomt lysbilde
 //   { duplicate_of }                   -> klon lysbilde + elementer
 //   { playlist_id, template_id }       -> fra mal
+//   { playlist_id, layer: 'overlay' }  -> fast felt over alle lysbildene (ett per presentasjon)
 export async function onRequestPost(context) {
   const denied = await requireAdmin(context);
   if (denied) return denied;
@@ -81,6 +82,7 @@ export async function onRequestPost(context) {
   if (cloneId) {
     const src = await env.DB.prepare('SELECT * FROM deck_slides WHERE id = ?').bind(cloneId).first();
     if (!src) return notFound('Lysbilde finnes ikke');
+    if (src.layer) return badRequest('Det faste feltet kan ikke kopieres som et lysbilde');
     // { duplicate_of, playlist_id }: kopi til en annen presentasjon (sist i den).
     const target = toIntOrNull(b?.playlist_id) ?? src.playlist_id;
     const elsewhere = target !== src.playlist_id;
@@ -124,6 +126,21 @@ export async function onRequestPost(context) {
   if (!playlistId) return badRequest('playlist_id er påkrevd');
   const playlist = await env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(playlistId).first();
   if (!playlist) return notFound('Spillelisten finnes ikke');
+
+  if (b?.layer === 'overlay') {
+    const existing = await env.DB.prepare(`SELECT * FROM deck_slides WHERE playlist_id = ? AND layer = 'overlay'`).bind(playlistId).first();
+    const row =
+      existing ??
+      (await env.DB
+        .prepare(
+          `INSERT INTO deck_slides (playlist_id, position, name, duration_seconds, background, enabled, layer)
+           VALUES (?, -1, 'Fast felt', 15, '{"type":"none"}', 1, 'overlay') RETURNING *`
+        )
+        .bind(playlistId)
+        .first());
+    if (!existing && Array.isArray(b.elements) && b.elements.length) await insertElements(env, row.id, b.elements);
+    return json({ ...row, background: safeJson(row.background, {}), elements: [] }, { status: existing ? 200 : 201 });
+  }
 
   const maxRow = await env.DB
     .prepare('SELECT COALESCE(MAX(position), -1) AS m FROM deck_slides WHERE playlist_id = ?')
