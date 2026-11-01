@@ -31,8 +31,11 @@ export async function assertPublicUrl(raw) {
   return url;
 }
 
-/** Tekst fra en offentlig adresse. Omdirigeringer følges (maks tre), og hver ny adresse sjekkes. */
-export async function fetchText(raw, { accept = '*/*', timeout = 10_000 } = {}) {
+/**
+ * Innhold fra en offentlig adresse: { bytes, type }. Omdirigeringer følges
+ * (maks tre), og hver ny adresse sjekkes.
+ */
+export async function fetchBytes(raw, { accept = '*/*', timeout = 10_000, maxBytes = MAX_BYTES } = {}) {
   let url = await assertPublicUrl(raw);
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const res = await fetch(url, {
@@ -47,10 +50,16 @@ export async function fetchText(raw, { accept = '*/*', timeout = 10_000 } = {}) 
     }
     if (!res.ok) throw new Error(`Kilden svarte ${res.status}`);
     const len = Number(res.headers.get('content-length'));
-    if (len > MAX_BYTES) throw new Error('Kilden er for stor');
-    const text = await res.text();
-    if (text.length > MAX_BYTES) throw new Error('Kilden er for stor');
-    return text;
+    if (len > maxBytes) throw new Error('Kilden er for stor');
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length > maxBytes) throw new Error('Kilden er for stor');
+    return { bytes, type: res.headers.get('content-type') || '' };
   }
   throw new Error('For mange omdirigeringer');
+}
+
+/** Tekst fra en offentlig adresse (se fetchBytes). */
+export async function fetchText(raw, opts = {}) {
+  const { bytes } = await fetchBytes(raw, opts);
+  return new TextDecoder().decode(bytes);
 }

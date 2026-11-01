@@ -9,6 +9,7 @@ import TidesView from './TidesView.jsx';
 import FootballView from './FootballView.jsx';
 import FixturesView from './FixturesView.jsx';
 import DeparturesView from './DeparturesView.jsx';
+import SheetView from './SheetView.jsx';
 import StockView from './StockView.jsx';
 import { statusLabel, etaTo, etaText, reportedEta, reportedEtaText, ago, hasPosition, isMoving, vesselColor } from '../../lib/ais.js';
 import { currentCalls, cargoLine, callTimeText, callDate, hasClock } from '../../lib/portCalls.js';
@@ -279,7 +280,7 @@ export default function AppSlide({ slide, chromeless }) {
   }
 
   // Dagens meny, tidevann og fotball: ferdige visninger med kort/ramme som standard.
-  if (['menu', 'tides', 'football', 'fixtures', 'stock', 'entur'].includes(data.app?.kind)) {
+  if (['menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet'].includes(data.app?.kind)) {
     const card = c.frame === false ? 'flex h-full w-full flex-col overflow-hidden' : 'flex h-full w-full flex-col overflow-hidden rounded-xl bg-black/30 p-[4%]';
     return (
       <div className={card} style={style}>
@@ -288,6 +289,20 @@ export default function AppSlide({ slide, chromeless }) {
         {data.app.kind === 'stock' && <StockView data={data} title={c.title} groups={c.groups} showUpdated={c.showUpdated !== false} showDetails={c.showDetails !== false} />}
         {data.app.kind === 'fixtures' && (
           <FixturesView data={data} view={c.fixturesView || 'list'} teams={c.teams} homeOnly={!!c.homeOnly} max={c.max} title={c.title} now={now} />
+        )}
+        {data.app.kind === 'sheet' && (
+          <SheetView
+            data={data}
+            sheetId={c.sheetId}
+            view={c.sheetView || 'table'}
+            header={c.header !== false}
+            columns={c.columns}
+            max={c.max}
+            cell={c.cell}
+            label={c.label}
+            column={c.column ?? 0}
+            title={c.title}
+          />
         )}
         {data.app.kind === 'entur' && (
           <DeparturesView data={data} stopId={c.stopId} modes={c.modes} walkMinutes={c.walkMinutes} max={c.max} showPlatform={c.showPlatform !== false} title={c.title} now={now} />

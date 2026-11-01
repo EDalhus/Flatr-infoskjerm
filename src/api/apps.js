@@ -10,6 +10,7 @@ import { cleanMenu, weekdayIn } from '../lib/menu.js';
 import { cleanStock } from '../lib/stock.js';
 import { cleanFixturesConfig, fixturesData } from './fixtures.js';
 import { cleanEnturConfig, enturData, searchStops } from './entur.js';
+import { cleanSheetsConfig, sheetsData } from './sheets.js';
 import { portName } from './ports.js';
 
 // Flatr Apps – aktiverte apper for kunden. En rad = én aktivert app fra
@@ -362,7 +363,9 @@ export async function appData(env, appId) {
             ? 30 * 60_000
             : row.kind === 'entur'
               ? 30_000
-              : DATA_TTL_MS;
+              : row.kind === 'sheet'
+                ? 5 * 60_000
+                : DATA_TTL_MS;
   if (hit && Date.now() - hit.at < ttl) return hit.data;
   try {
     const data =
@@ -384,7 +387,9 @@ export async function appData(env, appId) {
                     ? await fixturesData(safeJson(row.config, {}), await getTimezone(env))
                     : row.kind === 'entur'
                       ? { ...(await enturData(safeJson(row.config, {}))), tz: await getTimezone(env) }
-                      : {};
+                      : row.kind === 'sheet'
+                        ? await sheetsData(safeJson(row.config, {}))
+                        : {};
     const out = { app: { id: row.id, name: row.name, kind: row.kind }, ...data };
     dataCache.set(key, { at: Date.now(), data: out });
     if (dataCache.size > 300) dataCache.delete(dataCache.keys().next().value);
@@ -516,6 +521,7 @@ export async function onRequestPost(context) {
     if (kind === 'football') config = cleanFootballConfig({});
     if (kind === 'fixtures') config = { teams: [] };
     if (kind === 'entur') config = { stops: [] };
+    if (kind === 'sheet') config = { sheets: [] };
   }
 
   const exists = await env.DB.prepare('SELECT id FROM apps WHERE kind = ? AND COALESCE(app_ref, 0) = ?').bind(kind, ref ?? 0).first();
@@ -587,6 +593,8 @@ export async function onRequestPut(context) {
       if (b.config !== undefined) config = await cleanFixturesConfig({ ...prevConfig, ...b.config }, prevConfig);
     } else if (row.kind === 'entur') {
       if (b.config !== undefined) config = cleanEnturConfig({ ...prevConfig, ...b.config });
+    } else if (row.kind === 'sheet') {
+      if (b.config !== undefined) config = await cleanSheetsConfig({ ...prevConfig, ...b.config }, prevConfig);
     } else if (row.kind === 'football') {
       if (b.config !== undefined) config = cleanFootballConfig({ ...prevConfig, ...b.config });
       if (typeof b.api_key === 'string' && b.api_key.trim()) {

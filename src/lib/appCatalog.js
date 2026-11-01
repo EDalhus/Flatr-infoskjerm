@@ -310,6 +310,35 @@ export const OFFICIAL_APPS = [
     }
   },
   {
+    key: 'sheet',
+    name: 'Regneark',
+    tagline: 'Tall og lister fra Google Sheets eller Excel – oppdatert av seg selv.',
+    description:
+      'Lim inn lenken til et regneark, så kan skjermen vise det som en tabell, som ett stort nøkkeltall eller som en liste. Flatr henter det på nytt hvert femte minutt, så vaktlister, priser, salgstall og lagerbeholdning holder seg oppdatert uten at noen må taste dem inn i Flatr.\n\nVirker med Google Sheets, Excel-filer på OneDrive og CSV-lenker.',
+    category: 'data',
+    icon: 'table',
+    color: '#15803d',
+    element: 'app',
+    views: ['Tabell med valgte kolonner', 'Ett stort nøkkeltall fra en celle', 'Liste fra en kolonne'],
+    guide: {
+      title: 'Slik kobler du til et regneark',
+      intro: 'Flatr leser regnearket fra en lenke. Lenken må gi tilgang uten innlogging – alle som har den, kan se innholdet.',
+      steps: [
+        {
+          title: 'Google Sheets',
+          body: 'Trykk «Del», velg «Alle med linken» under Generell tilgang, og kopier linken. Vil du vise en bestemt fane, åpner du den fanen før du kopierer.'
+        },
+        {
+          title: 'Excel på OneDrive',
+          body: 'Åpne arbeidsboka i Excel på nett, velg Fil → Del → Bygg inn, og kopier adressen i koden (den som begynner med https://onedrive.live.com/embed). Flatr viser det første arket.'
+        },
+        { title: 'Lim den inn i Flatr', body: 'Aktiver Regneark, gå til Oppsett og lim inn lenken. Gi regnearket et navn, så det er lett å finne igjen.' },
+        { title: 'Vis det på skjermene', body: 'Åpne en presentasjon og velg Widgeter → Regneark. Velg tabell, nøkkeltall eller liste.' }
+      ],
+      troubleshooting: 'Står det at lenken går til en nettside? Da er regnearket ikke delt med «alle med linken», eller lenken er feil type. Endringer i regnearket kommer på skjermene innen fem minutter.'
+    }
+  },
+  {
     key: 'unsplash',
     name: 'Unsplash bildebank',
     tagline: 'Søk blant millioner av gratis bilder rett fra editoren – og la Claude AI finne bilder til presentasjonene.',

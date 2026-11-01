@@ -9,6 +9,7 @@ import { api } from '../../../lib/api.js';
 import { MODES as ENTUR_MODES } from '../../../lib/entur.js';
 import { CropModal, FocusPicker, saveCropped } from './ImageTools.jsx';
 import { activeRich } from '../../../lib/richText.js';
+import { columnNames } from '../../../viewer/slides/SheetView.jsx';
 
 const RSS_PRESETS = [
   { label: 'NRK – Toppsaker', url: 'https://www.nrk.no/toppsaker.rss' },
@@ -25,13 +26,19 @@ function AppFields({ c, set }) {
   useEffect(() => {
     api.apps
       .list()
-      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'fixtures', 'stock', 'entur'].includes(a.kind))))
+      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet'].includes(a.kind))))
       .catch(() => setApps([]));
   }, []);
   const app = (apps || []).find((a) => a.id === c.appId);
   const isCustom = app?.kind === 'custom';
   const isBirthdays = app?.kind === 'birthdays';
-  const isOther = ['menu', 'tides', 'football', 'fixtures', 'stock', 'entur'].includes(app?.kind);
+  const isOther = ['menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet'].includes(app?.kind);
+  // Regneark: kolonnenavnene til valgene under (fra siste henting).
+  const [sheetData, setSheetData] = useState(null);
+  useEffect(() => {
+    if (app?.kind !== 'sheet') return;
+    api.apps.live(app.id).then(setSheetData).catch(() => setSheetData(null));
+  }, [app?.id, app?.kind]);
   const fleet = app?.config?.fleet || [];
   const quays = app?.config?.quays || [];
   const picked = new Set((c.mmsi || []).map(String));
@@ -238,6 +245,78 @@ function AppFields({ c, set }) {
           </Field>
         </>
       )}
+      {app?.kind === 'sheet' && (() => {
+        const sheets = app.config?.sheets || [];
+        const sheet = sheets.find((s) => s.id === c.sheetId) || sheets[0];
+        const rows = sheetData?.sheets?.[sheet?.id]?.rows || [];
+        const names = columnNames(rows, c.header !== false);
+        const view = c.sheetView || 'table';
+        return (
+          <>
+            <Field label="Regneark" hint={sheets.length ? null : 'Legg til regneark under Flatr Apps → Regneark.'}>
+              <Select value={sheet?.id || ''} onChange={(e) => set({ sheetId: e.target.value, columns: [] })}>
+                {sheets.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Visning">
+              <Segmented value={view} onChange={(v) => set({ sheetView: v })} options={[{ value: 'table', label: 'Tabell' }, { value: 'value', label: 'Nøkkeltall' }, { value: 'list', label: 'Liste' }]} />
+            </Field>
+            {view !== 'value' && <Check label="Første rad er overskrifter" checked={c.header !== false} onChange={(v) => set({ header: v })} />}
+            {view === 'table' && names.length > 0 && (
+              <Field label="Kolonner" hint="Ingen valgt = de åtte første.">
+                <div className="flex flex-wrap gap-1.5">
+                  {names.map((n, i) => {
+                    const on = (c.columns || []).includes(i);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => set({ columns: on ? (c.columns || []).filter((x) => x !== i) : [...(c.columns || []), i].sort((a, b) => a - b) })}
+                        className={`h-8 max-w-[12rem] truncate rounded-full px-3 text-xs font-semibold transition-colors ${on ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'}`}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+            )}
+            {view === 'list' && names.length > 0 && (
+              <Field label="Kolonne">
+                <Select value={c.column ?? 0} onChange={(e) => set({ column: Number(e.target.value) })}>
+                  {names.map((n, i) => (
+                    <option key={i} value={i}>
+                      {n}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+            {view === 'value' ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Celle" hint="F.eks. B2">
+                  <Input value={c.cell ?? 'B2'} onChange={(e) => set({ cell: e.target.value.toUpperCase().slice(0, 6) })} />
+                </Field>
+                <Field label="Tekst over tallet">
+                  <Input value={c.label ?? ''} onChange={(e) => set({ label: e.target.value })} />
+                </Field>
+              </div>
+            ) : (
+              <Field label="Antall rader">
+                <Input type="number" min={1} max={30} value={c.max ?? 10} onChange={(e) => set({ max: Number(e.target.value) || undefined })} />
+              </Field>
+            )}
+            <Field label="Overskrift (valgfritt)">
+              <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
+            </Field>
+          </>
+        );
+      })()}
       {app?.kind === 'entur' && (
         <>
           <Field label="Holdeplass" hint={(app.config?.stops || []).length ? null : 'Legg til holdeplasser under Flatr Apps → Avganger.'}>

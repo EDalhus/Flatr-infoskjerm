@@ -17,6 +17,7 @@ import TidesSettings from './apps/TidesSettings.jsx';
 import FootballSettings from './apps/FootballSettings.jsx';
 import FixturesSettings from './apps/FixturesSettings.jsx';
 import EnturSettings from './apps/EnturSettings.jsx';
+import SheetSettings from './apps/SheetSettings.jsx';
 import AppBuilder from './apps/AppBuilder.jsx';
 import IconEditor from './apps/IconEditor.jsx';
 import { Icon, Input, Button, Card, PageHeader, ErrorText, Segmented } from './ui.jsx';
@@ -217,7 +218,7 @@ export default function AppsManager() {
   /* ------------------------------ detaljside ------------------------------- */
   if (current) {
     const ins = installOf(current);
-    const hasSettings = ['ais', 'custom', 'birthdays', 'claude', 'cursor', 'unsplash', 'menu', 'tides', 'football', 'fixtures', 'stock', 'entur'].includes(current.kind);
+    const hasSettings = ['ais', 'custom', 'birthdays', 'claude', 'cursor', 'unsplash', 'menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet'].includes(current.kind);
     // NAIS har tillegget «Anløp» som egen fane.
     const extraTabs = current.kind === 'ais' && ins ? [['calls', 'Anløp']] : [];
     const view = !ins || !hasSettings ? 'about' : detailTab === 'about' ? 'about' : extraTabs.some(([id]) => id === detailTab) ? detailTab : 'setup';
@@ -334,6 +335,7 @@ export default function AppsManager() {
           {view === 'setup' && current.kind === 'football' && <FootballSettings app={ins} onSaved={onSaved} />}
           {view === 'setup' && current.kind === 'fixtures' && <FixturesSettings app={ins} onSaved={onSaved} />}
           {view === 'setup' && current.kind === 'entur' && <EnturSettings app={ins} onSaved={onSaved} />}
+          {view === 'setup' && current.kind === 'sheet' && <SheetSettings app={ins} onSaved={onSaved} />}
           {view === 'setup' && current.kind === 'custom' && <CustomSettings app={ins} onSaved={onSaved} />}
           {view === 'setup' && current.kind === 'birthdays' && <BirthdaySettings app={ins} onSaved={onSaved} />}
           {view === 'setup' && current.kind === 'claude' && <ClaudeSettings app={ins} onSaved={onSaved} />}

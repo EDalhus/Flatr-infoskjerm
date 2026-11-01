@@ -212,6 +212,7 @@ function describe(el, apps) {
     if (app?.kind === 'tides') return { title: { tide: 'Tidevann', sea: 'Sjø' }[c.tideView] || 'Tidevann og sjø', sub: from, icon: 'sun' };
     if (app?.kind === 'fixtures') return { title: c.fixturesView === 'next' ? (c.homeOnly ? 'Neste hjemmekamp' : 'Neste kamp') : 'Kampprogram', sub: from, icon: 'calendar' };
     if (app?.kind === 'entur') return { title: 'Avganger', sub: from, icon: 'bus' };
+    if (app?.kind === 'sheet') return { title: { value: 'Nøkkeltall', list: 'Liste' }[c.sheetView] || 'Tabell', sub: from, icon: 'table' };
     if (app?.kind === 'football') return { title: { last: 'Resultater', table: 'Tabell' }[c.footballView] || 'Neste kamper', sub: from, icon: 'chart' };
     const [title, icon] = APP_VIEW[c.view || 'map'] || ['Widget', 'sparkle'];
     return { title: app ? title : 'Flatr App', sub: from, icon: app ? icon : 'sparkle' };

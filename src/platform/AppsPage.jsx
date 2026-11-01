@@ -10,7 +10,7 @@ import { SiteHeader, SiteFooter, SectionHead, AppTile, usePublicApps } from './L
 // De offisielle appene gruppert etter hva kunden vil oppnå. Nye apper som ikke
 // står her, havner under «Mer» av seg selv.
 const THEMES = [
-  { id: 'drift', title: 'Drift og logistikk', text: 'Flåten, kaiene og lageret – oppdatert av seg selv.', keys: ['ais', 'stock'] },
+  { id: 'drift', title: 'Drift og logistikk', text: 'Flåten, kaiene og lageret – oppdatert av seg selv.', keys: ['ais', 'stock', 'sheet'] },
   { id: 'vaer', title: 'Vær og sjø', text: 'Fra Yr, Kartverket og MET – ingen nøkler, ingen oppsett.', keys: ['weather', 'tides'] },
   { id: 'arbeidsplass', title: 'Arbeidsplassen', text: 'Det som gjør skjermen i lunsjrommet verdt å se på.', keys: ['birthdays', 'menu', 'calendar', 'entur'] },
   { id: 'nyheter', title: 'Nyheter og sport', text: 'Nyhetene og lagene dere følger med på.', keys: ['rss', 'fixtures', 'football'] },
