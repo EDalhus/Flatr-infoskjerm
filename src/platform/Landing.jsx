@@ -135,7 +135,7 @@ export function SiteFooter() {
           <LogoMarkSquare className="h-6 w-6" />
           <span>© {new Date().getFullYear()} Flatr</span>
         </div>
-        <div className="flex gap-5">
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
           <Link to="/apps" className="hover:text-ink">
             Apps
           </Link>
@@ -145,6 +145,10 @@ export function SiteFooter() {
           <Link to="/personvern" className="hover:text-ink">
             Personvern
           </Link>
+          {/* Kjører hos Cloudflare, adskilt fra serveren (se status/). */}
+          <a href="https://status.flatr.no" className="hover:text-ink">
+            Driftsstatus
+          </a>
           <Link to="/login" className="hover:text-ink">
             Logg inn
           </Link>
