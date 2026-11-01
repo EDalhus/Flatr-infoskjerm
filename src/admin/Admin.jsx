@@ -22,6 +22,7 @@ import AppsManager from './components/AppsManager.jsx';
 import AccountManager, { TwoFactorCard } from './components/AccountManager.jsx';
 import ApiManager from './components/ApiManager.jsx';
 import DataManager from './components/DataManager.jsx';
+import BillingManager from './components/BillingManager.jsx';
 import Login from './Login.jsx';
 import { useTheme } from './components/ThemePicker.jsx';
 import OnlineBar from './components/OnlineBar.jsx';
@@ -43,6 +44,7 @@ const NAV = [
   { id: 'apps', label: 'Flatr Apps', icon: 'sparkle', group: 'apps', Component: AppsManager },
   { id: 'reports', label: 'Rapporter', icon: 'chart', group: 'content', Component: ReportsManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
+  { id: 'billing', label: 'Abonnement', icon: 'card', group: 'account', Component: BillingManager, tenantOnly: true },
   { id: 'brand', label: 'Merkevare', icon: 'tag', group: 'account', Component: BrandManager, tenantOnly: true },
   { id: 'account', label: 'Konto og sikkerhet', icon: 'lock', group: 'account', Component: AccountManager, tenantOnly: true },
   { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },

@@ -44,7 +44,7 @@ const NotFound = () => (
 // Hoveddomenet (flatr.no): landingsside, registrering og innlogging.
 const platformRouter = (ctx) =>
   createBrowserRouter([
-    { path: '/', element: <Landing /> },
+    { path: '/', element: <Landing billing={!!ctx.billing} /> },
     { path: '/apps', element: <AppsPage /> },
     { path: '/signup', element: <Signup baseDomain={ctx.base_domain} /> },
     { path: '/login', element: <PlatformLogin baseDomain={ctx.base_domain} /> },

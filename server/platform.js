@@ -12,6 +12,7 @@ import path from 'node:path';
 import { D1Database } from './d1.js';
 import { DiskBucket } from './r2.js';
 import { migrateTenant } from './tenantMigrations.js';
+import { PLANS } from '../src/lib/pricing.js';
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || './data');
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -114,6 +115,24 @@ for (const sql of [
      email TEXT NOT NULL,
      expires_at TEXT NOT NULL
    )`,
+  // Abonnement (Stripe, se server/billing.js). plan = siste betalte plan (pro | club),
+  // også etter at abonnementet er avsluttet; subscription_status sier om det gjelder.
+  `ALTER TABLE tenants ADD COLUMN plan TEXT`,
+  `ALTER TABLE tenants ADD COLUMN billing_interval TEXT`,
+  `ALTER TABLE tenants ADD COLUMN collection TEXT`,
+  `ALTER TABLE tenants ADD COLUMN stripe_customer_id TEXT`,
+  `ALTER TABLE tenants ADD COLUMN stripe_subscription_id TEXT`,
+  `ALTER TABLE tenants ADD COLUMN subscription_status TEXT`,
+  `ALTER TABLE tenants ADD COLUMN period_end TEXT`,
+  `ALTER TABLE tenants ADD COLUMN cancel_at_period_end INTEGER`,
+  `ALTER TABLE tenants ADD COLUMN past_due_since TEXT`,
+  `ALTER TABLE tenants ADD COLUMN paid_screens INTEGER`,
+  `ALTER TABLE tenants ADD COLUMN extra_storage_gb INTEGER`,
+  // Organisasjonsnummer og navn fra Enhetsregisteret, og om laget står i Frivillighetsregisteret.
+  `ALTER TABLE tenants ADD COLUMN org_number TEXT`,
+  `ALTER TABLE tenants ADD COLUMN legal_name TEXT`,
+  `ALTER TABLE tenants ADD COLUMN billing_email TEXT`,
+  `ALTER TABLE tenants ADD COLUMN volunteer_verified_at TEXT`,
   // Adressene til slettede organisasjoner (se deleteTenant og slugProblem).
   `CREATE TABLE IF NOT EXISTS retired_slugs (
      slug TEXT PRIMARY KEY,
@@ -131,18 +150,44 @@ for (const sql of [
 
 const envInt = (name, fallback) => Number.parseInt(process.env[name], 10) || fallback;
 
-/** Kvotene for en kunde: egne verdier på kunden, ellers standard (beta). */
-// Gratisplanen (det som står på flatr.no): 1 skjerm, 5 GB, ingen video.
+// Betalt (og forfalt i inntil tre uker, mens Stripe prøver igjen og fakturaen purres).
+const PAST_DUE_GRACE_MS = 21 * 24 * 3600_000;
+
+/** Planen kunden betaler for nå, eller null (gratis). */
+export function paidPlan(tenant) {
+  const plan = PLANS[tenant.plan];
+  if (!plan) return null;
+  if (['active', 'trialing'].includes(tenant.subscription_status)) return plan;
+  if (tenant.subscription_status === 'past_due') {
+    const since = Date.parse(tenant.past_due_since || '');
+    return !since || Date.now() - since < PAST_DUE_GRACE_MS ? plan : null;
+  }
+  return null;
+}
+
+/** Kvotene for en kunde: abonnementet, egne verdier på kunden, ellers standard (gratis). */
+// Gratisplanen (det som står på flatr.no): 1 skjerm, ingen video.
 // Kan overstyres per konto i superadmin (NULL = standard). En skjerm er en TV
 // (eller nettleser), så TV-grensen følger alltid skjermgrensen.
 export function tenantLimits(tenant) {
   // + én skjerm per aktiv henvisning (maks REFERRAL_MAX), se referralStats.
-  const screens = (tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 1)) + referralStats(tenant.id).bonus;
+  const bonus = referralStats(tenant.id).bonus;
+  const plan = paidPlan(tenant);
+  if (plan) {
+    const screens = Math.max(tenant.paid_screens || 1, tenant.max_screens ?? 0) + bonus;
+    const storageMb = Math.max((plan.storageGb + (tenant.extra_storage_gb || 0)) * 1024, tenant.max_storage_mb ?? 0);
+    return { storageBytes: storageMb * 1024 * 1024, devices: screens, screens, video: true, plan: plan.id };
+  }
+  const screens = (tenant.max_screens ?? envInt('BETA_MAX_SCREENS', 1)) + bonus;
   return {
     storageBytes: (tenant.max_storage_mb ?? envInt('BETA_STORAGE_MB', 5120)) * 1024 * 1024,
     devices: screens,
     screens,
-    video: tenant.allow_video === 1 || process.env.FREE_ALLOW_VIDEO === 'true'
+    video: tenant.allow_video === 1 || process.env.FREE_ALLOW_VIDEO === 'true',
+    plan: 'free',
+    // Abonnementet er avsluttet: skjermer over grensen slutter å vise innholdet
+    // (betakunder med ekstra skjermer fra oss berøres ikke).
+    enforce: !!PLANS[tenant.plan]
   };
 }
 

@@ -8,7 +8,7 @@
 
 import { marketAdminList, marketAdminSetHidden } from './market.js';
 import { appsAdminList, appsAdminReview } from './appMarket.js';
-import { platformDb, tenantResources, tenantLimits, normEmail } from './platform.js';
+import { platformDb, tenantResources, tenantLimits, normEmail, paidPlan } from './platform.js';
 import { authSession } from './identity.js';
 import { usage } from '../src/api/_shared.js';
 
@@ -67,6 +67,17 @@ async function tenantStats(t) {
     last_login: lastLogin,
     limits: tenantLimits(t),
     overrides: { max_storage_mb: t.max_storage_mb, max_devices: t.max_devices, max_screens: t.max_screens, allow_video: t.allow_video === 1 },
+    // Abonnementet (Stripe): planen som gjelder nå, og status hos Stripe.
+    billing: {
+      plan: paidPlan(t)?.id || 'free',
+      last_plan: t.plan || null,
+      status: t.subscription_status || null,
+      interval: t.billing_interval || null,
+      collection: t.collection || null,
+      paid_screens: t.paid_screens || 0,
+      org_number: t.org_number || null,
+      volunteer: !!t.volunteer_verified_at
+    },
     ...stats
   };
 }

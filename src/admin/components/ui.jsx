@@ -169,6 +169,12 @@ const ICONS = {
       <path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
     </>
   ),
+  card: (
+    <>
+      <rect x="3" y="5.5" width="18" height="13" rx="2" />
+      <path d="M3 10h18M7 15h3" />
+    </>
+  ),
   download: (
     <>
       <path d="M12 3v12" />

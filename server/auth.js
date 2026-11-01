@@ -43,6 +43,7 @@ import { sendMail, buttonMail, escapeHtml } from './mail.js';
 import { usage } from '../src/api/_shared.js';
 import { userColorPalette } from '../src/api/_access.js';
 import { auth, authSession, ensureAuthUser, hasPassword, setPassword, onEmailVerified, passwordOk, deleteAccount } from './identity.js';
+import { stripeEnabled } from './stripe.js';
 
 const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), {
@@ -346,7 +347,7 @@ export async function handleTenantAuthRoute(request, ctx) {
     if (!ctx.user) return json({ error: 'Ikke innlogget' }, 401);
     const L = tenantLimits(tenant);
     const u = await usage(tenantResources(tenant.slug));
-    return json({ screens: { used: u.screens, limit: L.screens }, storage: { used: u.storageBytes, limit: L.storageBytes }, video: L.video });
+    return json({ screens: { used: u.screens, limit: L.screens }, storage: { used: u.storageBytes, limit: L.storageBytes }, video: L.video, billing: stripeEnabled() });
   }
 
   // «Be om flere skjermer» – e-post til plattformeierne med svar-til brukeren.

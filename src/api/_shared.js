@@ -173,20 +173,21 @@ export async function checkLimit(env, kind, extraBytes = 0) {
       {
         error:
           u.storageBytes >= L.storageBytes * 0.95
-            ? `Lagringsplassen er full (${fmtGb(u.storageBytes)} av ${fmtGb(L.storageBytes)} i planen din). Slett filer i biblioteket, eller kontakt oss for mer plass.`
+            ? `Lagringsplassen er full (${fmtGb(u.storageBytes)} av ${fmtGb(L.storageBytes)} i planen din). Slett filer i biblioteket, eller ${L.billing ? 'legg til lagring under Abonnement' : 'kontakt oss for mer plass'}.`
             : `Filen er for stor for plassen som er igjen (${fmtGb(L.storageBytes - u.storageBytes)} ledig av ${fmtGb(L.storageBytes)} i planen din).`
       },
       { status: 413 }
     );
   }
+  const more = L.billing ? 'Legg til flere under Abonnement.' : 'Trenger du flere? Be om det under Skjermer.';
   if (kind === 'devices' && u.devices >= L.devices) {
-    return json({ error: `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. Trenger du flere? Be om det under Skjermer.` }, { status: 403 });
+    return json({ error: `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. ${more}` }, { status: 403 });
   }
   if (kind === 'screens' && u.screens >= L.screens) {
-    return json({ error: `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. Trenger du flere? Be om det under Skjermer.` }, { status: 403 });
+    return json({ error: `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. ${more}` }, { status: 403 });
   }
   if (kind === 'video' && !L.video) {
-    return json({ error: 'Video er med i Pro. Gratisplanen har plass til bilder.' }, { status: 403 });
+    return json({ error: `Video er med i Pro. Gratisplanen har plass til bilder.${L.billing ? ' Oppgrader under Abonnement.' : ''}` }, { status: 403 });
   }
   return null;
 }
@@ -281,6 +282,12 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
     if (!p) playlistId = null;
   } else if (id) {
     screen = await env.DB.prepare('SELECT * FROM screens WHERE id = ?').bind(id).first();
+    // Abonnementet er avsluttet, og skjermen er over grensen i gratisplanen: vis en
+    // beskjed i stedet for innholdet. De eldste skjermene virker som før.
+    if (screen && env.LIMITS?.enforce) {
+      const before = await env.DB.prepare('SELECT COUNT(*) AS n FROM screens WHERE id < ?').bind(screen.id).first('n');
+      if (Number(before) >= env.LIMITS.screens) return planEndedState(screen);
+    }
     if (screen) {
       // Tidsplanen bestemmer hva som vises nå (ellers standard-spillelisten).
       const now = await resolveScreenContent(env, screen);
@@ -390,6 +397,40 @@ export async function buildState(env, screenId, { playlistId: previewPlaylistId 
     serverTime: new Date().toISOString()
   };
   if (env.CDN_MEDIA) await cdnMediaUrls(env, state);
+  state.version = signature(state);
+  return state;
+}
+
+/** Én beskjed på skjermen i stedet for innholdet (se enforce i tenantLimits). */
+function planEndedState(screen) {
+  const text = (id, z, y, h, config) => ({ id, slide_id: -1, z, kind: 'text', x: 8, y, w: 84, h, rotation: 0, config, created_at: null });
+  const slide = {
+    id: -1,
+    playlist_id: null,
+    position: 0,
+    name: 'Ikke med i planen',
+    duration_seconds: 60,
+    transition: null,
+    transition_ms: null,
+    background: { type: 'color', color: '#0a0b0b' },
+    enabled: 1,
+    layer: null,
+    elements: [
+      text(-1, 0, 32, 16, { text: 'Denne skjermen er ikke med i planen', size: 88, weight: 800, color: '#ffffff', align: 'center', valign: 'bottom' }),
+      text(-2, 1, 52, 14, { text: 'Abonnementet på Flatr er avsluttet. En eier kan fornye det under Abonnement i Flatr.', size: 44, weight: 500, color: '#a9adab', align: 'center', valign: 'top', lineHeight: 1.3 })
+    ]
+  };
+  const state = {
+    // Samme form som ellers (TV-appene leser hours som objekt), men alltid på.
+    screen: { ...screen, hours: null, power: 'on', closed: false, active_slot: null, plan_ended: true },
+    deck: [slide],
+    overlay: null,
+    categories: [],
+    schedule: [],
+    sponsors: [],
+    alerts: [],
+    serverTime: new Date().toISOString()
+  };
   state.version = signature(state);
   return state;
 }

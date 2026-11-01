@@ -322,6 +322,15 @@ export const api = {
     get: () => req('/plan'),
     request: (extra, message) => req('/plan/request', { method: 'POST', body: { extra, message } })
   },
+  // Abonnement (Stripe) og oppslag i Enhetsregisteret – se server/billing.js.
+  billing: {
+    get: () => req('/billing'),
+    org: (number) => req(`/billing/org?number=${encodeURIComponent(number)}`),
+    checkout: (body) => req('/billing/checkout', { method: 'POST', body }),
+    sync: (sessionId) => req('/billing/sync', { method: 'POST', body: { session_id: sessionId } }),
+    change: (body) => req('/billing/change', { method: 'POST', body }),
+    portal: () => req('/billing/portal', { method: 'POST', body: {} })
+  },
   // Eksport og sletting. Eksporten er en vanlig lenke (/api/export), så nettleseren laster ned.
   org: {
     remove: (confirm, password) => req('/org', { method: 'DELETE', body: { confirm, password } })

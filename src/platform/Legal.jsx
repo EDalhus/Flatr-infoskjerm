@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LogoLockup } from '../admin/components/Logo.jsx';
 
-export const LEGAL_UPDATED = '26. oktober 2026';
+export const LEGAL_UPDATED = '1. november 2026';
 const CONTROLLER = '[Selskapsnavn / ditt navn], org.nr. [nummer]';
 const CONTACT = '[kontakt-e-post]';
 
@@ -53,8 +53,8 @@ export function Privacy() {
           navn og valgt adresse (subdomene).
         </li>
         <li>
-          <strong>Innlogging:</strong> en sesjons-cookie som holder deg innlogget, og engangslenker sendt på e-post.
-          Vi bruker ikke passord.
+          <strong>Innlogging:</strong> passordet ditt (lagret som en sikker hash, aldri i klartekst), tofaktor hvis du
+          slår det på, kobling til Google hvis du logger inn med Google, og en sesjons-cookie som holder deg innlogget.
         </li>
         <li>
           <strong>Innhold:</strong> det du laster opp eller skriver i Flatr – bilder, video, dokumenter, tekst, program
@@ -67,6 +67,10 @@ export function Privacy() {
         <li>
           <strong>Drift og sikkerhet:</strong> IP-adresse og tidspunkt i serverlogger, for å hindre misbruk og rette
           feil.
+        </li>
+        <li>
+          <strong>Betaling (betalte planer):</strong> e-post for kvitteringer, organisasjonsnummer, navn og adresse fra
+          Enhetsregisteret, og hvilken plan dere har. Kortopplysninger går rett til Stripe og lagres aldri hos Flatr.
         </li>
       </ul>
 
@@ -85,12 +89,18 @@ export function Privacy() {
         </li>
         <li>
           <strong>Cloudflare, Inc.</strong> – DNS, kryptert tilkobling og beskyttelse mot angrep. Trafikken til Flatr
-          går gjennom Cloudflare. Overføring utenfor EØS skjer etter EUs standardkontrakter.
+          går gjennom Cloudflare, og driftsstatusen på status.flatr.no kjører der. Overføring utenfor EØS skjer etter
+          EUs standardkontrakter.
+        </li>
+        <li>
+          <strong>Stripe</strong> – betaling for betalte planer: kort, fakturaer og kvitteringer. Overføring utenfor EØS
+          skjer etter EUs standardkontrakter.
         </li>
       </ul>
       <p>
         E-post sendes fra vår egen server. Værdata (MET Norge), stedsnavn (Kartverket), nyhetsstrømmer og kalendere
-        hentes av serveren vår – ingen personopplysninger om deg sendes til disse.
+        hentes av serveren vår – ingen personopplysninger om deg sendes til disse. Organisasjonsnummer dere skriver inn
+        under Abonnement, slås opp i Brønnøysundregistrene (Enhetsregisteret og Frivillighetsregisteret).
       </p>
 
       <h2>Hvor lenge vi lagrer</h2>
@@ -132,12 +142,25 @@ export function Terms() {
 
       <h2>Betaen</h2>
       <ul>
-        <li>Tjenesten er gratis i betaperioden. Vi gir beskjed i god tid før eventuelle priser innføres.</li>
+        <li>Gratisplanen er gratis. Vi gir beskjed i god tid før endringer i prisene.</li>
         <li>
           Funksjoner kan endres, og det kan forekomme feil og nedetid. Ikke bruk Flatr som eneste skjerm for
           sikkerhetskritisk informasjon.
         </li>
-        <li>Kontoer har kvoter for lagring, TV-er og skjermer. Ta kontakt om du trenger mer.</li>
+        <li>Kontoer har kvoter for lagring, TV-er og skjermer. Trenger du mer, kan du oppgradere eller ta kontakt.</li>
+      </ul>
+
+      <h2>Priser og betaling</h2>
+      <ul>
+        <li>Betalte planer (Pro og Lag og frivillige) koster det som står på flatr.no, per skjerm og eks. mva.</li>
+        <li>De betales forskuddsvis per måned eller år, med kort, eller med faktura ved årlig betaling. Betalingen håndteres av Stripe.</li>
+        <li>Lag og frivillige gjelder organisasjoner som står i Frivillighetsregisteret. Vi sjekker det i Brønnøysundregistrene.</li>
+        <li>Flere skjermer eller mer lagring midt i en periode faktureres forholdsmessig med en gang. Færre trekkes fra neste betaling.</li>
+        <li>Du kan si opp når som helst under Abonnement i Flatr. Planen gjelder ut perioden dere har betalt for, og påbegynte perioder refunderes ikke.</li>
+        <li>
+          Blir en betaling ikke gjort, beholder dere planen i tre uker. Deretter gjelder gratisplanen, og skjermer over grensen
+          viser en beskjed i stedet for innholdet til dere fornyer.
+        </li>
       </ul>
 
       <h2>Ditt innhold</h2>

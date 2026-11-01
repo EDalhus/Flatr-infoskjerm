@@ -277,6 +277,9 @@ export default function ScreensManager({ onChange, onNavigate }) {
   const showAdd = adding || added || (loaded && !list.length);
   const closeAdd = list.length ? () => (setAdding(false), setAdded(null)) : null;
 
+  // Med betaling på: til Abonnement. Ellers: be oss om flere (gratis i betaperioden).
+  const more = () => (plan?.billing && onNavigate ? onNavigate('billing') : setAsking(true));
+
   return (
     <>
       <PageHeader
@@ -288,7 +291,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
                 {plan.screens.used} av {plan.screens.limit} {plan.screens.limit === 1 ? 'skjerm' : 'skjermer'} i bruk
               </span>
               <span aria-hidden="true">·</span>
-              <button type="button" onClick={() => setAsking(true)} className="font-semibold text-brand hover:underline">
+              <button type="button" onClick={more} className="font-semibold text-brand hover:underline">
                 Trenger du flere?
               </button>
             </span>
@@ -309,9 +312,13 @@ export default function ScreensManager({ onChange, onNavigate }) {
         <div className="mx-auto w-full max-w-6xl px-6 sm:px-8">
           <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand-tint px-4 py-3 text-sm text-ink">
             <Icon name="monitor" className="h-4 w-4 text-brand" />
-            <span className="flex-1">Du har brukt alle skjermene i planen. Trenger du flere, gir vi deg gjerne en eller to til – gratis i betaperioden.</span>
-            <Button size="sm" onClick={() => setAsking(true)}>
-              Be om flere
+            <span className="flex-1">
+              {plan?.billing
+                ? 'Du har brukt alle skjermene i planen. Legg til flere under Abonnement.'
+                : 'Du har brukt alle skjermene i planen. Trenger du flere, gir vi deg gjerne en eller to til – gratis i betaperioden.'}
+            </span>
+            <Button size="sm" onClick={more}>
+              {plan?.billing ? 'Legg til skjermer' : 'Be om flere'}
             </Button>
           </div>
         </div>

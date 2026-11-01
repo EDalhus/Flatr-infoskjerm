@@ -40,6 +40,8 @@ import { notifyChange, waitForChange } from './changes.js';
 import { notifier, teamMembers } from './notify.js';
 import { trustedClientIp } from './clientIp.js';
 import { healthChecks } from './health.js';
+import { handleBillingRoute, handleBillingWebhook, startBilling } from './billing.js';
+import { stripeEnabled } from './stripe.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -81,7 +83,7 @@ function tenantEnv(tenant, user) {
     TENANT: { slug: tenant.slug, name: tenant.name },
     // Kundens adresse (lenker som skal skannes, f.eks. avstemninger).
     ORIGIN: ctxBase.origin(tenant.slug),
-    LIMITS: tenantLimits(tenant),
+    LIMITS: { ...tenantLimits(tenant), billing: stripeEnabled() },
     // TV-er venter på skjermbilder av widgeter – be om dem med en gang.
     REQUEST_SNAPSHOTS: () => process.env.CONVERTER_URL && requestRefresh(tenant.slug),
     // Videoer komprimeres etter opplasting (bare når ffmpeg finnes).
@@ -325,6 +327,7 @@ async function handleTenant(request, tenant) {
   const env = tenantEnv(tenant, user);
   if (key === '/api/import') return handleImportRoute(request, ctx, env);
   if (key === '/api/export') return handleExportRoute(request, ctx, env);
+  if (key === '/api/billing' || key.startsWith('/api/billing/')) return handleBillingRoute(request, ctx, env);
   if (key === '/api/market' || key === '/api/market/install') return handleMarketRoute(request, ctx, env);
   if (key === '/api/app-market' || key.startsWith('/api/app-market/')) return handleAppMarketRoute(request, { ...ctx, tenant });
 
@@ -362,6 +365,8 @@ async function handleTenant(request, tenant) {
 
 async function handlePlatform(request) {
   const url = new URL(request.url);
+  // Stripe (signert, uten innlogging) – se server/billing.js.
+  if (url.pathname === '/api/billing/webhook' && request.method === 'POST') return handleBillingWebhook(request);
   if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/') && crossSiteWrite(request)) {
     return jsonError(403, 'Forespørselen kom fra en annen adresse.');
   }
@@ -384,7 +389,7 @@ async function handlePlatform(request) {
 
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
     const key = apiKey(url.pathname);
-    if (key === '/api/context') return json({ mode: 'platform', base_domain: BASE_DOMAIN, social: SOCIAL_PROVIDERS });
+    if (key === '/api/context') return json({ mode: 'platform', base_domain: BASE_DOMAIN, social: SOCIAL_PROVIDERS, billing: stripeEnabled() });
     if (key === '/api/platform/apps' && request.method === 'GET') return json(publicCatalog());
     // ?deep=1: ja/nei per del til statussiden (status.flatr.no), se server/health.js.
     if (key === '/api/health') {
@@ -483,6 +488,7 @@ if (process.env.CONVERTER_URL) startSnapshots();
 startMonitor();
 startNotices();
 resumeVideos().catch((err) => console.error('[video] oppstart:', err.message));
+startBilling();
 
 server.listen(PORT, () => {
   console.log(`Flatr kjører på :${PORT}  (${PROTOCOL}://${BASE_DOMAIN}, kunder på *.${BASE_DOMAIN})`);

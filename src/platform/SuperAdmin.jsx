@@ -206,6 +206,13 @@ export default function SuperAdmin() {
                         >
                           {t.slug}.{me.base_domain}
                         </a>
+                        {t.billing?.last_plan && (
+                          <div className={`mt-1 text-xs font-semibold ${t.billing.plan === 'free' ? 'text-muted' : 'text-brand'}`}>
+                            {t.billing.last_plan === 'club' ? 'Lag og frivillige' : 'Pro'} · {t.billing.paid_screens} skjermer ·{' '}
+                            {t.billing.interval === 'year' ? 'årlig' : 'månedlig'} {t.billing.collection === 'invoice' ? '(faktura)' : ''}
+                            {t.billing.status && t.billing.status !== 'active' ? ` · ${t.billing.status}` : ''}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted">
                         {t.owners.join(', ') || '–'}

@@ -6,6 +6,7 @@ import { LogoLockup, LogoMarkSquare } from '../admin/components/Logo.jsx';
 import { Icon } from '../admin/components/ui.jsx';
 import AppIcon from '../admin/components/apps/AppIcon.jsx';
 import { OFFICIAL_APPS, CATEGORY_LABEL } from '../lib/appCatalog.js';
+import { PLANS, STORAGE_ADDONS, kr } from '../lib/pricing.js';
 
 const FEATURES = [
   {
@@ -53,15 +54,6 @@ const PRO_PLAN = ['Så mange skjermer du vil', 'Video på skjermene', '20 GB lag
 
 const CLUB_PLAN = ['Alt i Pro', '15 GB lagring', 'For lag, foreninger og korps i Frivillighetsregisteret'];
 
-// Ekstra lagring (begge betalte planer): GB -> kr per måned.
-const STORAGE_ADDONS = [
-  [10, 5],
-  [20, 9],
-  [30, 13],
-  [40, 16],
-  [50, 19]
-];
-
 const FAQ = [
   {
     q: 'Trenger du flere skjermer?',
@@ -70,7 +62,9 @@ const FAQ = [
   },
   {
     q: 'Hva koster Flatr?',
-    a: 'Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro kommer snart: 29 kr per skjerm i måneden (24 kr fra skjerm nr. 20), og halv pris for lag og frivillige. Alle funksjoner bortsett fra video er med i gratisplanen – du betaler bare for skjermene. Du velger selv om du vil oppgradere.'
+    // Svaret avhenger av om betaling er slått på (se priceAnswer).
+    a: null,
+    price: true
   },
   {
     q: 'Hva slags skjerm trenger jeg?',
@@ -158,7 +152,13 @@ export function SiteFooter() {
   );
 }
 
-export default function Landing() {
+const PRO_PRICE = `${kr(PLANS.pro.tiers[0][1])} per skjerm i måneden (${kr(PLANS.pro.tiers[1][1])} fra skjerm nr. ${PLANS.pro.tiers[0][0] + 1})`;
+const priceAnswer = (billing) =>
+  billing
+    ? `Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro koster ${PRO_PRICE}, og lag og foreninger i Frivillighetsregisteret får halv pris. Du oppgraderer selv under Abonnement i Flatr, betaler med kort eller faktura, og kan si opp når som helst.`
+    : `Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro kommer snart: ${PRO_PRICE}, og halv pris for lag og frivillige. Alle funksjoner bortsett fra video er med i gratisplanen – du betaler bare for skjermene. Du velger selv om du vil oppgradere.`;
+
+export default function Landing({ billing = false }) {
   const [contactOpen, setContactOpen] = useState(false);
   useEffect(() => {
     document.title = 'Flatr – infoskjermer som bare virker';
@@ -288,17 +288,13 @@ export default function Landing() {
             </div>
 
             <PaidPlan
-              name="Pro"
-              price="29 kr"
-              note="24 kr per skjerm fra skjerm nr. 20"
+              name={PLANS.pro.name}
+              price={kr(PLANS.pro.tiers[0][1])}
+              note={`${kr(PLANS.pro.tiers[1][1])} per skjerm fra skjerm nr. ${PLANS.pro.tiers[0][0] + 1}`}
               items={PRO_PLAN}
+              available={billing}
             />
-            <PaidPlan
-              name="Lag og frivillige"
-              price="15 kr"
-              note="Halv pris for frivilligheten"
-              items={CLUB_PLAN}
-            />
+            <PaidPlan name={PLANS.club.name} price={kr(PLANS.club.tiers[0][1])} note="Halv pris for frivilligheten" items={CLUB_PLAN} available={billing} />
           </div>
 
           <div className="mx-auto mt-4 grid max-w-5xl gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -306,10 +302,10 @@ export default function Landing() {
               <h3 className="m-0 font-semibold">Trenger du mer lagring?</h3>
               <p className="mt-1 text-muted">Legg til ekstra lagring på Pro eller Lag og frivillige.</p>
               <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 tabular-nums">
-                {STORAGE_ADDONS.map(([gb, kr]) => (
+                {STORAGE_ADDONS.map(([gb, price]) => (
                   <div key={gb} className="contents">
                     <dt className="text-muted">+{gb} GB</dt>
-                    <dd className="m-0 text-right font-medium">{kr} kr / mnd</dd>
+                    <dd className="m-0 text-right font-medium">{kr(price)} / mnd</dd>
                   </div>
                 ))}
               </dl>
@@ -340,7 +336,7 @@ export default function Landing() {
                   {f.q}
                   <Icon name="plus" className="h-4 w-4 shrink-0 text-muted transition group-open:rotate-45" />
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-muted">{f.a}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted">{f.price ? priceAnswer(billing) : f.a}</p>
                 {f.contact && (
                   <button type="button" onClick={() => setContactOpen(true)} className="mt-3 text-sm font-semibold text-brand hover:underline">
                     Ta kontakt →
@@ -461,13 +457,17 @@ export function SectionHead({ kicker, title, text, center = false }) {
   );
 }
 
-/** Betalt plan (kommer snart): pris per skjerm og hva som er med. */
-function PaidPlan({ name, price, note, items }) {
+/** Betalt plan: pris per skjerm og hva som er med. Med betaling på: start med en gratis konto og oppgrader i Flatr. */
+function PaidPlan({ name, price, note, items, available }) {
   return (
     <div className="flex flex-col rounded-xl border border-line bg-card p-7">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold">{name}</h3>
-        <span className="shrink-0 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted">Kommer snart</span>
+        {available ? (
+          <span className="shrink-0 rounded-full bg-brand-tint px-2.5 py-1 text-xs font-medium text-brand">Tilgjengelig nå</span>
+        ) : (
+          <span className="shrink-0 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted">Kommer snart</span>
+        )}
       </div>
       <div className="mt-4 flex items-baseline gap-1">
         <span className="text-4xl font-bold tracking-tight">{price}</span>
@@ -475,6 +475,14 @@ function PaidPlan({ name, price, note, items }) {
       </div>
       <p className="mt-1 text-xs text-muted">{note}</p>
       <PlanList items={items} />
+      {available && (
+        <Link
+          to="/signup"
+          className="mt-8 rounded-md border border-line px-5 py-3 text-center font-semibold text-ink transition hover:border-brand hover:text-brand"
+        >
+          Start gratis, oppgrader i Flatr
+        </Link>
+      )}
     </div>
   );
 }
