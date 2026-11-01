@@ -211,7 +211,7 @@ function AdminShell({ context }) {
 
   const shared = { nav, tab, go, me, tenant, theme, setTheme, setColor, logout, lobby, screenCount, current };
   // navKey remonterer siden ved hver navigasjon, så den leser adressen på nytt.
-  const content = <Active key={navKey} onChange={bump} onNavigate={go} me={me} theme={theme} />;
+  const content = <Active key={navKey} onChange={bump} onNavigate={go} me={me} theme={theme} tenant={tenant} />;
 
   return (
     <>

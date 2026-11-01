@@ -206,7 +206,7 @@ function alertMeta(a, screens) {
   return [where, when, until].filter(Boolean).join(' · ');
 }
 
-export default function Dashboard({ onChange, onNavigate, me, theme }) {
+export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
   const [screens, setScreens] = useState(null);
   const [playlists, setPlaylists] = useState([]);
   const [wizard, setWizard] = useState(null); // null = avgjøres når data er lastet
@@ -301,6 +301,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme }) {
     return (
       <Onboarding
         greeting={greeting(me?.name)}
+        orgName={tenant?.name}
         playlists={playlists}
         onNavigate={go}
         onDone={() => {

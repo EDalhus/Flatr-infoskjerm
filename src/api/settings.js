@@ -21,6 +21,8 @@ async function readSettings(env) {
     daily_digest: map.daily_digest === '1',
     // Ukentlig påminnelse om gammelt innhold, utløpte lysbilder o.l. (server/notices.js). På som standard.
     weekly_reminder: map.weekly_reminder !== '0',
+    // Hva Flatr brukes til (valgt i veiviseren, se src/admin/components/industries.js).
+    industry: map.industry || null,
     // Farevarsler fra MET som banner på skjermene (src/api/metAlerts.js).
     met_alerts: map.met_alerts ? cleanMetSettings(safeParse(map.met_alerts)) : null,
     require_2fa: map.require_2fa === '1',
@@ -74,6 +76,7 @@ export async function onRequestPut(context) {
   if (b.offline_alerts !== undefined) await setValue(context.env, 'offline_alerts', b.offline_alerts ? '1' : '0');
   if (b.daily_digest !== undefined) await setValue(context.env, 'daily_digest', b.daily_digest ? '1' : '0');
   if (b.weekly_reminder !== undefined) await setValue(context.env, 'weekly_reminder', b.weekly_reminder ? '1' : '0');
+  if (b.industry !== undefined) await setValue(context.env, 'industry', String(b.industry || '').replace(/[^a-z]/g, '').slice(0, 20));
   if (b.met_alerts !== undefined) await setValue(context.env, 'met_alerts', JSON.stringify(cleanMetSettings(b.met_alerts)));
   if (b.require_2fa !== undefined) {
     if (context.env.SESSION_USER && context.env.SESSION_USER.role !== 'owner') return json({ error: 'Bare eiere kan endre dette.' }, { status: 403 });
