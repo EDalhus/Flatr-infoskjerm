@@ -42,6 +42,7 @@ import { trustedClientIp } from './clientIp.js';
 import { healthChecks } from './health.js';
 import { handleBillingRoute, handleBillingWebhook, startBilling } from './billing.js';
 import { stripeEnabled } from './stripe.js';
+import { includedAi } from './aiQuota.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -84,6 +85,8 @@ function tenantEnv(tenant, user) {
     // Kundens adresse (lenker som skal skannes, f.eks. avstemninger).
     ORIGIN: ctxBase.origin(tenant.slug),
     LIMITS: { ...tenantLimits(tenant), billing: stripeEnabled() },
+    // Flatr AI inkludert (Flatrs Claude-nøkkel med månedlig kvote), eller null.
+    AI_INCLUDED: includedAi(tenant),
     // TV-er venter på skjermbilder av widgeter – be om dem med en gang.
     REQUEST_SNAPSHOTS: () => process.env.CONVERTER_URL && requestRefresh(tenant.slug),
     // Videoer komprimeres etter opplasting (bare når ffmpeg finnes).

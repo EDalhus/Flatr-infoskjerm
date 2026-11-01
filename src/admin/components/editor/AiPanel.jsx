@@ -136,6 +136,8 @@ function AssistantTurn({ blocks, live }) {
   );
 }
 
+const fillDate = (iso) => new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' });
+
 function KeySetup({ app, onSaved }) {
   const cursor = app.kind === 'cursor';
   const [key, setKey] = useState('');
@@ -303,6 +305,11 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
   if (!hasKey)
     return (
       <>
+        {data.app.included?.exhausted && (
+          <p className="m-3 mb-0 rounded-xl bg-warn-tint px-4 py-3 text-xs leading-relaxed text-ink">
+            Månedens Flatr AI er brukt opp. Den fylles på igjen {fillDate(data.app.included.resets_at)}. Vil du fortsette nå, kan du legge inn en egen nøkkel:
+          </p>
+        )}
         <KeySetup app={data.app} onSaved={load} />
         {pending && <p className="m-0 px-4 text-xs text-muted">Meldingen din sendes når nøkkelen er lagret.</p>}
       </>
@@ -327,6 +334,7 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
           ) : (
             <>
               {data.app.name} · {data.app.model}
+              {data.app.included && !data.app.own_key && <span title="Flatr AI er inkludert i planen, med en kvote per måned">· {data.app.included.used_pct} % av månedens KI brukt</span>}
             </>
           )}
         </span>
@@ -342,7 +350,13 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
               <a href={`/admin?view=apps&app=${data.app.kind}`} className="rounded-lg px-3 py-2 text-left text-ink hover:bg-zone">
                 Innstillinger for {data.app.name} {data.app.key_hint ? `(${data.app.key_hint})` : ''}
               </a>
-              {usage && (
+              {data.app.included && !data.app.own_key && (
+                <div className="border-t border-line px-3 py-2 text-[11px] leading-relaxed text-muted">
+                  Flatr AI er inkludert i planen: {data.app.included.used_pct} % brukt denne måneden ({data.app.included.requests}{' '}
+                  {data.app.included.requests === 1 ? 'forespørsel' : 'forespørsler'}). Fylles på igjen {fillDate(data.app.included.resets_at)}.
+                </div>
+              )}
+              {usage && data.app.own_key && (
                 <div className="border-t border-line px-3 py-2 text-[11px] leading-relaxed text-muted">
                   Brukt siden {new Date(usage.since).toLocaleDateString('nb-NO')}: {Math.round((usage.input + usage.cache_read + usage.cache_write) / 1000)}k inn ·{' '}
                   {Math.round(usage.output / 1000)}k ut (tokens)

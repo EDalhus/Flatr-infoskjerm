@@ -310,7 +310,13 @@ export default function AiCommand({ go, me }) {
           )}
         </div>
       </div>
-      {assistant && !assistant.has_key && <p className="m-0 mt-3 px-3 text-sm text-warn">{assistant.name} mangler API-nøkkel – legg den inn under Flatr Apps.</p>}
+      {assistant && !assistant.has_key && (
+        <p className="m-0 mt-3 px-3 text-sm text-warn">
+          {assistant.included?.exhausted
+            ? `Månedens Flatr AI er brukt opp. Den fylles på igjen ${new Date(assistant.included.resets_at).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' })}, eller legg inn en egen nøkkel under Flatr Apps.`
+            : `${assistant.name} mangler API-nøkkel – legg den inn under Flatr Apps.`}
+        </p>
+      )}
       {error && <p className="m-0 mt-3 px-3 text-sm text-danger">{error}</p>}
 
       {recent.length > 0 && (

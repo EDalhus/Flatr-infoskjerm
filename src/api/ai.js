@@ -26,38 +26,57 @@ import { addPdf, addLink, addText, archiveItem, activeItems, publicItem, loadIte
 // ids }) når den er ny eller endret, og agenten bytter den ut med innholdet.
 //
 // Samtalen lagres som innholdsblokker i Anthropic-formatet (ai_messages).
+//
+// Flatr AI inkludert (env.AI_INCLUDED, server/aiQuota.js): uten egen nøkkel i
+// Claude AI-appen brukes Flatrs nøkkel med en månedlig kvote. Appen trenger
+// ikke være aktivert – den aktiveres første gang assistenten brukes.
 
 const running = new Map(); // `${tenant}:${playlist}` -> { stop }
 
 /**
  * Assistent-appen å bruke, med nøkkel: den valgte (kind, f.eks. 'cursor') hvis
- * den er aktivert, ellers den første. null = ingen aktivert.
+ * den er aktivert, ellers den første. Med inkludert KI og ingen app: Claude AI
+ * uten rad (row = null, lages av ensureRow). null = ingen assistent.
  */
 async function assistantApp(env, kind) {
   const marks = AGENT_KINDS.map(() => '?').join(',');
   const { results } = await env.DB.prepare(`SELECT * FROM apps WHERE kind IN (${marks}) ORDER BY id`).bind(...AGENT_KINDS).all();
-  const row = (results ?? []).find((r) => r.kind === kind) || results?.[0];
-  if (!row) return null;
-  let apiKey = null;
-  if (row.secret) {
+  const row = (results ?? []).find((r) => r.kind === kind) || results?.[0] || null;
+  if (!row && !(env.AI_INCLUDED && (!kind || kind === 'claude'))) return null;
+  let ownKey = null;
+  if (row?.secret) {
     try {
-      apiKey = safeJson(await decryptSecret(env, row.secret), {}).api_key || null;
+      ownKey = safeJson(await decryptSecret(env, row.secret), {}).api_key || null;
     } catch {
-      apiKey = null;
+      ownKey = null;
     }
   }
-  return { row, config: safeJson(row.config, {}), apiKey, agent: AGENTS[row.kind] };
+  // Flatrs nøkkel bare for Claude, bare uten egen nøkkel, og bare mens kvoten varer.
+  const included = !ownKey && (row?.kind ?? 'claude') === 'claude' && env.AI_INCLUDED ? env.AI_INCLUDED : null;
+  const apiKey = ownKey || (included && !included.status().exhausted ? included.key : null);
+  return { row, config: safeJson(row?.config, {}), apiKey, ownKey: !!ownKey, included, agent: AGENTS[row?.kind ?? 'claude'] };
+}
+
+/** Aktiverer Claude AI første gang inkludert KI brukes (kontekst og forbruk lagres på appen). */
+async function ensureRow(env, a) {
+  if (!a || a.row) return a;
+  await env.DB.prepare(`INSERT INTO apps (name, kind, config) VALUES ('Claude AI', 'claude', '{}')`).run();
+  return assistantApp(env, 'claude');
 }
 
 const publicAssistant = (a) =>
   a
     ? {
-        id: a.row.id,
-        kind: a.row.kind,
-        name: a.row.name,
+        // Uten rad: Claude AI med inkludert KI, ikke aktivert ennå.
+        id: a.row?.id ?? null,
+        kind: a.row?.kind ?? 'claude',
+        name: a.row?.name ?? 'Claude AI',
         model: a.config.model_label || a.agent.MODEL_LABEL,
         effort: a.config.effort || 'medium',
         has_key: !!a.apiKey,
+        own_key: a.ownKey,
+        // Flatr AI inkludert: hvor mye av månedens kvote som er brukt.
+        included: a.included ? a.included.status() : null,
         key_hint: a.config.key_hint || null,
         usage: a.config.usage || null,
         context: activeItems(a.config).map(publicItem)
@@ -213,7 +232,7 @@ export async function onRequestDelete(context) {
   const contextId = new URL(request.url).searchParams.get('context');
   if (contextId) {
     const a = await assistantApp(env, new URL(request.url).searchParams.get('agent'));
-    if (!a) return notFound('Ingen AI-app er aktivert');
+    if (!a?.row) return notFound('Ingen AI-app er aktivert');
     await saveConfig(env, a.row.id, archiveItem(a.config, contextId));
     return json(publicAssistant(await assistantApp(env)));
   }
@@ -243,13 +262,14 @@ export async function onRequestPost(context) {
   if (params.get('parse') === 'calls') {
     const a = await assistantApp(env, 'claude');
     if (!a?.apiKey || !a.agent.parseCalls) return json({ error: 'Krever Claude AI med API-nøkkel', code: 'no_ai' }, { status: 400 });
+    const onUsage = a.ownKey ? null : (u) => a.included?.record(a.agent.MODEL, u, { request: true });
     const b = (await readJson(request)) || {};
     const ais = await env.DB.prepare(`SELECT config FROM apps WHERE kind = 'ais' ORDER BY id LIMIT 1`).first();
     const config = safeJson(ais?.config, {});
     try {
       const tz = await getTimezone(env);
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
-      const calls = await a.agent.parseCalls(a.apiKey, b.text || '', { fleet: config.fleet || [], quays: config.quays || [], today, units: UNITS });
+      const calls = await a.agent.parseCalls(a.apiKey, b.text || '', { fleet: config.fleet || [], quays: config.quays || [], today, units: UNITS, onUsage });
       return json({ calls: cleanCalls(calls) });
     } catch (err) {
       return json({ error: a.agent.errorText(err) }, { status: 502 });
@@ -258,7 +278,7 @@ export async function onRequestPost(context) {
 
   const ctxKind = params.get('context');
   if (ctxKind) {
-    const a = await assistantApp(env, params.get('agent'));
+    const a = await ensureRow(env, await assistantApp(env, params.get('agent')));
     if (!a) return notFound('Aktiver Claude AI først');
     try {
       let config;
@@ -290,9 +310,16 @@ export async function onRequestPost(context) {
   if (!message) return badRequest('Skriv hva du vil ha');
   const pl = await env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(playlistId).first();
   if (!pl) return notFound('Presentasjonen finnes ikke');
-  const assistant = await assistantApp(env, b.agent);
+  const assistant = await ensureRow(env, await assistantApp(env, b.agent));
   if (!assistant) return json({ error: 'Aktiver Claude AI eller Cursor AI under Flatr Apps først.', code: 'no_app' }, { status: 400 });
+  if (!assistant.apiKey && assistant.included) {
+    const until = new Date(assistant.included.status().resets_at).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' });
+    return json({ error: `Månedens Flatr AI er brukt opp. Den fylles på igjen ${until}. Vil dere bruke mer, kan dere legge inn en egen API-nøkkel i Claude AI-appen.`, code: 'quota' }, { status: 429 });
+  }
   if (!assistant.apiKey) return json({ error: `Legg inn en API-nøkkel i ${assistant.row.name}-appen først.`, code: 'no_key' }, { status: 400 });
+  // Flatrs nøkkel: forbruket telles mot kvoten (og meldingen som én forespørsel).
+  const included = assistant.ownKey ? null : assistant.included;
+  included?.record(assistant.agent.MODEL, {}, { request: true });
 
   const key = lockKey(env, playlistId);
   if (running.has(key)) return json({ error: 'Assistenten jobber allerede med denne presentasjonen' }, { status: 409 });
@@ -338,7 +365,7 @@ export async function onRequestPost(context) {
             answered = true;
             return save(env, playlistId, role, content);
           },
-          usage: (u) => addUsage(env, assistant.row.id, u),
+          usage: (u) => (included?.record(assistant.agent.MODEL, u), addUsage(env, assistant.row.id, u)),
           screenshot: slideScreenshot(env, request, playlistId),
           contextItems: (ids) => loadItems(env, assistant.config, ids),
           brand,

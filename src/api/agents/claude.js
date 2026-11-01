@@ -229,7 +229,7 @@ const CALLS_SCHEMA = {
  * Gjør fri tekst (e-post, Excel, notater) om til anløp. fleet/quays brukes til
  * å koble båter og kaier; today ("YYYY-MM-DD") til datoer uten år.
  */
-export async function parseCalls(apiKey, text, { fleet = [], quays = [], today, units = [] }) {
+export async function parseCalls(apiKey, text, { fleet = [], quays = [], today, units = [], onUsage = null }) {
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
     model: MODEL,
@@ -250,6 +250,7 @@ Rules:
       }
     ]
   });
+  if (response.usage) onUsage?.(response.usage);
   if (response.stop_reason === 'refusal') throw new Error('Claude ville ikke tolke teksten.');
   const block = response.content.find((b) => b.type === 'text');
   const parsed = block ? JSON.parse(block.text) : { calls: [] };
