@@ -5,6 +5,7 @@ import FleetMap from '../../../viewer/components/FleetMap.jsx';
 import { PlaceSearch } from '../deck/ElementConfigFields.jsx';
 import { Icon, Field, Input, Button, IconButton } from '../ui.jsx';
 import { Section, SaveBar, Dot } from './parts.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Innstillingene til den offisielle appen NAIS (Norsk AIS-tjeneste): BarentsWatch-
 // nøkkel, flåten (navn + MMSI) og kaier, med live-kart ved siden av.
@@ -59,13 +60,13 @@ function BoatSearch({ appId, fleet, groups, onAdd, onClose }) {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Søk på båtnavn eller MMSI, f.eks. Framfjord"
+            placeholder={tr('Søk på båtnavn eller MMSI, f.eks. Framfjord')}
             className="pl-9"
             autoFocus
             onKeyDown={(e) => e.key === 'Escape' && onClose()}
           />
         </div>
-        <Input value={group} onChange={(e) => setGroup(e.target.value)} placeholder="Gruppe, f.eks. rederi" list="ais-groups" aria-label="Gruppe for båtene du legger til" />
+        <Input value={group} onChange={(e) => setGroup(e.target.value)} placeholder={tr('Gruppe, f.eks. rederi')} list="ais-groups" aria-label={tr('Gruppe for båtene du legger til')} />
       </div>
       <datalist id="ais-groups">
         {groups.filter(Boolean).map((g) => (
@@ -75,23 +76,23 @@ function BoatSearch({ appId, fleet, groups, onAdd, onClose }) {
 
       <div className="mt-2 text-sm">
         {q.trim().length < 2 ? (
-          <p className="m-0 text-xs text-muted">Søker i alle skip med AIS-signal i norske farvann (BarentsWatch). Skriv minst to bokstaver.</p>
+          <p className="m-0 text-xs text-muted">{tr('Søker i alle skip med AIS-signal i norske farvann (BarentsWatch). Skriv minst to bokstaver.')}</p>
         ) : err && !manual ? (
           <p className="m-0 text-xs text-danger">{err}</p>
         ) : busy && !hits && !manual ? (
-          <p className="m-0 text-xs text-muted">Søker …</p>
+          <p className="m-0 text-xs text-muted">{tr('Søker …')}</p>
         ) : (
           <>
             {hits?.length === 0 && !manual && (
-              <p className="m-0 text-xs text-muted">Ingen båter med det navnet har sendt AIS-signal nylig. Har du MMSI-nummeret, kan du skrive det inn.</p>
+              <p className="m-0 text-xs text-muted">{tr('Ingen båter med det navnet har sendt AIS-signal nylig. Har du MMSI-nummeret, kan du skrive det inn.')}</p>
             )}
             {(hits?.length > 0 || manual) && (
               <ul className="m-0 max-h-72 list-none divide-y divide-hair overflow-y-auto rounded-xl border border-hair bg-card p-0">
                 {manual && (
                   <li className="flex items-center gap-3 px-3 py-2">
-                    <span className="min-w-0 flex-1 text-ink">Legg til MMSI {digits}</span>
+                    <span className="min-w-0 flex-1 text-ink">{tr('Legg til MMSI')} {digits}</span>
                     <Button size="sm" variant="outline" onClick={() => onAdd({ mmsi: digits, name: digits }, group.trim())}>
-                      Legg til
+                      {tr('Legg til')}
                     </Button>
                   </li>
                 )}
@@ -105,16 +106,16 @@ function BoatSearch({ appId, fleet, groups, onAdd, onClose }) {
                         <div className="truncate font-medium text-ink">{niceName(h.name)}</div>
                         <div className="truncate text-xs text-muted">
                           {cls.label}
-                          {h.length ? ` · ${h.length} m` : ''}
+                          {h.length ? tr(' · {0} m', [h.length]) : ''}
                           {h.destination ? ` · → ${niceName(h.destination)}` : ''}
                           <span className="font-mono"> · {h.mmsi}</span>
                         </div>
                       </div>
                       {added ? (
-                        <span className="shrink-0 text-xs font-semibold text-muted">I flåten</span>
+                        <span className="shrink-0 text-xs font-semibold text-muted">{tr('I flåten')}</span>
                       ) : (
                         <Button size="sm" variant="outline" onClick={() => onAdd({ mmsi: h.mmsi, name: niceName(h.name) }, group.trim())}>
-                          Legg til
+                          {tr('Legg til')}
                         </Button>
                       )}
                     </li>
@@ -143,7 +144,7 @@ function GroupInput({ value, label, onCommit }) {
         if (e.key === 'Escape') setDraft(value);
       }}
       list="ais-groups-all"
-      placeholder="+ Gruppe"
+      placeholder={tr('+ Gruppe')}
       className="w-28 shrink-0 rounded-md bg-transparent px-1.5 py-0.5 text-xs text-muted outline-none placeholder:text-muted/60 hover:bg-zone focus:bg-paper focus:text-ink focus:ring-2 focus:ring-focus/30"
       aria-label={label}
     />
@@ -169,16 +170,16 @@ function GroupHeader({ name, count, hidden, onToggle, onRename }) {
             if (e.key === 'Escape') setEditing(false);
           }}
           className="h-7 min-w-0 flex-1 rounded-md border border-focus bg-paper px-1.5 text-xs font-semibold text-ink outline-none"
-          aria-label="Navn på gruppen"
+          aria-label={tr('Navn på gruppen')}
         />
       ) : (
         <button
           type="button"
           onClick={() => name && setEditing(true)}
           className={`min-w-0 flex-1 truncate text-left text-xs font-semibold uppercase tracking-wide ${hidden ? 'text-muted/60' : 'text-muted'} ${name ? 'hover:text-ink' : 'cursor-default'}`}
-          title={name ? 'Klikk for å gi gruppen nytt navn' : undefined}
+          title={name ? tr('Klikk for å gi gruppen nytt navn') : undefined}
         >
-          {name || 'Uten gruppe'} <span className="font-normal normal-case tracking-normal">· {count}</span>
+          {name || tr('Uten gruppe')} <span className="font-normal normal-case tracking-normal">· {count}</span>
         </button>
       )}
       <button
@@ -186,9 +187,9 @@ function GroupHeader({ name, count, hidden, onToggle, onRename }) {
         onClick={onToggle}
         className="rounded-md px-2 py-0.5 text-[11px] font-semibold text-muted hover:bg-zone hover:text-ink"
         aria-pressed={!hidden}
-        title={hidden ? 'Vis på kartet' : 'Skjul på kartet'}
+        title={hidden ? tr('Vis på kartet') : tr('Skjul på kartet')}
       >
-        {hidden ? 'Skjult på kartet' : 'Vises på kartet'}
+        {hidden ? tr('Skjult på kartet') : tr('Vises på kartet')}
       </button>
     </li>
   );
@@ -250,7 +251,7 @@ export default function AisSettings({ app, onSaved }) {
       setFleet(saved.config.fleet);
       setQuays(saved.config.quays);
       setDirty(false);
-      setNotice('Lagret.');
+      setNotice(tr('Lagret.'));
       if (saved.config.client_id && saved.has_secret) setEditConn(false);
       onSaved(saved);
     } catch (e) {
@@ -272,7 +273,7 @@ export default function AisSettings({ app, onSaved }) {
   };
 
   const addBoat = touch(({ mmsi, name: boatName }, group) => {
-    if (!validMmsi(mmsi)) return setError('MMSI må være 9 siffer.');
+    if (!validMmsi(mmsi)) return setError(tr('MMSI må være 9 siffer.'));
     setError('');
     setFleet((list) =>
       list.some((b) => b.mmsi === mmsi)
@@ -341,12 +342,12 @@ export default function AisSettings({ app, onSaved }) {
         {/* --- tilkobling --- */}
         <Section
           icon="link"
-          title="BarentsWatch"
-          hint={editConn ? 'Hver konto bruker sin egen gratis API-klient av typen AIS. Steg-for-steg finner du under «Om appen».' : null}
+          title={tr('BarentsWatch')}
+          hint={editConn ? tr('Hver konto bruker sin egen gratis API-klient av typen AIS. Steg-for-steg finner du under «Om appen».') : null}
           action={
             !editConn && (
               <Button variant="ghost" size="sm" onClick={() => setEditConn(true)}>
-                Endre
+                {tr('Endre')}
               </Button>
             )
           }
@@ -354,20 +355,20 @@ export default function AisSettings({ app, onSaved }) {
         >
           {editConn ? (
             <div className="grid gap-4">
-              <Field label="Client id" hint="Lag klienten på barentswatch.no → Min side → API-klienter (type AIS).">
+              <Field label={tr('Client id')} hint={tr('Lag klienten på barentswatch.no → Min side → API-klienter (type AIS).')}>
                 <Input value={clientId} onChange={(e) => touch(setClientId)(e.target.value)} placeholder="din@epost.no:flatr" autoComplete="off" />
               </Field>
-              <Field label="Client secret" hint={hasSecret ? 'Lagret og kryptert. Skriv inn en ny for å bytte.' : 'Lagres kryptert og vises aldri igjen.'}>
+              <Field label={tr('Client secret')} hint={hasSecret ? tr('Lagret og kryptert. Skriv inn en ny for å bytte.') : tr('Lagres kryptert og vises aldri igjen.')}>
                 <Input type="password" value={secret} onChange={(e) => touch(setSecret)(e.target.value)} placeholder={hasSecret ? '••••••••••••' : ''} autoComplete="new-password" />
               </Field>
-              <Field label="Navn i editoren">
+              <Field label={tr('Navn i editoren')}>
                 <Input value={name} onChange={(e) => touch(setName)(e.target.value)} />
               </Field>
             </div>
           ) : (
             <div className="flex items-center gap-2 px-5 pb-4 text-sm">
               <Dot tone={connected ? 'ok' : liveError ? 'bad' : 'muted'} />
-              <span className="text-ink">{connected ? 'Tilkoblet' : liveError ? 'Får ikke kontakt' : 'Kobler til …'}</span>
+              <span className="text-ink">{connected ? tr('Tilkoblet') : liveError ? tr('Får ikke kontakt') : tr('Kobler til …')}</span>
               <span className="truncate text-muted">· {liveError || clientId}</span>
             </div>
           )}
@@ -376,18 +377,18 @@ export default function AisSettings({ app, onSaved }) {
         {/* --- flåten --- */}
         <Section
           icon="pin"
-          title="Flåten"
+          title={tr('Flåten')}
           count={fleet.length}
           action={
             <Button variant={adding ? 'ghost' : 'outline'} size="sm" onClick={() => setAdding(!adding)}>
               <Icon name={adding ? 'x' : 'plus'} className="h-4 w-4" />
-              {adding ? 'Avbryt' : 'Legg til båt'}
+              {adding ? tr('Avbryt') : tr('Legg til båt')}
             </Button>
           }
           flush
         >
           {adding && <BoatSearch appId={app.id} fleet={fleet} groups={groupNames} onAdd={addBoat} onClose={() => setAdding(false)} />}
-          {fleet.length === 0 && !adding && <p className="m-0 px-5 pb-5 text-sm text-muted">Ingen båter ennå. Trykk «Legg til båt» og søk på navnet.</p>}
+          {fleet.length === 0 && !adding && <p className="m-0 px-5 pb-5 text-sm text-muted">{tr('Ingen båter ennå. Trykk «Legg til båt» og søk på navnet.')}</p>}
           {fleet.length > 0 && (
             <ul className="m-0 list-none divide-y divide-hair border-t border-hair p-0">
               {groupNames.map((g) => {
@@ -408,25 +409,25 @@ export default function AisSettings({ app, onSaved }) {
                     const found = v && !v.missing;
                     return (
                       <li key={b.mmsi} className={`group flex items-center gap-3 px-5 py-2.5 hover:bg-zone/50 ${hiddenGroups.has(g) ? 'opacity-60' : ''}`}>
-                        <Dot tone={!live ? 'muted' : !found ? 'bad' : isMoving(v) ? 'ok' : 'warn'} title={found ? statusLabel(v) : 'Ikke funnet i AIS'} />
+                        <Dot tone={!live ? 'muted' : !found ? 'bad' : isMoving(v) ? 'ok' : 'warn'} title={found ? statusLabel(v) : tr('Ikke funnet i AIS')} />
                         <input
                           value={b.name}
                           onChange={(e) => editBoat(b.mmsi, { name: e.target.value })}
                           className="min-w-0 flex-1 rounded-md bg-transparent px-1 py-0.5 text-sm font-medium text-ink outline-none hover:bg-zone focus:bg-paper focus:ring-2 focus:ring-focus/30"
-                          aria-label="Navn"
+                          aria-label={tr('Navn')}
                         />
-                        <GroupInput value={b.group || ''} label={`Gruppe for ${b.name}`} onCommit={(group) => editBoat(b.mmsi, { group })} />
+                        <GroupInput value={b.group || ''} label={tr('Gruppe for {0}', [b.name])} onCommit={(group) => editBoat(b.mmsi, { group })} />
                         <span className="hidden font-mono text-xs text-muted lg:inline">{b.mmsi}</span>
                         <button
                           type="button"
                           onClick={() => focusOn(v)}
                           disabled={!found}
                           className="w-36 shrink-0 truncate text-right text-xs text-muted enabled:hover:text-ink"
-                          title={found ? 'Vis på kartet' : undefined}
+                          title={found ? tr('Vis på kartet') : undefined}
                         >
-                          {!live ? '' : found ? `${statusLabel(v)} · ${ago(v.msgtime).replace(/^for /, '').replace(/ siden$/, '')}` : <span className="text-danger">Ikke funnet i AIS</span>}
+                          {!live ? '' : found ? `${statusLabel(v)} · ${ago(v.msgtime).replace(/^for /, '').replace(/ siden$/, '')}` : <span className="text-danger">{tr('Ikke funnet i AIS')}</span>}
                         </button>
-                        <IconButton name="x" label={`Fjern ${b.name}`} tone="danger" onClick={() => removeBoat(b.mmsi)} className="opacity-0 group-hover:opacity-100 focus:opacity-100" />
+                        <IconButton name="x" label={tr('Fjern {0}', [b.name])} tone="danger" onClick={() => removeBoat(b.mmsi)} className="opacity-0 group-hover:opacity-100 focus:opacity-100" />
                       </li>
                     );
                   })
@@ -444,23 +445,23 @@ export default function AisSettings({ app, onSaved }) {
         {/* --- kaier --- */}
         <Section
           icon="home"
-          title="Kaier"
+          title={tr('Kaier')}
           count={quays.length}
-          hint="Brukes til ETA og ankomsttavler."
+          hint={tr('Brukes til ETA og ankomsttavler.')}
           action={
             <Button variant={placing ? 'primary' : 'outline'} size="sm" onClick={() => setPlacing(!placing)}>
               <Icon name={placing ? 'x' : 'plus'} className="h-4 w-4" />
-              {placing ? 'Avbryt' : 'Ny kai'}
+              {placing ? tr('Avbryt') : tr('Ny kai')}
             </Button>
           }
           flush
         >
           {placing && (
             <p className="m-0 flex items-center gap-2 border-y border-brand/30 bg-brand-tint px-5 py-2.5 text-sm font-medium text-brand">
-              <Icon name="pin" className="h-4 w-4" /> Søk eller zoom i kartet, og klikk der kaia ligger.
+              <Icon name="pin" className="h-4 w-4" /> {tr('Søk eller zoom i kartet, og klikk der kaia ligger.')}
             </p>
           )}
-          {quays.length === 0 && !placing && <p className="m-0 px-5 pb-5 text-sm text-muted">Ingen kaier ennå.</p>}
+          {quays.length === 0 && !placing && <p className="m-0 px-5 pb-5 text-sm text-muted">{tr('Ingen kaier ennå.')}</p>}
           {quays.length > 0 && (
             <ul className="m-0 list-none divide-y divide-hair border-t border-hair p-0">
               {quays.map((q, i) => (
@@ -470,14 +471,14 @@ export default function AisSettings({ app, onSaved }) {
                     value={q.name}
                     onChange={(e) => editQuay(i, { name: e.target.value })}
                     className="min-w-0 flex-1 rounded-md bg-transparent px-1 py-0.5 text-sm font-medium text-ink outline-none hover:bg-zone focus:bg-paper focus:ring-2 focus:ring-focus/30"
-                    aria-label="Kallenavn på kaia (vises på kartet)"
-                    placeholder="Kallenavn"
+                    aria-label={tr('Kallenavn på kaia (vises på kartet)')}
+                    placeholder={tr('Kallenavn')}
                   />
                   <span className="hidden font-mono text-xs text-muted sm:inline">
                     {q.lat.toFixed(4)}, {q.lon.toFixed(4)}
                   </span>
-                  <IconButton name="search" label="Vis på kartet" onClick={() => setFocus({ lat: q.lat, lon: q.lon, zoom: 15 })} />
-                  <IconButton name="x" label="Fjern kaia" tone="danger" onClick={() => removeQuay(i)} className="opacity-0 group-hover:opacity-100 focus:opacity-100" />
+                  <IconButton name="search" label={tr('Vis på kartet')} onClick={() => setFocus({ lat: q.lat, lon: q.lon, zoom: 15 })} />
+                  <IconButton name="x" label={tr('Fjern kaia')} tone="danger" onClick={() => removeQuay(i)} className="opacity-0 group-hover:opacity-100 focus:opacity-100" />
                 </li>
               ))}
             </ul>
@@ -500,7 +501,7 @@ export default function AisSettings({ app, onSaved }) {
             />
             <div className="absolute left-3 top-3 z-10 w-72 max-w-[calc(100%-4.5rem)]">
               <PlaceSearch
-                placeholder={placing ? 'Søk etter kaia, f.eks. Skateflukaia' : 'Søk etter et sted'}
+                placeholder={placing ? tr('Søk etter kaia, f.eks. Skateflukaia') : tr('Søk etter et sted')}
                 onPick={(h) => {
                   setFocus({ lat: h.lat, lon: h.lon, zoom: 15 });
                   setLastHit({ name: h.name, lat: h.lat, lon: h.lon });
@@ -510,7 +511,7 @@ export default function AisSettings({ app, onSaved }) {
           </div>
           {grouped && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-xs text-muted">Vis på kartet:</span>
+              <span className="mr-1 text-xs text-muted">{tr('Vis på kartet:')}</span>
               {groupNames.map((g) => {
                 const on = !hiddenGroups.has(g);
                 return (
@@ -521,14 +522,14 @@ export default function AisSettings({ app, onSaved }) {
                     onClick={() => toggleGroup(g)}
                     className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${on ? 'bg-brand text-onbrand' : 'bg-zone text-muted line-through hover:text-ink'}`}
                   >
-                    {g || 'Uten gruppe'}
+                    {g || tr('Uten gruppe')}
                   </button>
                 );
               })}
             </div>
           )}
           <p className="m-0 mt-2 text-xs text-muted">
-            {liveError ? `Kunne ikke hente AIS: ${liveError}` : live ? `AIS oppdatert ${ago(live.fetched_at)}${live.stale ? ' (viser siste kjente)' : ''}` : 'Henter AIS …'}
+            {liveError ? tr('Kunne ikke hente AIS: {0}', [liveError]) : live ? tr('AIS oppdatert {0}{1}', [ago(live.fetched_at), live.stale ? tr(' (viser siste kjente)') : '']) : tr('Henter AIS …')}
           </p>
         </div>
       </div>

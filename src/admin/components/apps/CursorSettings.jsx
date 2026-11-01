@@ -3,6 +3,7 @@ import { api } from '../../../lib/api.js';
 import { Icon, Button } from '../ui.jsx';
 import { Section, Dot } from './parts.jsx';
 import { AddContext, ContextList } from '../AiContext.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Innstillingene til Cursor AI: API-nøkkel fra Cursor (sjekkes og lagres
 // kryptert), hvilken modell agenten skal bruke, og fast kontekst. Egen side
@@ -51,7 +52,7 @@ export default function CursorSettings({ app, onSaved }) {
 
   const saveKey = async (e) => {
     e.preventDefault();
-    if (await update({ api_key: key.trim() }, 'Nøkkelen virker og er lagret.')) {
+    if (await update({ api_key: key.trim() }, tr('Nøkkelen virker og er lagret.'))) {
       setKey('');
       setEditKey(false);
     }
@@ -66,12 +67,12 @@ export default function CursorSettings({ app, onSaved }) {
     <div className="grid max-w-3xl gap-5">
       <Section
         icon="lock"
-        title="Cursor API-nøkkel"
-        hint={editKey ? 'Lages på cursor.com → Dashboard → Integrations → API Keys. Steg-for-steg under «Om appen».' : null}
+        title={tr('Cursor API-nøkkel')}
+        hint={editKey ? tr('Lages på cursor.com → Dashboard → Integrations → API Keys. Steg-for-steg under «Om appen».') : null}
         action={
           !editKey && (
             <Button variant="ghost" size="sm" onClick={() => setEditKey(true)}>
-              Bytt
+              {tr('Bytt')}
             </Button>
           )
         }
@@ -86,39 +87,39 @@ export default function CursorSettings({ app, onSaved }) {
               placeholder="key_…"
               autoComplete="off"
               className="h-10 rounded-xl border border-line bg-paper px-3 font-mono text-sm text-ink outline-none focus:border-focus"
-              aria-label="API-nøkkel"
+              aria-label={tr('API-nøkkel')}
             />
             <Button type="submit" disabled={busy || !key.trim()}>
-              {busy ? 'Sjekker …' : 'Lagre nøkkel'}
+              {busy ? tr('Sjekker …') : tr('Lagre nøkkel')}
             </Button>
             {app.has_secret && (
               <button type="button" onClick={() => setEditKey(false)} className="justify-self-start text-xs font-semibold text-muted hover:text-ink">
-                Avbryt
+                {tr('Avbryt')}
               </button>
             )}
           </form>
         ) : (
           <div className="flex items-center gap-2 px-5 pb-4 text-sm">
             <Dot tone="ok" />
-            <span className="text-ink">Tilkoblet</span>
+            <span className="text-ink">{tr('Tilkoblet')}</span>
             <span className="font-mono text-muted">· {app.config?.key_hint || 'lagret'}</span>
             <button
               type="button"
-              onClick={() => update({ api_key: null }, 'Nøkkelen er fjernet.').then((ok) => ok && setEditKey(true))}
+              onClick={() => update({ api_key: null }, tr('Nøkkelen er fjernet.')).then((ok) => ok && setEditKey(true))}
               className="ml-auto text-xs font-semibold text-danger hover:underline"
             >
-              Fjern
+              {tr('Fjern')}
             </button>
           </div>
         )}
         {(error || notice) && <p className={`m-0 px-5 pb-4 text-sm ${error ? 'text-danger' : 'text-brand'} ${editKey ? '!px-0 !pb-0 pt-3' : ''}`}>{error || notice}</p>}
       </Section>
 
-      <Section icon="sparkle" title="Modell" hint="Hvilken modell Cursor-agenten bruker. «Cursors standard» følger det som er valgt i Cursor-kontoen.">
+      <Section icon="sparkle" title={tr('Modell')} hint={tr('Hvilken modell Cursor-agenten bruker. «Cursors standard» følger det som er valgt i Cursor-kontoen.')}>
         {!app.has_secret ? (
-          <p className="m-0 text-sm text-muted">Legg inn API-nøkkelen først.</p>
+          <p className="m-0 text-sm text-muted">{tr('Legg inn API-nøkkelen først.')}</p>
         ) : models === null ? (
-          <p className="m-0 text-sm text-muted">Henter modeller …</p>
+          <p className="m-0 text-sm text-muted">{tr('Henter modeller …')}</p>
         ) : models.error ? (
           <p className="m-0 text-sm text-danger">{models.error}</p>
         ) : (
@@ -127,9 +128,9 @@ export default function CursorSettings({ app, onSaved }) {
             onChange={(e) => chooseModel(e.target.value)}
             disabled={busy}
             className="h-10 w-full max-w-sm rounded-xl border border-line bg-paper px-3 text-sm text-ink outline-none focus:border-focus"
-            aria-label="Modell"
+            aria-label={tr('Modell')}
           >
-            <option value="">Cursors standard</option>
+            <option value="">{tr('Cursors standard')}</option>
             {models.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -141,12 +142,12 @@ export default function CursorSettings({ app, onSaved }) {
 
       <Section
         icon="layers"
-        title="Fast kontekst"
+        title={tr('Fast kontekst')}
         count={context.length}
-        hint="Dokumenter Cursor alltid følger når den lager presentasjoner – f.eks. merkevareretningslinjer, tone of voice eller fakta om bedriften. Nettsider og tekst leses; PDF-er kan Cursor ikke lese ennå."
+        hint={tr('Dokumenter Cursor alltid følger når den lager presentasjoner – f.eks. merkevareretningslinjer, tone of voice eller fakta om bedriften. Nettsider og tekst leses; PDF-er kan Cursor ikke lese ennå.')}
       >
         <div className="grid gap-3">
-          <ContextList agent="cursor" items={context} onChange={onContext} empty="Ingen ennå. Legg til merkevareretningslinjene deres, så følger Cursor dem." />
+          <ContextList agent="cursor" items={context} onChange={onContext} empty={tr('Ingen ennå. Legg til merkevareretningslinjene deres, så følger Cursor dem.')} />
           <AddContext agent="cursor" onChange={onContext} />
         </div>
       </Section>
@@ -154,10 +155,10 @@ export default function CursorSettings({ app, onSaved }) {
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand/30 bg-brand-tint p-4 text-sm text-ink">
         <Icon name="sparkle" className="h-4 w-4 shrink-0 text-brand" />
         <span className="min-w-0 flex-1">
-          Trykk <kbd className="rounded border border-line bg-card px-1.5 py-0.5 font-mono text-xs">{MOD}K</kbd> hvor som helst i Flatr, eller åpne AI-fanen i editoren. Har du også Claude AI, velger du assistent der.
+          {tr('Trykk')} <kbd className="rounded border border-line bg-card px-1.5 py-0.5 font-mono text-xs">{MOD}{tr('K')}</kbd> {tr('hvor som helst i Flatr, eller åpne AI-fanen i editoren. Har du også Claude AI, velger du assistent der.')}
         </span>
         <Button size="sm" onClick={() => window.dispatchEvent(new CustomEvent('flatr:ai-open', { detail: { agent: 'cursor' } }))} disabled={!app.has_secret}>
-          Prøv nå
+          {tr('Prøv nå')}
         </Button>
       </div>
     </div>

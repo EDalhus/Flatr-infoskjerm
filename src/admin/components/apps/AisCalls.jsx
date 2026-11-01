@@ -4,6 +4,7 @@ import { etaTo, etaText, reportedEta, reportedEtaText } from '../../../lib/ais.j
 import { CARGO_DIRS, UNITS, currentCalls, cargoText, callTimeText, callDate, hasClock, parseCallTable, cleanCalls } from '../../../lib/portCalls.js';
 import { Icon, Field, Input, Select, Button, IconButton } from '../ui.jsx';
 import { Section } from './parts.jsx';
+import { tr, locale } from '../../../lib/i18n.js';
 
 // Tillegget «Anløp» i NAIS: kjente båtanløp med kai, forventet ankomst og
 // avgang, neste havn og varer som leveres eller hentes. Båter fra flåten får
@@ -22,14 +23,14 @@ function DateTimeInput({ value, onChange, min, required, label }) {
   const join = (d, t) => (d ? (t ? `${d}T${t}` : d) : '');
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-2">
-      <Input type="date" value={date} min={min?.slice(0, 10)} onChange={(e) => onChange(join(e.target.value, clock))} required={required} aria-label={`${label} dato`} />
+      <Input type="date" value={date} min={min?.slice(0, 10)} onChange={(e) => onChange(join(e.target.value, clock))} required={required} aria-label={tr('{0} dato', [label])} />
       <Input
         type="time"
         value={clock}
         onChange={(e) => onChange(join(date, e.target.value))}
         disabled={!date}
-        aria-label={`${label} klokkeslett (valgfritt)`}
-        title="Valgfritt – la stå tomt hvis klokkeslettet ikke er kjent"
+        aria-label={tr('{0} klokkeslett (valgfritt)', [label])}
+        title={tr('Valgfritt – la stå tomt hvis klokkeslettet ikke er kjent')}
       />
     </div>
   );
@@ -60,7 +61,7 @@ function CallForm({ initial, fleet, quays, goodsList, onSave, onCancel, onDelete
       className="grid gap-4 border-y border-hair bg-zone/40 px-5 py-4"
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Båt">
+        <Field label={tr('Båt')}>
           <Select
             value={boatValue}
             onChange={(e) => {
@@ -74,23 +75,23 @@ function CallForm({ initial, fleet, quays, goodsList, onSave, onCancel, onDelete
               }
             }}
           >
-            <option value="">Velg båt …</option>
+            <option value="">{tr('Velg båt …')}</option>
             {fleet.map((b) => (
               <option key={b.mmsi} value={b.mmsi}>
                 {b.name}
               </option>
             ))}
-            <option value={OTHER}>Annen båt (ikke i flåten)</option>
+            <option value={OTHER}>{tr('Annen båt (ikke i flåten)')}</option>
           </Select>
         </Field>
         {other ? (
-          <Field label="Navn på båten" hint="Uten MMSI får anløpet ingen live status fra AIS.">
-            <Input value={c.name} onChange={(e) => set({ name: e.target.value })} placeholder="F.eks. MS Nordkyn" autoFocus />
+          <Field label={tr('Navn på båten')} hint={tr('Uten MMSI får anløpet ingen live status fra AIS.')}>
+            <Input value={c.name} onChange={(e) => set({ name: e.target.value })} placeholder={tr('F.eks. MS Nordkyn')} autoFocus />
           </Field>
         ) : (
-          <Field label="Kai">
+          <Field label={tr('Kai')}>
             <Select value={c.quayId || ''} onChange={(e) => set({ quayId: e.target.value || null })}>
-              {!quays.length && <option value="">Ingen kaier – legg dem inn under Oppsett</option>}
+              {!quays.length && <option value="">{tr('Ingen kaier – legg dem inn under Oppsett')}</option>}
               {quays.map((q) => (
                 <option key={q.id} value={q.id}>
                   {q.name}
@@ -100,9 +101,9 @@ function CallForm({ initial, fleet, quays, goodsList, onSave, onCancel, onDelete
           </Field>
         )}
         {other && (
-          <Field label="Kai">
+          <Field label={tr('Kai')}>
             <Select value={c.quayId || ''} onChange={(e) => set({ quayId: e.target.value || null })}>
-              {!quays.length && <option value="">Ingen kaier – legg dem inn under Oppsett</option>}
+              {!quays.length && <option value="">{tr('Ingen kaier – legg dem inn under Oppsett')}</option>}
               {quays.map((q) => (
                 <option key={q.id} value={q.id}>
                   {q.name}
@@ -111,42 +112,42 @@ function CallForm({ initial, fleet, quays, goodsList, onSave, onCancel, onDelete
             </Select>
           </Field>
         )}
-        <Field label="Forventet ankomst" hint="Klokkeslett er valgfritt.">
-          <DateTimeInput label="Ankomst" value={c.eta} onChange={(eta) => set({ eta })} required />
+        <Field label={tr('Forventet ankomst')} hint={tr('Klokkeslett er valgfritt.')}>
+          <DateTimeInput label={tr('Ankomst')} value={c.eta} onChange={(eta) => set({ eta })} required />
         </Field>
-        <Field label="Forventet avgang (valgfritt)" hint={!etdOk ? 'Avgang må være etter ankomst.' : null}>
-          <DateTimeInput label="Avgang" value={c.etd || ''} min={c.eta} onChange={(etd) => set({ etd })} />
+        <Field label={tr('Forventet avgang (valgfritt)')} hint={!etdOk ? tr('Avgang må være etter ankomst.') : null}>
+          <DateTimeInput label={tr('Avgang')} value={c.etd || ''} min={c.eta} onChange={(etd) => set({ etd })} />
         </Field>
-        <Field label="Kommer fra (valgfritt)">
-          <Input value={c.from || ''} onChange={(e) => set({ from: e.target.value })} placeholder="F.eks. Rotterdam" />
+        <Field label={tr('Kommer fra (valgfritt)')}>
+          <Input value={c.from || ''} onChange={(e) => set({ from: e.target.value })} placeholder={tr('F.eks. Rotterdam')} />
         </Field>
-        <Field label="Neste havn">
-          <Input value={c.next || ''} onChange={(e) => set({ next: e.target.value })} placeholder="F.eks. Bergen" />
+        <Field label={tr('Neste havn')}>
+          <Input value={c.next || ''} onChange={(e) => set({ next: e.target.value })} placeholder={tr('F.eks. Bergen')} />
         </Field>
       </div>
 
       <div>
-        <div className="mb-1.5 text-xs font-semibold text-muted">Varer</div>
+        <div className="mb-1.5 text-xs font-semibold text-muted">{tr('Varer')}</div>
         <div className="grid gap-2">
           {c.cargo.map((g, i) => (
             <div key={i} className="grid grid-cols-[110px_minmax(0,1fr)_90px_110px_auto] items-center gap-2">
-              <Select value={g.dir} onChange={(e) => setCargo(i, { dir: e.target.value })} aria-label="Leverer eller henter">
+              <Select value={g.dir} onChange={(e) => setCargo(i, { dir: e.target.value })} aria-label={tr('Leverer eller henter')}>
                 {CARGO_DIRS.map((d) => (
                   <option key={d.value} value={d.value}>
                     {d.icon} {d.label}
                   </option>
                 ))}
               </Select>
-              <Input value={g.goods} onChange={(e) => setCargo(i, { goods: e.target.value })} placeholder="Vare, f.eks. olivin" list="call-goods" aria-label="Vare" />
-              <Input type="number" min="0" step="any" value={g.qty ?? ''} onChange={(e) => setCargo(i, { qty: e.target.value === '' ? null : Number(e.target.value) })} placeholder="Mengde" aria-label="Mengde" />
-              <Select value={g.unit || 'tonn'} onChange={(e) => setCargo(i, { unit: e.target.value })} aria-label="Enhet">
+              <Input value={g.goods} onChange={(e) => setCargo(i, { goods: e.target.value })} placeholder={tr('Vare, f.eks. olivin')} list="call-goods" aria-label={tr('Vare')} />
+              <Input type="number" min="0" step="any" value={g.qty ?? ''} onChange={(e) => setCargo(i, { qty: e.target.value === '' ? null : Number(e.target.value) })} placeholder={tr('Mengde')} aria-label={tr('Mengde')} />
+              <Select value={g.unit || 'tonn'} onChange={(e) => setCargo(i, { unit: e.target.value })} aria-label={tr('Enhet')}>
                 {UNITS.map((u) => (
                   <option key={u} value={u}>
                     {u}
                   </option>
                 ))}
               </Select>
-              <IconButton name="x" label="Fjern varelinjen" tone="danger" onClick={() => set({ cargo: c.cargo.filter((_, j) => j !== i) })} />
+              <IconButton name="x" label={tr('Fjern varelinjen')} tone="danger" onClick={() => set({ cargo: c.cargo.filter((_, j) => j !== i) })} />
             </div>
           ))}
           <datalist id="call-goods">
@@ -159,25 +160,25 @@ function CallForm({ initial, fleet, quays, goodsList, onSave, onCancel, onDelete
             onClick={() => set({ cargo: [...c.cargo, { dir: c.cargo.at(-1)?.dir || 'unload', goods: '', qty: null, unit: c.cargo.at(-1)?.unit || 'tonn' }] })}
             className="justify-self-start text-sm font-semibold text-brand hover:underline"
           >
-            + Legg til vare
+            {tr('+ Legg til vare')}
           </button>
         </div>
       </div>
 
-      <Field label="Merknad (valgfritt)">
-        <Input value={c.note || ''} onChange={(e) => set({ note: e.target.value })} placeholder="Vises bare her, ikke på skjermene" />
+      <Field label={tr('Merknad (valgfritt)')}>
+        <Input value={c.note || ''} onChange={(e) => set({ note: e.target.value })} placeholder={tr('Vises bare her, ikke på skjermene')} />
       </Field>
 
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" disabled={!valid || busy}>
-          {busy ? 'Lagrer …' : 'Lagre anløp'}
+          {busy ? tr('Lagrer …') : tr('Lagre anløp')}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Avbryt
+          {tr('Avbryt')}
         </Button>
         {onDelete && (
           <button type="button" onClick={onDelete} className="ml-auto text-sm font-semibold text-danger hover:underline">
-            Slett anløpet
+            {tr('Slett anløpet')}
           </button>
         )}
       </div>
@@ -201,7 +202,7 @@ function ImportCalls({ fleet, quays, onAdd, onClose, busy }) {
     const clean = cleanCalls(calls.map((c) => ({ ...c, id: Math.random().toString(36).slice(2, 10) })));
     setFound(clean);
     setPicked(new Set(clean.map((c) => c.id)));
-    if (!clean.length) setError('Fant ingen anløp. Har tabellen en overskriftsrad med f.eks. «Båt» og «Dato»?');
+    if (!clean.length) setError(tr('Fant ingen anløp. Har tabellen en overskriftsrad med f.eks. «Båt» og «Dato»?'));
   };
   const byAi = async () => {
     setWorking(true);
@@ -218,30 +219,30 @@ function ImportCalls({ fleet, quays, onAdd, onClose, busy }) {
   return (
     <div className="grid gap-3 border-y border-hair bg-zone/40 px-5 py-4">
       <div className="text-sm text-ink">
-        <strong>Importer anløp</strong>
-        <span className="text-muted"> – lim inn rader fra Excel, en e-post fra rederiet eller egne notater.</span>
+        <strong>{tr('Importer anløp')}</strong>
+        <span className="text-muted"> {tr('– lim inn rader fra Excel, en e-post fra rederiet eller egne notater.')}</span>
       </div>
       <textarea
         rows={7}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={'F.eks.\nBåt\tKai\tDato\tTid\tNeste havn\tVare\tMengde\tEnhet\tRetning\nFramfjord\tSkutvika\t02.11\t14:30\tBergen\tOlivin\t3500\ttonn\tLasting\n\neller fri tekst: «Holmfoss kommer onsdag til Ålesund og henter 200 big bags Sea …»'}
+        placeholder={tr('F.eks.\nBåt\tKai\tDato\tTid\tNeste havn\tVare\tMengde\tEnhet\tRetning\nFramfjord\tSkutvika\t02.11\t14:30\tBergen\tOlivin\t3500\ttonn\tLasting\n\neller fri tekst: «Holmfoss kommer onsdag til Ålesund og henter 200 big bags Sea …»')}
         className="rounded-xl border border-line bg-paper px-3 py-2 font-mono text-xs text-ink outline-none focus:border-focus"
       />
       <div className="flex flex-wrap items-center gap-2">
         {ai && (
           <Button size="sm" onClick={byAi} disabled={working || !text.trim()}>
             <Icon name="sparkle" className="h-4 w-4" />
-            {working ? 'Claude leser …' : 'Tolk med Claude AI'}
+            {working ? tr('Claude leser …') : tr('Tolk med Claude AI')}
           </Button>
         )}
         <Button size="sm" variant={ai ? 'outline' : 'primary'} onClick={() => (setError(''), show(parseCallTable(text, { fleet, quays, today })))} disabled={working || !text.trim()}>
-          Les som tabell
+          {tr('Les som tabell')}
         </Button>
         <Button size="sm" variant="ghost" onClick={onClose}>
-          Avbryt
+          {tr('Avbryt')}
         </Button>
-        {ai === false && <span className="text-xs text-muted">Med Claude AI kan du også lime inn fri tekst og e-poster.</span>}
+        {ai === false && <span className="text-xs text-muted">{tr('Med Claude AI kan du også lime inn fri tekst og e-poster.')}</span>}
       </div>
       {error && <p className="m-0 text-xs text-danger">{error}</p>}
       {found?.length > 0 && (
@@ -263,7 +264,7 @@ function ImportCalls({ fleet, quays, onAdd, onClose, busy }) {
                 <div className="min-w-0 flex-1">
                   <div className="text-ink">
                     <strong>{callTimeText(c.eta)}</strong> · {boatName(c)}
-                    {!c.mmsi && <span className="text-xs text-muted"> (ikke i flåten)</span>} · {quays.find((q) => q.id === c.quayId)?.name || <span className="text-warn">ukjent kai</span>}
+                    {!c.mmsi && <span className="text-xs text-muted"> {tr('(ikke i flåten)')}</span>} · {quays.find((q) => q.id === c.quayId)?.name || <span className="text-warn">{tr('ukjent kai')}</span>}
                   </div>
                   <div className="truncate text-xs text-muted">{[c.next && `→ ${c.next}`, cargoText(c.cargo)].filter(Boolean).join('  ·  ')}</div>
                 </div>
@@ -271,7 +272,7 @@ function ImportCalls({ fleet, quays, onAdd, onClose, busy }) {
             ))}
           </ul>
           <Button size="sm" className="justify-self-start" disabled={busy || !picked.size} onClick={() => onAdd(found.filter((c) => picked.has(c.id)))}>
-            Legg til {picked.size} anløp
+            {tr('Legg til')} {picked.size} {tr('anløp')}
           </Button>
         </div>
       )}
@@ -295,24 +296,24 @@ function CargoReport({ calls, days }) {
     }
   }
   const rows = [...totals.values()].sort((a, b) => a.dir.localeCompare(b.dir) || b.qty - a.qty);
-  if (!rows.length) return <p className="m-0 px-5 pb-4 text-sm text-muted">Ingen varer registrert de siste {days} dagene.</p>;
+  if (!rows.length) return <p className="m-0 px-5 pb-4 text-sm text-muted">{tr('Ingen varer registrert de siste')} {days} {tr('dagene.')}</p>;
   return (
     <div className="px-5 pb-4">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-muted">
-            <th className="py-1 font-semibold">Vare</th>
-            <th className="py-1 font-semibold">Retning</th>
-            <th className="py-1 text-right font-semibold">Mengde</th>
-            <th className="py-1 text-right font-semibold">Anløp</th>
+            <th className="py-1 font-semibold">{tr('Vare')}</th>
+            <th className="py-1 font-semibold">{tr('Retning')}</th>
+            <th className="py-1 text-right font-semibold">{tr('Mengde')}</th>
+            <th className="py-1 text-right font-semibold">{tr('Anløp')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-hair">
           {rows.map((r) => (
             <tr key={`${r.dir}${r.goods}${r.unit}`}>
               <td className="py-1.5 text-ink">{r.goods}</td>
-              <td className="py-1.5 text-muted">{r.dir === 'load' ? '↑ Hentet' : '↓ Levert'}</td>
-              <td className="py-1.5 text-right tabular-nums text-ink">{r.qty ? `${r.qty.toLocaleString('nb-NO')} ${r.unit || ''}` : '–'}</td>
+              <td className="py-1.5 text-muted">{r.dir === 'load' ? tr('↑ Hentet') : tr('↓ Levert')}</td>
+              <td className="py-1.5 text-right tabular-nums text-ink">{r.qty ? `${r.qty.toLocaleString(locale())} ${r.unit || ''}` : '–'}</td>
               <td className="py-1.5 text-right tabular-nums text-muted">{r.calls}</td>
             </tr>
           ))}
@@ -383,7 +384,7 @@ export default function AisCalls({ app, onSaved }) {
   for (const c of list) {
     const key = callDate(c.eta).toDateString();
     let day = days.find((d) => d.key === key);
-    if (!day) days.push((day = { key, label: callDate(c.eta).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }), calls: [] }));
+    if (!day) days.push((day = { key, label: callDate(c.eta).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' }), calls: [] }));
     day.calls.push(c);
   }
 
@@ -391,19 +392,19 @@ export default function AisCalls({ app, onSaved }) {
     <div className="grid max-w-5xl gap-5">
       <Section
         icon="calendar"
-        title="Anløp"
+        title={tr('Anløp')}
         count={upcoming.length}
-        hint="Båtanløp dere vet om: kai, forventet ankomst og avgang, neste havn og varer. Vis dem på skjermene med NAIS → Anløpsplan i editoren."
+        hint={tr('Båtanløp dere vet om: kai, forventet ankomst og avgang, neste havn og varer. Vis dem på skjermene med NAIS → Anløpsplan i editoren.')}
         action={
           editing !== 'new' &&
           editing !== 'import' && (
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => setEditing('import')}>
-                Importer
+                {tr('Importer')}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setEditing('new')}>
                 <Icon name="plus" className="h-4 w-4" />
-                Nytt anløp
+                {tr('Nytt anløp')}
               </Button>
             </div>
           )
@@ -426,15 +427,15 @@ export default function AisCalls({ app, onSaved }) {
         <label className="flex items-start gap-2 border-t border-hair px-5 py-3 text-sm text-muted">
           <input type="checkbox" className="mt-0.5" checked={!!app.config?.calls_notify} disabled={hook === false} onChange={(e) => setNotify(e.target.checked)} />
           <span>
-            <span className="font-semibold text-ink">Varsle i {hook?.kind === 'teams' ? 'Teams' : 'Slack/Teams'}</span> når en båt fra flåten nærmer seg kaia (under en time), ankommer, eller er mer enn en time forsinket.
+            <span className="font-semibold text-ink">{tr('Varsle i')} {hook?.kind === 'teams' ? 'Teams' : tr('Slack/Teams')}</span> {tr('når en båt fra flåten nærmer seg kaia (under en time), ankommer, eller er mer enn en time forsinket.')}
             {hook === false && (
               <>
                 {' '}
-                Koble til Slack eller Teams under{' '}
+                {tr('Koble til Slack eller Teams under')}{' '}
                 <a href="/admin?view=screens" className="font-semibold text-brand hover:underline">
-                  Skjermer
+                  {tr('Skjermer')}
                 </a>{' '}
-                først.
+                {tr('først.')}
               </>
             )}
           </span>
@@ -457,8 +458,8 @@ export default function AisCalls({ app, onSaved }) {
             ))}
           </div>
           {quays.length > 1 && (
-            <select value={quayFilter} onChange={(e) => setQuayFilter(e.target.value)} className="h-8 rounded-lg border border-line bg-paper px-2 text-xs text-ink" aria-label="Kai">
-              <option value="">Alle kaier</option>
+            <select value={quayFilter} onChange={(e) => setQuayFilter(e.target.value)} className="h-8 rounded-lg border border-line bg-paper px-2 text-xs text-ink" aria-label={tr('Kai')}>
+              <option value="">{tr('Alle kaier')}</option>
               {quays.map((q) => (
                 <option key={q.id} value={q.id}>
                   {q.name}
@@ -472,11 +473,11 @@ export default function AisCalls({ app, onSaved }) {
         {showPast && (
           <div className="border-t border-hair">
             <div className="flex items-center gap-2 px-5 pb-2 pt-3 text-xs font-semibold uppercase tracking-wide text-muted">
-              Varer
+              {tr('Varer')}
               <select value={reportDays} onChange={(e) => setReportDays(Number(e.target.value))} className="rounded-md border border-line bg-paper px-1.5 py-0.5 text-xs normal-case text-ink">
                 {[30, 90, 365].map((d) => (
                   <option key={d} value={d}>
-                    siste {d} dager
+                    {tr('siste')} {d} {tr('dager')}
                   </option>
                 ))}
               </select>
@@ -487,7 +488,7 @@ export default function AisCalls({ app, onSaved }) {
 
         {!list.length && (
           <p className="m-0 px-5 pb-5 text-sm text-muted">
-            {showPast ? 'Ingen tidligere anløp.' : quays.length ? 'Ingen kommende anløp. Trykk «Nytt anløp» for å legge inn det første.' : 'Legg først inn kaiene under Oppsett, så kan du registrere anløp.'}
+            {showPast ? tr('Ingen tidligere anløp.') : quays.length ? tr('Ingen kommende anløp. Trykk «Nytt anløp» for å legge inn det første.') : tr('Legg først inn kaiene under Oppsett, så kan du registrere anløp.')}
           </p>
         )}
 
@@ -532,7 +533,7 @@ function CallRow({ c, vessel, boat, quay, now, onEdit }) {
       <button type="button" onClick={onEdit} className="flex w-full items-center gap-4 px-5 py-3 text-left hover:bg-zone/50">
         <div className="w-28 shrink-0">
           <div className="text-sm font-semibold tabular-nums text-ink">{callTimeText(c.eta, now)}</div>
-          {c.etd && <div className="text-xs tabular-nums text-muted">avg. {callTimeText(c.etd, now)}</div>}
+          {c.etd && <div className="text-xs tabular-nums text-muted">{tr('avg.')} {callTimeText(c.etd, now)}</div>}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-sm">
@@ -541,26 +542,26 @@ function CallRow({ c, vessel, boat, quay, now, onEdit }) {
             {quay && <span className="truncate text-muted">· {quay.name}</span>}
           </div>
           <div className="truncate text-xs text-muted">
-            {[c.from && `fra ${c.from}`, c.next && `→ ${c.next}`].filter(Boolean).join('  ')}
+            {[c.from && tr('fra {0}', [c.from]), c.next && `→ ${c.next}`].filter(Boolean).join('  ')}
             {c.cargo.length > 0 && `${c.from || c.next ? '  ·  ' : ''}${cargoText(c.cargo)}`}
             {c.note && `  ·  ${c.note}`}
           </div>
         </div>
         <div className="w-40 shrink-0 text-right text-xs">
           {live?.state === 'arrived' ? (
-            <span className="font-semibold text-ok">Ved kai nå</span>
+            <span className="font-semibold text-ok">{tr('Ved kai nå')}</span>
           ) : reported ? (
             <span className="grid">
               <span className={`font-semibold ${late ? 'text-warn' : 'text-ink'}`}>
-                ETA {reportedEtaText(reported, now)}
-                {late && ' · forsinket'}
+                {tr('ETA')} {reportedEtaText(reported, now)}
+                {late && tr(' · forsinket')}
               </span>
               {vessel.destination && <span className="truncate text-muted">→ {vessel.destination}</span>}
             </span>
           ) : live ? (
-            <span className="font-semibold text-ink">Live: {etaText(live)}</span>
+            <span className="font-semibold text-ink">{tr('Live:')} {etaText(live)}</span>
           ) : (
-            <span className="text-muted">{c.mmsi ? 'Venter på AIS' : 'Ingen live data'}</span>
+            <span className="text-muted">{c.mmsi ? tr('Venter på AIS') : tr('Ingen live data')}</span>
           )}
         </div>
       </button>

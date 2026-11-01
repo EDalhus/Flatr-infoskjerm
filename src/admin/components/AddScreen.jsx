@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Input, Select, Button, Field, Segmented, ErrorText } from './ui.jsx';
+import { tr } from '../../lib/i18n.js';
 
 export const normalizeCode = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 export const codeFromUrl = () =>
@@ -16,7 +17,7 @@ export function CodeInput({ value, onChange, inputRef }) {
   const chars = value.padEnd(6, ' ').split('');
   return (
     <label className="relative block w-fit cursor-text">
-      <span className="sr-only">Koden som vises på TV-en</span>
+      <span className="sr-only">{tr('Koden som vises på TV-en')}</span>
       <input
         ref={inputRef}
         value={value}
@@ -25,7 +26,7 @@ export function CodeInput({ value, onChange, inputRef }) {
         autoComplete="off"
         spellCheck={false}
         className="absolute inset-0 h-full w-full cursor-text opacity-0"
-        aria-label="Kode fra TV-en"
+        aria-label={tr('Kode fra TV-en')}
       />
       <span className="pointer-events-none flex items-center gap-1.5" aria-hidden="true">
         {chars.map((c, i) => (
@@ -53,7 +54,7 @@ export function CopyLink({ link }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.prompt('Kopier lenken:', link);
+      window.prompt(tr('Kopier lenken:'), link);
     }
   };
   return (
@@ -61,13 +62,13 @@ export function CopyLink({ link }) {
       <code className="min-w-0 flex-1 truncate rounded-xl border border-line bg-paper px-3 py-2.5 text-sm text-ink">{link}</code>
       <Button variant="outline" onClick={copy}>
         <Icon name={copied ? 'check' : 'copy'} className="h-4 w-4" />
-        {copied ? 'Kopiert' : 'Kopier'}
+        {copied ? tr('Kopiert') : tr('Kopier')}
       </Button>
       <a
         href={link}
         target="_blank"
         rel="noreferrer"
-        aria-label="Åpne i ny fane"
+        aria-label={tr('Åpne i ny fane')}
         className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-card text-ink hover:bg-hair"
       >
         <Icon name="external" className="h-4 w-4" />
@@ -102,8 +103,8 @@ export function AddScreenForm({ playlists = [], playlistId, initialCode = '', on
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (mode === 'tv' && code.length < 6) return setError('Koden har 6 tegn – den står på TV-en.');
-    if (mode === 'browser' && !name.trim()) return setError('Gi skjermen et navn.');
+    if (mode === 'tv' && code.length < 6) return setError(tr('Koden har 6 tegn – den står på TV-en.'));
+    if (mode === 'browser' && !name.trim()) return setError(tr('Gi skjermen et navn.'));
     setBusy(true);
     try {
       if (mode === 'tv') {
@@ -125,45 +126,44 @@ export function AddScreenForm({ playlists = [], playlistId, initialCode = '', on
         value={mode}
         onChange={setMode}
         options={[
-          { value: 'tv', label: 'TV med kode' },
-          { value: 'browser', label: 'Lenke til nettleser' }
+          { value: 'tv', label: tr('TV med kode') },
+          { value: 'browser', label: tr('Lenke til nettleser') }
         ]}
         className="w-fit"
       />
 
       {mode === 'tv' ? (
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold text-muted">Koden som står på TV-en</span>
+          <span className="text-xs font-semibold text-muted">{tr('Koden som står på TV-en')}</span>
           <CodeInput value={code} onChange={setCode} inputRef={codeRef} />
           <span className="text-xs text-muted">
-            Åpne Flatr-appen på Apple TV eller Android TV, eller gå til flatr.no/tv i nettleseren på skjermen. Du kan også skanne QR-koden med
-            mobilen, så fylles koden ut av seg selv.
+            {tr('Åpne Flatr-appen på Apple TV eller Android TV, eller gå til flatr.no/tv i nettleseren på skjermen. Du kan også skanne QR-koden med mobilen, så fylles koden ut av seg selv.')}
           </span>
         </div>
       ) : (
         <p className="m-0 max-w-lg text-sm text-muted">
-          Du får en lenke du åpner i nettleseren på skjermen, f.eks. en smart-TV, en PC eller en Chromecast med nettleser.
+          {tr('Du får en lenke du åpner i nettleseren på skjermen, f.eks. en smart-TV, en PC eller en Chromecast med nettleser.')}
         </p>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Navn på skjermen">
+        <Field label={tr('Navn på skjermen')}>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={mode === 'tv' ? 'Resepsjon (valgfritt)' : 'Resepsjon'}
+            placeholder={mode === 'tv' ? tr('Resepsjon (valgfritt)') : tr('Resepsjon')}
             autoFocus={mode === 'browser'}
           />
         </Field>
         {!playlistId && (
-          <Field label="Skal vise">
+          <Field label={tr('Skal vise')}>
             <Select value={content} onChange={(e) => setContent(e.target.value)}>
               {playlists.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
-              <option value={NEW}>+ Ny tom presentasjon</option>
+              <option value={NEW}>{tr('+ Ny tom presentasjon')}</option>
             </Select>
           </Field>
         )}
@@ -173,11 +173,11 @@ export function AddScreenForm({ playlists = [], playlistId, initialCode = '', on
 
       <div className="flex gap-2">
         <Button type="submit" disabled={busy || (mode === 'tv' && code.length < 6)}>
-          {busy ? 'Legger til …' : mode === 'tv' ? 'Koble til' : 'Lag lenke'}
+          {busy ? tr('Legger til …') : mode === 'tv' ? tr('Koble til') : tr('Lag lenke')}
         </Button>
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Avbryt
+            {tr('Avbryt')}
           </Button>
         )}
       </div>
@@ -193,20 +193,20 @@ export function AddedScreen({ result, onAnother, onClose }) {
       <span className="grid h-14 w-14 place-items-center rounded-full bg-ok-tint text-ok">
         <Icon name="check" className="h-7 w-7" />
       </span>
-      <h2 className="m-0 text-xl font-bold text-ink">«{result.name}» er lagt til</h2>
+      <h2 className="m-0 text-xl font-bold text-ink">«{result.name}{tr('» er lagt til')}</h2>
       {result.mode === 'tv' ? (
-        <p className="m-0 max-w-md text-sm text-muted">TV-en begynner å vise innholdet om noen sekunder.</p>
+        <p className="m-0 max-w-md text-sm text-muted">{tr('TV-en begynner å vise innholdet om noen sekunder.')}</p>
       ) : (
         <div className="flex w-full max-w-lg flex-col gap-2">
-          <p className="m-0 text-sm text-muted">Åpne denne lenken i nettleseren på skjermen og sett den i fullskjerm.</p>
+          <p className="m-0 text-sm text-muted">{tr('Åpne denne lenken i nettleseren på skjermen og sett den i fullskjerm.')}</p>
           <CopyLink link={link} />
         </div>
       )}
       <div className="mt-2 flex gap-2">
-        {onAnother && <Button onClick={onAnother}>Legg til en til</Button>}
+        {onAnother && <Button onClick={onAnother}>{tr('Legg til en til')}</Button>}
         {onClose && (
           <Button variant="outline" onClick={onClose}>
-            Ferdig
+            {tr('Ferdig')}
           </Button>
         )}
       </div>

@@ -9,14 +9,15 @@ import LiveScreenView from './LiveScreenView.jsx';
 import { AddContext } from './AiContext.jsx';
 import { chosenAgent, chooseAgent } from './aiAgent.js';
 import { Icon, Button } from './ui.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
 const NEW = 'new';
 const MOD = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
 const param = (name) => new URLSearchParams(window.location.search).get(name) || '';
 const EFFORTS = [
-  { value: 'low', label: 'Rask' },
-  { value: 'medium', label: 'Balansert' },
-  { value: 'high', label: 'Grundig' }
+  { value: 'low', label: tr('Rask') },
+  { value: 'medium', label: tr('Balansert') },
+  { value: 'high', label: tr('Grundig') }
 ];
 
 function greeting(name) {
@@ -31,7 +32,7 @@ function ago(iso) {
   if (!Number.isFinite(min)) return '';
   if (min < 60) return `${Math.max(1, min)} min siden`;
   if (min < 24 * 60) return `${Math.round(min / 60)} t siden`;
-  return new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
 }
 
 /** Lite stjerne-/gnistmerke i Claude-stil. */
@@ -158,8 +159,8 @@ export default function AiCommand({ go, me }) {
 
   const shell = (children) => (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-paper/95 px-4 backdrop-blur-md" onMouseDown={() => setOpen(false)} onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
-      <div role="dialog" aria-label="AI-assistent" className="mx-auto w-full max-w-3xl pb-16 pt-[12vh]" onMouseDown={(e) => e.stopPropagation()}>
-        <button type="button" onClick={() => setOpen(false)} className="fixed right-5 top-5 grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-zone hover:text-ink" aria-label="Lukk (Esc)">
+      <div role="dialog" aria-label={tr('AI-assistent')} className="mx-auto w-full max-w-3xl pb-16 pt-[12vh]" onMouseDown={(e) => e.stopPropagation()}>
+        <button type="button" onClick={() => setOpen(false)} className="fixed right-5 top-5 grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-zone hover:text-ink" aria-label={tr('Lukk (Esc)')}>
           <Icon name="x" className="h-5 w-5" />
         </button>
         <h1 className="m-0 mb-8 flex items-center justify-center gap-3 text-center text-ink" style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontWeight: 400, fontSize: 'clamp(30px, 4vw, 44px)' }}>
@@ -174,11 +175,11 @@ export default function AiCommand({ go, me }) {
   if (assistant === null)
     return shell(
       <div className="mx-auto max-w-lg rounded-3xl border border-line bg-card p-6 text-center shadow-card">
-        <p className="m-0 text-base text-ink">Lag og endre presentasjoner ved å skrive hva du vil ha.</p>
-        <p className="m-0 mt-2 text-sm text-muted">Aktiver Flatr-appen Claude AI og legg inn en API-nøkkel fra Anthropic for å komme i gang.</p>
+        <p className="m-0 text-base text-ink">{tr('Lag og endre presentasjoner ved å skrive hva du vil ha.')}</p>
+        <p className="m-0 mt-2 text-sm text-muted">{tr('Aktiver Flatr-appen Claude AI og legg inn en API-nøkkel fra Anthropic for å komme i gang.')}</p>
         <div className="mt-5 flex justify-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-            Ikke nå
+            {tr('Ikke nå')}
           </Button>
           <Button
             size="sm"
@@ -187,7 +188,7 @@ export default function AiCommand({ go, me }) {
               go('apps', { app: 'claude' });
             }}
           >
-            Gå til Claude AI
+            {tr('Gå til Claude AI')}
           </Button>
         </div>
       </div>
@@ -211,7 +212,7 @@ export default function AiCommand({ go, me }) {
             }
           }}
           rows={3}
-          placeholder={target === NEW ? 'Hva vil du lage? F.eks. «Infoskjerm for kantina med dagens meny og vær»' : 'Hva vil du endre i presentasjonen?'}
+          placeholder={target === NEW ? tr('Hva vil du lage? F.eks. «Infoskjerm for kantina med dagens meny og vær»') : tr('Hva vil du endre i presentasjonen?')}
           className="block min-h-[96px] w-full resize-none rounded-3xl bg-transparent px-6 pt-5 text-lg text-ink outline-none placeholder:text-muted"
         />
         <div className="flex items-center gap-2 px-4 pb-4 pt-1">
@@ -219,14 +220,14 @@ export default function AiCommand({ go, me }) {
             type="button"
             onClick={() => setPlus((p) => !p)}
             className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink hover:bg-zone ${plus ? 'bg-zone' : ''}`}
-            aria-label="Legg til fast kontekst"
-            title="Legg til fast kontekst (merkevare, retningslinjer)"
+            aria-label={tr('Legg til fast kontekst')}
+            title={tr('Legg til fast kontekst (merkevare, retningslinjer)')}
           >
             <Icon name="plus" className="h-5 w-5" />
           </button>
           <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
             {context.map((c) => (
-              <span key={c.id} className="group inline-flex max-w-[240px] items-center gap-1 rounded-full bg-zone py-1 pl-2.5 pr-1 text-xs text-ink/80" title={`Fast kontekst: ${c.title}`}>
+              <span key={c.id} className="group inline-flex max-w-[240px] items-center gap-1 rounded-full bg-zone py-1 pl-2.5 pr-1 text-xs text-ink/80" title={tr('Fast kontekst: {0}', [c.title])}>
                 {c.kind === 'pdf' ? '📄' : c.kind === 'link' ? '🔗' : '📝'} <span className="truncate">{c.title}</span>
                 <button
                   type="button"
@@ -238,8 +239,8 @@ export default function AiCommand({ go, me }) {
                     }
                   }}
                   className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-muted hover:bg-line hover:text-danger"
-                  aria-label={`Fjern ${c.title}`}
-                  title="Fjern fra fast kontekst"
+                  aria-label={tr('Fjern {0}', [c.title])}
+                  title={tr('Fjern fra fast kontekst')}
                 >
                   <Icon name="x" className="h-3 w-3" />
                 </button>
@@ -251,7 +252,7 @@ export default function AiCommand({ go, me }) {
             onClick={submit}
             disabled={busy || !text.trim()}
             className={`grid h-9 w-9 shrink-0 place-items-center rounded-full transition-opacity hover:opacity-90 disabled:opacity-30 ${cursorChosen ? 'bg-ink text-paper' : 'bg-[#d97757] text-white'}`}
-            aria-label="Start"
+            aria-label={tr('Start')}
           >
             {busy ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <span className="text-lg leading-none">↑</span>}
           </button>
@@ -259,9 +260,9 @@ export default function AiCommand({ go, me }) {
         {plus && (
           <div className="border-t border-line px-5 py-4">
             <div className="mb-2 text-xs text-muted">
-              <strong className="text-ink">Fast kontekst</strong> – Claude husker og følger dette i alle presentasjoner (merkevareretningslinjer, designmanual, tone of voice).{' '}
+              <strong className="text-ink">{tr('Fast kontekst')}</strong> {tr('– Claude husker og følger dette i alle presentasjoner (merkevareretningslinjer, designmanual, tone of voice).')}{' '}
               <button type="button" onClick={() => (setOpen(false), go('apps', { app: 'claude' }))} className="font-semibold text-brand hover:underline">
-                Administrer
+                {tr('Administrer')}
               </button>
             </div>
             <AddContext compact agent={assistant?.kind} onChange={(a) => setAssistant(a)} />
@@ -271,9 +272,9 @@ export default function AiCommand({ go, me }) {
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 px-3 text-sm">
         <label className="flex min-w-0 items-center gap-1 text-ink">
-          <span className="sr-only">Presentasjon</span>
+          <span className="sr-only">{tr('Presentasjon')}</span>
           <select value={target} onChange={(e) => setTarget(e.target.value)} className="max-w-[260px] cursor-pointer truncate bg-transparent font-medium text-ink outline-none">
-            <option value={NEW}>Ny presentasjon</option>
+            <option value={NEW}>{tr('Ny presentasjon')}</option>
             {playlists.map((p) => (
               <option key={p.id} value={String(p.id)}>
                 {p.name}
@@ -282,17 +283,17 @@ export default function AiCommand({ go, me }) {
           </select>
         </label>
         {target === NEW && (
-          <select value={orientation} onChange={(e) => setOrientation(e.target.value)} className="cursor-pointer bg-transparent text-muted outline-none" aria-label="Format">
-            <option value="landscape">Liggende 16:9</option>
-            <option value="portrait">Stående 9:16</option>
+          <select value={orientation} onChange={(e) => setOrientation(e.target.value)} className="cursor-pointer bg-transparent text-muted outline-none" aria-label={tr('Format')}>
+            <option value="landscape">{tr('Liggende 16:9')}</option>
+            <option value="portrait">{tr('Stående 9:16')}</option>
           </select>
         )}
         <div className="ml-auto flex items-center gap-1.5">
           {assistants.length > 1 ? (
-            <select value={assistant?.kind || ''} onChange={(e) => switchAgent(e.target.value)} className="cursor-pointer bg-transparent text-ink outline-none" aria-label="Assistent">
+            <select value={assistant?.kind || ''} onChange={(e) => switchAgent(e.target.value)} className="cursor-pointer bg-transparent text-ink outline-none" aria-label={tr('Assistent')}>
               {assistants.map((a) => (
                 <option key={a.kind} value={a.kind}>
-                  {a.kind === 'claude' ? a.model : a.model === 'Cursor' ? a.name : `Cursor · ${a.model}`}
+                  {a.kind === 'claude' ? a.model : a.model === 'Cursor' ? a.name : tr('Cursor · {0}', [a.model])}
                 </option>
               ))}
             </select>
@@ -300,7 +301,7 @@ export default function AiCommand({ go, me }) {
             <span className="text-ink">{assistant?.model?.replace(/^Claude /, '') || '…'}</span>
           )}
           {assistant?.kind !== 'cursor' && (
-          <select value={assistant?.effort || 'medium'} onChange={(e) => setEffort(e.target.value)} className="cursor-pointer bg-transparent text-muted outline-none" aria-label="Innsats">
+          <select value={assistant?.effort || 'medium'} onChange={(e) => setEffort(e.target.value)} className="cursor-pointer bg-transparent text-muted outline-none" aria-label={tr('Innsats')}>
             {EFFORTS.map((e) => (
               <option key={e.value} value={e.value}>
                 {e.label}
@@ -313,8 +314,8 @@ export default function AiCommand({ go, me }) {
       {assistant && !assistant.has_key && (
         <p className="m-0 mt-3 px-3 text-sm text-warn">
           {assistant.included?.exhausted
-            ? `Månedens Flatr AI er brukt opp. Den fylles på igjen ${new Date(assistant.included.resets_at).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' })}, eller legg inn en egen nøkkel under Flatr Apps.`
-            : `${assistant.name} mangler API-nøkkel – legg den inn under Flatr Apps.`}
+            ? tr('Månedens Flatr AI er brukt opp. Den fylles på igjen {0}, eller legg inn en egen nøkkel under Flatr Apps.', [new Date(assistant.included.resets_at).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })])
+            : tr('{0} mangler API-nøkkel – legg den inn under Flatr Apps.', [assistant.name])}
         </p>
       )}
       {error && <p className="m-0 mt-3 px-3 text-sm text-danger">{error}</p>}
@@ -322,9 +323,9 @@ export default function AiCommand({ go, me }) {
       {recent.length > 0 && (
         <section className="mt-12">
           <div className="mb-3 flex items-center justify-between px-3 text-sm">
-            <span className="text-muted">Siste presentasjoner</span>
+            <span className="text-muted">{tr('Siste presentasjoner')}</span>
             <button type="button" onClick={() => (setOpen(false), go('playlists'))} className="text-muted hover:text-ink">
-              Se alle
+              {tr('Se alle')}
             </button>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -339,14 +340,14 @@ export default function AiCommand({ go, me }) {
                     inputRef.current?.focus();
                   }}
                   className={`rounded-2xl border bg-card p-2 text-left transition-colors hover:bg-zone/60 ${selected ? (cursorChosen ? 'border-ink ring-1 ring-ink' : 'border-[#d97757] ring-1 ring-[#d97757]') : 'border-line'}`}
-                  title={selected ? 'Valgt – klikk for å velge ny presentasjon i stedet' : 'Bruk denne presentasjonen'}
+                  title={selected ? tr('Valgt – klikk for å velge ny presentasjon i stedet') : tr('Bruk denne presentasjonen')}
                 >
                   <div className="pointer-events-none">
                     <LiveScreenView playlistId={p.id} orientation={p.orientation} />
                   </div>
                   <div className="px-1.5 pb-1 pt-2.5">
                     <div className="truncate text-sm font-medium text-ink">{p.name}</div>
-                    <div className="text-xs text-muted">{selected ? 'Valgt' : ago(p.updated_at || p.created_at)}</div>
+                    <div className="text-xs text-muted">{selected ? tr('Valgt') : ago(p.updated_at || p.created_at)}</div>
                   </div>
                 </button>
               );
@@ -355,7 +356,7 @@ export default function AiCommand({ go, me }) {
         </section>
       )}
       <p className="m-0 mt-10 text-center text-xs text-muted">
-        Enter for å starte · Shift+Enter for ny linje · Esc lukker · {MOD}K åpner hvor som helst
+        {tr('Enter for å starte · Shift+Enter for ny linje · Esc lukker ·')} {MOD}{tr('K åpner hvor som helst')}
       </p>
     </>
   );

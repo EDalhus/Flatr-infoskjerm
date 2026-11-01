@@ -22,21 +22,22 @@ import PollSettings from './apps/PollSettings.jsx';
 import AppBuilder from './apps/AppBuilder.jsx';
 import IconEditor from './apps/IconEditor.jsx';
 import { Icon, Input, Button, Card, PageHeader, ErrorText, Segmented } from './ui.jsx';
+import { tr } from '../../lib/i18n.js';
 
 // Flatr Apps – markedsplassen. Offisielle apper (bygd inn i Flatr) og egne
 // apper (laget i appbyggeren, delt etter godkjenning) aktiveres her før de kan
 // brukes i editoren. Adressen holder tilstanden: ?view=apps&tab=…&app=…&build=…
 
 const TABS = [
-  { value: 'explore', label: 'Utforsk' },
-  { value: 'mine', label: 'Mine apper' },
-  { value: 'dev', label: 'Utvikler' }
+  { value: 'explore', label: tr('Utforsk') },
+  { value: 'mine', label: tr('Mine apper') },
+  { value: 'dev', label: tr('Utvikler') }
 ];
 const REVIEW = {
-  none: { label: 'Privat', tone: 'bg-zone text-muted' },
-  pending: { label: 'Venter på godkjenning', tone: 'bg-amber-100 text-amber-800' },
-  approved: { label: 'Godkjent', tone: 'bg-brand-tint text-brand' },
-  rejected: { label: 'Avvist', tone: 'bg-danger-tint text-danger' }
+  none: { label: tr('Privat'), tone: 'bg-zone text-muted' },
+  pending: { label: tr('Venter på godkjenning'), tone: 'bg-amber-100 text-amber-800' },
+  approved: { label: tr('Godkjent'), tone: 'bg-brand-tint text-brand' },
+  rejected: { label: tr('Avvist'), tone: 'bg-danger-tint text-danger' }
 };
 
 const officialItem = (a, icons, canEdit) => ({ ...a, id: a.key, kind: a.key, publisher: 'Flatr', verified: true, image: icons?.[a.key] || null, can_edit_icon: canEdit, iconKey: `official:${a.key}` });
@@ -71,7 +72,7 @@ function AppCard({ item, installed, onOpen }) {
           {installed && (
             <Badge tone="bg-brand-tint text-brand">
               <Icon name="check" className="h-3 w-3" />
-              Aktivert
+              {tr('Aktivert')}
             </Badge>
           )}
           {item.own && item.review_status && <Badge tone={REVIEW[item.review_status]?.tone}>{REVIEW[item.review_status]?.label}</Badge>}
@@ -82,14 +83,14 @@ function AppCard({ item, installed, onOpen }) {
         <div className="mt-1 flex items-center gap-1 text-sm text-muted">
           {item.publisher}
           {item.verified && (
-            <span title="Offisiell app fra Flatr" className="grid h-4 w-4 place-items-center rounded-full bg-brand text-onbrand">
+            <span title={tr('Offisiell app fra Flatr')} className="grid h-4 w-4 place-items-center rounded-full bg-brand text-onbrand">
               <Icon name="check" className="h-2.5 w-2.5" />
             </span>
           )}
         </div>
       </div>
       <p className="m-0 line-clamp-2 text-sm text-muted">{item.tagline}</p>
-      <div className="mt-auto pt-1 text-xs font-medium text-muted">{CATEGORY_LABEL[item.category] || 'Annet'}</div>
+      <div className="mt-auto pt-1 text-xs font-medium text-muted">{CATEGORY_LABEL[item.category] || tr('Annet')}</div>
     </button>
   );
 }
@@ -158,7 +159,7 @@ export default function AppsManager() {
   };
   const deactivate = async (item) => {
     const ins = installOf(item);
-    if (!ins || !confirm(`Deaktivere «${item.name}»? Innstillingene slettes, og elementer som bruker appen slutter å vise data.`)) return;
+    if (!ins || !confirm(tr('Deaktivere «{0}»? Innstillingene slettes, og elementer som bruker appen slutter å vise data.', [item.name]))) return;
     setError('');
     try {
       await api.apps.remove(ins.id);
@@ -169,7 +170,7 @@ export default function AppsManager() {
     }
   };
   const removeCustom = async (item) => {
-    if (!confirm(`Fjerne «${item.name}» fra markedsplassen? Kunder som allerede har aktivert den kan fortsatt bruke den.`)) return;
+    if (!confirm(tr('Fjerne «{0}» fra markedsplassen? Kunder som allerede har aktivert den kan fortsatt bruke den.', [item.name]))) return;
     try {
       await api.appMarket.remove(item.ref);
       setOpenId('');
@@ -193,12 +194,12 @@ export default function AppsManager() {
               Flatr Apps
             </button>
           }
-          title={editing ? `Rediger ${editing.name}` : 'Lag en app'}
-          subtitle="Koble et JSON-API til skjermene uten å skrive kode."
+          title={editing ? tr('Rediger {0}', [editing.name]) : tr('Lag en app')}
+          subtitle={tr('Koble et JSON-API til skjermene uten å skrive kode.')}
         />
         <div className="mx-auto w-full max-w-6xl px-6 pb-12 pt-4 sm:px-8">
           {build !== 'new' && !editing ? (
-            <ErrorText>Finner ikke appen.</ErrorText>
+            <ErrorText>{tr('Finner ikke appen.')}</ErrorText>
           ) : (
             <AppBuilder
               key={build}
@@ -221,7 +222,7 @@ export default function AppsManager() {
     const ins = installOf(current);
     const hasSettings = ['ais', 'custom', 'birthdays', 'claude', 'cursor', 'unsplash', 'menu', 'tides', 'football', 'fixtures', 'stock', 'entur', 'sheet', 'poll'].includes(current.kind);
     // NAIS har tillegget «Anløp» som egen fane.
-    const extraTabs = current.kind === 'ais' && ins ? [['calls', 'Anløp']] : [];
+    const extraTabs = current.kind === 'ais' && ins ? [['calls', tr('Anløp')]] : [];
     const view = !ins || !hasSettings ? 'about' : detailTab === 'about' ? 'about' : extraTabs.some(([id]) => id === detailTab) ? detailTab : 'setup';
     const onSaved = (a) => setInstalls((l) => l.map((x) => (x.id === a.id ? a : x)));
     const host = (() => {
@@ -247,11 +248,11 @@ export default function AppsManager() {
                 type="button"
                 onClick={() => setIconOpen(!iconOpen)}
                 className="group relative block rounded-2xl focus:outline-none focus:ring-2 focus:ring-focus/40"
-                title="Endre ikon"
+                title={tr('Endre ikon')}
               >
                 <AppIcon icon={current.icon} color={current.color} size={56} image={current.image} />
                 <span className="absolute inset-0 grid place-items-center rounded-[14px] bg-black/55 text-[10px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  Endre
+                  {tr('Endre')}
                 </span>
               </button>
               {iconOpen && <IconEditor appKey={current.iconKey} item={current} onChange={(img) => iconChanged(current, img)} onClose={() => setIconOpen(false)} />}
@@ -265,7 +266,7 @@ export default function AppsManager() {
               {ins && (
                 <Badge tone="bg-brand-tint text-brand">
                   <Icon name="check" className="h-3 w-3" />
-                  Aktivert
+                  {tr('Aktivert')}
                 </Badge>
               )}
               {current.own && <Badge tone={REVIEW[current.review_status]?.tone}>{REVIEW[current.review_status]?.label}</Badge>}
@@ -273,29 +274,29 @@ export default function AppsManager() {
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted">
               {current.publisher}
               {current.verified && (
-                <span title="Offisiell app fra Flatr" className="grid h-4 w-4 place-items-center rounded-full bg-brand text-onbrand">
+                <span title={tr('Offisiell app fra Flatr')} className="grid h-4 w-4 place-items-center rounded-full bg-brand text-onbrand">
                   <Icon name="check" className="h-2.5 w-2.5" />
                 </span>
               )}
               <span>·</span>
-              <span>{CATEGORY_LABEL[current.category] || 'Annet'}</span>
+              <span>{CATEGORY_LABEL[current.category] || tr('Annet')}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {current.own && (
               <Button variant="ghost" size="sm" onClick={() => setBuild(String(current.ref))}>
                 <Icon name="edit" className="h-4 w-4" />
-                Rediger
+                {tr('Rediger')}
               </Button>
             )}
             {ins ? (
               <Button variant="ghost" size="sm" onClick={() => deactivate(current)} className="!text-muted hover:!text-danger">
-                Deaktiver
+                {tr('Deaktiver')}
               </Button>
             ) : (
               <Button onClick={() => activate(current)} disabled={busy}>
                 <Icon name="plus" className="h-4 w-4" />
-                {busy ? 'Aktiverer …' : 'Aktiver'}
+                {busy ? tr('Aktiverer …') : tr('Aktiver')}
               </Button>
             )}
           </div>
@@ -303,7 +304,7 @@ export default function AppsManager() {
 
         {ins && hasSettings && (
           <div className="mt-5 border-b border-hair">
-            <nav className="-mb-px flex gap-5" aria-label="Faner">
+            <nav className="-mb-px flex gap-5" aria-label={tr('Faner')}>
               {[
                 ['setup', 'Oppsett'],
                 ...extraTabs,
@@ -356,7 +357,7 @@ export default function AppsManager() {
                     <span>
                       {current.ready || (
                         <>
-                          Klar til bruk. Åpne en presentasjon og legg den til fra <strong>Widgeter</strong> i editoren.
+                          {tr('Klar til bruk. Åpne en presentasjon og legg den til fra')} <strong>{tr('Widgeter')}</strong> {tr('i editoren.')}
                         </>
                       )}
                     </span>
@@ -365,7 +366,7 @@ export default function AppsManager() {
                 {!ins && (
                   <Button className="mt-6" onClick={() => activate(current)} disabled={busy}>
                     <Icon name="plus" className="h-4 w-4" />
-                    {busy ? 'Aktiverer …' : `Aktiver ${current.name}`}
+                    {busy ? tr('Aktiverer …') : tr('Aktiver {0}', [current.name])}
                   </Button>
                 )}
                 {current.guide && (
@@ -392,21 +393,21 @@ export default function AppsManager() {
                     </ol>
                     {current.guide.troubleshooting && (
                       <div className="mt-6 rounded-xl border border-line bg-zone/50 p-4 text-sm">
-                        <div className="font-semibold text-ink">Fungerer det ikke?</div>
+                        <div className="font-semibold text-ink">{tr('Fungerer det ikke?')}</div>
                         <p className="m-0 mt-1 leading-relaxed text-muted">{current.guide.troubleshooting}</p>
                       </div>
                     )}
                   </section>
                 )}
                 {current.own && current.review_status === 'rejected' && current.review_note && (
-                  <p className="m-0 mt-6 rounded-lg bg-danger-tint px-3 py-2 text-sm text-danger">Avvist av Flatr: {current.review_note}</p>
+                  <p className="m-0 mt-6 rounded-lg bg-danger-tint px-3 py-2 text-sm text-danger">{tr('Avvist av Flatr:')} {current.review_note}</p>
                 )}
               </div>
               <aside className="min-w-0">
                 <dl className="m-0 grid gap-5 rounded-2xl border border-hair bg-card p-5 text-sm">
                   {current.views?.length > 0 && (
                     <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Visninger</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{tr('Visninger')}</dt>
                       <dd className="m-0 mt-2 grid gap-1.5">
                         {current.views.map((v) => (
                           <span key={v} className="flex items-center gap-2 text-ink">
@@ -419,30 +420,30 @@ export default function AppsManager() {
                   )}
                   {current.requires && (
                     <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Krever</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{tr('Krever')}</dt>
                       <dd className="m-0 mt-1.5 text-ink">{current.requires}</dd>
                     </div>
                   )}
                   {current.kind === 'custom' && current.settings?.length > 0 && (
                     <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Du fyller inn</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{tr('Du fyller inn')}</dt>
                       <dd className="m-0 mt-1.5 text-ink">{current.settings.map((x) => x.label).join(', ')}</dd>
                     </div>
                   )}
                   {current.kind === 'custom' && host && (
                     <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Henter data fra</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{tr('Henter data fra')}</dt>
                       <dd className="m-0 mt-1.5 break-all text-ink">{host}</dd>
                     </div>
                   )}
                   <div>
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Utgiver</dt>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{tr('Utgiver')}</dt>
                     <dd className="m-0 mt-1.5 text-ink">{current.publisher}</dd>
                   </div>
                   {current.own && (
                     <div className="border-t border-hair pt-4">
                       <button type="button" onClick={() => removeCustom(current)} className="text-sm font-medium text-danger hover:underline">
-                        Fjern fra markedsplassen
+                        {tr('Fjern fra markedsplassen')}
                       </button>
                     </div>
                   )}
@@ -468,11 +469,11 @@ export default function AppsManager() {
     <>
       <PageHeader
         title="Flatr Apps"
-        subtitle="Aktiver apper for å bruke dem på skjermene – eller lag din egen."
+        subtitle={tr('Aktiver apper for å bruke dem på skjermene – eller lag din egen.')}
         action={
           <Button onClick={() => setBuild('new')}>
             <Icon name="plus" className="h-4 w-4" />
-            Lag app
+            {tr('Lag app')}
           </Button>
         }
       />
@@ -481,15 +482,15 @@ export default function AppsManager() {
           <Segmented value={activeTab} onChange={(v) => setTab(v === 'explore' ? '' : v)} options={TABS} />
           <div className="relative ml-auto w-full sm:w-72">
             <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Søk i apper" className="!pl-9" aria-label="Søk i apper" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('Søk i apper')} className="!pl-9" aria-label={tr('Søk i apper')} />
           </div>
         </div>
 
         <ErrorText>{error}</ErrorText>
 
         <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
-          <nav className="flex gap-1 overflow-x-auto lg:flex-col" aria-label="Kategorier">
-            {[{ id: '', label: 'Alle kategorier' }, ...CATEGORIES].map((c) => (
+          <nav className="flex gap-1 overflow-x-auto lg:flex-col" aria-label={tr('Kategorier')}>
+            {[{ id: '', label: tr('Alle kategorier') }, ...CATEGORIES].map((c) => (
               <button
                 key={c.id}
                 type="button"
@@ -506,22 +507,21 @@ export default function AppsManager() {
               <Card>
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-ink">Lag din egen app</div>
+                    <div className="font-bold text-ink">{tr('Lag din egen app')}</div>
                     <p className="m-0 mt-1 text-sm text-muted">
-                      Koble et JSON-API til skjermene uten kode. Appen er privat for kontoen din, og kan sendes til godkjenning for å bli tilgjengelig for alle
-                      Flatr-kunder.
+                      {tr('Koble et JSON-API til skjermene uten kode. Appen er privat for kontoen din, og kan sendes til godkjenning for å bli tilgjengelig for alle Flatr-kunder.')}
                     </p>
                   </div>
                   <Button onClick={() => setBuild('new')}>
                     <Icon name="plus" className="h-4 w-4" />
-                    Lag app
+                    {tr('Lag app')}
                   </Button>
                 </div>
               </Card>
             )}
             {installs && shown.length === 0 && (
               <p className="m-0 py-12 text-center text-sm text-muted">
-                {activeTab === 'mine' ? 'Du har ikke aktivert noen apper ennå. Finn dem under Utforsk.' : activeTab === 'dev' ? '' : 'Ingen apper passer søket.'}
+                {activeTab === 'mine' ? tr('Du har ikke aktivert noen apper ennå. Finn dem under Utforsk.') : activeTab === 'dev' ? '' : tr('Ingen apper passer søket.')}
               </p>
             )}
             <div className={`grid gap-4 sm:grid-cols-2 xl:grid-cols-3 ${activeTab === 'dev' ? 'mt-4' : ''}`}>

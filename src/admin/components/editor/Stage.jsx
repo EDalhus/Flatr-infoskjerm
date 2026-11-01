@@ -17,6 +17,7 @@ import SlideCanvas from '../../../viewer/SlideCanvas.jsx';
 import { bestSnap, snapCandidates, resizeBox, bbox, intersects, clamp, round } from './geometry.js';
 import { activeRich, plainToRich, richToHtml, domToRich, richToPlain, hasFormatting, toggleInline, keepSelection } from '../../../lib/richText.js';
 import { useBrand } from '../../brandStore.js';
+import { tr } from '../../../lib/i18n.js';
 
 const PAD = 40;
 const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -128,30 +129,30 @@ function TextToolbar({ style }) {
   const btn = 'grid h-8 min-w-8 place-items-center rounded-lg px-2 text-sm text-ink hover:bg-zone';
   return (
     <div className="pointer-events-auto absolute z-30 flex items-center gap-0.5 rounded-xl border border-line bg-card p-1 shadow-pop" style={style} onPointerDown={(e) => e.stopPropagation()}>
-      <button type="button" onMouseDown={toggle('b')} className={`${btn} font-black`} title="Fet (⌘B)">
-        B
+      <button type="button" onMouseDown={toggle('b')} className={`${btn} font-black`} title={tr('Fet (⌘B)')}>
+        {tr('B')}
       </button>
-      <button type="button" onMouseDown={toggle('i')} className={`${btn} italic`} title="Kursiv (⌘I)">
-        I
+      <button type="button" onMouseDown={toggle('i')} className={`${btn} italic`} title={tr('Kursiv (⌘I)')}>
+        {tr('I')}
       </button>
-      <button type="button" onMouseDown={toggle('u')} className={`${btn} underline`} title="Understreket (⌘U)">
-        U
+      <button type="button" onMouseDown={toggle('u')} className={`${btn} underline`} title={tr('Understreket (⌘U)')}>
+        {tr('U')}
       </button>
       <span className="mx-1 h-5 w-px bg-line" />
       {colors.map((col) => (
-        <button key={col} type="button" onMouseDown={run('foreColor', col)} title={`Farge ${col}`} className="grid h-8 w-6 place-items-center rounded-lg hover:bg-zone">
+        <button key={col} type="button" onMouseDown={run('foreColor', col)} title={tr('Farge {0}', [col])} className="grid h-8 w-6 place-items-center rounded-lg hover:bg-zone">
           <span className="h-4 w-4 rounded-full border border-black/20" style={{ background: col }} />
         </button>
       ))}
       <span className="mx-1 h-5 w-px bg-line" />
-      <button type="button" onMouseDown={run('insertUnorderedList')} className={btn} title="Punktliste">
-        • Liste
+      <button type="button" onMouseDown={run('insertUnorderedList')} className={btn} title={tr('Punktliste')}>
+        {tr('• Liste')}
       </button>
-      <button type="button" onMouseDown={run('insertOrderedList')} className={btn} title="Nummerert liste">
-        1. Liste
+      <button type="button" onMouseDown={run('insertOrderedList')} className={btn} title={tr('Nummerert liste')}>
+        {tr('1. Liste')}
       </button>
-      <button type="button" onMouseDown={run('removeFormat')} className={`${btn} text-muted`} title="Fjern formatering på det som er markert">
-        Fjern
+      <button type="button" onMouseDown={run('removeFormat')} className={`${btn} text-muted`} title={tr('Fjern formatering på det som er markert')}>
+        {tr('Fjern')}
       </button>
     </div>
   );
@@ -433,7 +434,7 @@ export default function Stage({
               ) : el.kind === 'image' && !el.config?.url ? (
                 // Tomt bilde: synlig plassholder i editoren (ellers usynlig og forvirrende).
                 <div className="grid h-full w-full place-items-center border-[6px] border-dashed border-white/50 bg-white/10 text-[40px] font-semibold text-white/80">
-                  Velg bilde i panelet
+                  {tr('Velg bilde i panelet')}
                 </div>
               ) : (
                 <ElementView element={el} ctx={ctx} />
@@ -457,7 +458,7 @@ export default function Stage({
               onPointerLeave={() => setHoverId((h) => (h === el.id ? null : h))}
               className={`absolute ${editingId === el.id ? 'pointer-events-none' : lock ? 'cursor-not-allowed' : 'cursor-move'}`}
               style={{ ...b, transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined }}
-              title={lock ? `${lock.name} jobber med dette elementet` : ELEMENT_LABEL[el.kind]}
+              title={lock ? tr('{0} jobber med dette elementet', [lock.name]) : ELEMENT_LABEL[el.kind]}
             />
           );
         })}
@@ -544,7 +545,7 @@ export default function Stage({
                 <div className="absolute left-1/2 top-0 h-6 w-px -translate-y-full" style={{ background: color }} />
                 <div
                   onPointerDown={(e) => onRotateDown(e, single)}
-                  title="Roter (Shift = 15° om gangen)"
+                  title={tr('Roter (Shift = 15° om gangen)')}
                   className="pointer-events-auto absolute left-1/2 top-0 h-4 w-4 -translate-x-1/2 rounded-full border-2 bg-white"
                   style={{ borderColor: color, transform: 'translate(-50%, -36px)', cursor: 'grab' }}
                 />

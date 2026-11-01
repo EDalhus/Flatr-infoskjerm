@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { WEEKDAYS, cleanHours, defaultHours, summarize } from '../../lib/hours.js';
+import { tr } from '../../lib/i18n.js';
 
 // Åpningstider for en skjerm: av/på, og fra–til per ukedag. Utenfor åpningstid
 // er skjermen svart. Lagrer når en dag slås av/på og når et klokkeslett er
@@ -35,7 +36,7 @@ export default function HoursEditor({ value, onSave }) {
           onChange={(e) => commit({ ...h, enabled: e.target.checked })}
           className="h-4 w-4 rounded border-line text-brand"
         />
-        Slå av skjermen utenfor åpningstid
+        {tr('Slå av skjermen utenfor åpningstid')}
       </label>
       {h.enabled && (
         <>
@@ -61,7 +62,7 @@ export default function HoursEditor({ value, onSave }) {
                         onChange={(e) => setDay(d, { ...v, open: e.target.value })}
                         onBlur={() => onSave(h)}
                         className="h-8 rounded-lg border border-line bg-paper px-2 text-sm text-ink"
-                        aria-label={`${name} åpner`}
+                        aria-label={tr('{0} åpner', [name])}
                       />
                       <span className="text-muted">–</span>
                       <input
@@ -70,11 +71,11 @@ export default function HoursEditor({ value, onSave }) {
                         onChange={(e) => setDay(d, { ...v, close: e.target.value })}
                         onBlur={() => onSave(h)}
                         className="h-8 rounded-lg border border-line bg-paper px-2 text-sm text-ink"
-                        aria-label={`${name} stenger`}
+                        aria-label={tr('{0} stenger', [name])}
                       />
                     </div>
                   ) : (
-                    <span className="text-muted">Av hele dagen</span>
+                    <span className="text-muted">{tr('Av hele dagen')}</span>
                   )}
                 </div>
               );
@@ -84,12 +85,12 @@ export default function HoursEditor({ value, onSave }) {
             <span>{summarize(h)}</span>
             {h.days[1] && (
               <button type="button" onClick={copyWeekdays} className="font-semibold text-brand hover:underline">
-                Bruk mandag på alle hverdager
+                {tr('Bruk mandag på alle hverdager')}
               </button>
             )}
           </div>
           <p className="m-0 text-xs text-muted">
-            Tidsplanen går foran: et arrangement lagt inn i Tidsplan vises selv om det er utenfor åpningstid. Apple TV-en slår seg av også uten nett.
+            {tr('Tidsplanen går foran: et arrangement lagt inn i Tidsplan vises selv om det er utenfor åpningstid. Apple TV-en slår seg av også uten nett.')}
           </p>
         </>
       )}

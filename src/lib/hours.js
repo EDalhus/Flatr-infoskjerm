@@ -1,4 +1,5 @@
-// Åpningstider per skjerm: utenfor åpningstid er skjermen svart (som «Skjerm
+
+import { tr } from './i18n.js';// Åpningstider per skjerm: utenfor åpningstid er skjermen svart (som «Skjerm
 // av» i tidsplanen). Felles for server (buildState) og admin.
 //
 // Format: { enabled: true, days: { 1: { open: '07:00', close: '17:00' }, …, 7: null } }
@@ -11,8 +12,8 @@ export const WEEKDAYS = [
   [3, 'Onsdag'],
   [4, 'Torsdag'],
   [5, 'Fredag'],
-  [6, 'Lørdag'],
-  [7, 'Søndag']
+  [6, tr('Lørdag')],
+  [7, tr('Søndag')]
 ];
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -72,8 +73,8 @@ export function isOpen(hours, date = new Date(), tz = 'Europe/Oslo') {
 
 /** Kort oppsummering til admin: «Man–fre 07:00–17:00 · lør 10:00–15:00». */
 export function summarize(hours) {
-  if (!hours?.enabled) return 'Alltid på';
-  const short = { 1: 'man', 2: 'tir', 3: 'ons', 4: 'tor', 5: 'fre', 6: 'lør', 7: 'søn' };
+  if (!hours?.enabled) return tr('Alltid på');
+  const short = { 1: tr('man'), 2: tr('tir'), 3: tr('ons'), 4: tr('tor'), 5: tr('fre'), 6: tr('lør'), 7: tr('søn') };
   const groups = [];
   for (const [d] of WEEKDAYS) {
     const v = hours.days?.[d];

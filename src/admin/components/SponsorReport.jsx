@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { addDays } from '../../lib/timeslots.js';
 import { Button, Select, ErrorText, Icon } from './ui.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const monthStart = (y, m) => `${y}-${pad(m + 1)}-01`;
@@ -15,14 +16,14 @@ function periods(today, current) {
   const [y, m] = today.split('-').map(Number);
   const prev = m === 1 ? [y - 1, 11] : [y, m - 2];
   return [
-    { id: 'last-month', label: 'Forrige måned', from: monthStart(...prev), to: monthEnd(...prev) },
-    { id: 'this-month', label: 'Denne måneden', from: monthStart(y, m - 1), to: today },
-    { id: 'year', label: 'Hittil i år', from: `${y}-01-01`, to: today },
-    { id: 'current', label: 'Samme periode som rapporten', from: current.from, to: current.to }
+    { id: 'last-month', label: tr('Forrige måned'), from: monthStart(...prev), to: monthEnd(...prev) },
+    { id: 'this-month', label: tr('Denne måneden'), from: monthStart(y, m - 1), to: today },
+    { id: 'year', label: tr('Hittil i år'), from: `${y}-01-01`, to: today },
+    { id: 'current', label: tr('Samme periode som rapporten'), from: current.from, to: current.to }
   ];
 }
 
-const fmtDate = (d, opts) => new Date(`${d}T12:00:00Z`).toLocaleDateString('nb-NO', { timeZone: 'UTC', ...opts });
+const fmtDate = (d, opts) => new Date(`${d}T12:00:00Z`).toLocaleDateString(locale(), { timeZone: 'UTC', ...opts });
 const periodText = (from, to) =>
   from === to
     ? fmtDate(from, { day: 'numeric', month: 'long', year: 'numeric' })
@@ -74,21 +75,21 @@ export default function SponsorReport({ target, today, current, onClose }) {
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4 print:static print:bg-white print:p-0" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="mx-auto w-full max-w-3xl">
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl bg-card p-3 shadow-pop print:hidden">
-          <Select id="sponsor-period" value={period} onChange={(e) => setPeriod(e.target.value)} className="!w-56" aria-label="Periode">
+          <Select id="sponsor-period" value={period} onChange={(e) => setPeriod(e.target.value)} className="!w-56" aria-label={tr('Periode')}>
             {options.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.label}
               </option>
             ))}
           </Select>
-          <span className="text-xs text-muted">Trykk «Skriv ut» og velg «Lagre som PDF» for å sende rapporten til sponsoren.</span>
+          <span className="text-xs text-muted">{tr('Trykk «Skriv ut» og velg «Lagre som PDF» for å sende rapporten til sponsoren.')}</span>
           <span className="ml-auto flex gap-2">
             <Button onClick={() => window.print()} disabled={!data}>
               <Icon name="share" className="h-4 w-4" />
-              Skriv ut
+              {tr('Skriv ut')}
             </Button>
             <Button variant="ghost" onClick={onClose}>
-              Lukk
+              {tr('Lukk')}
             </Button>
           </span>
         </div>
@@ -97,7 +98,7 @@ export default function SponsorReport({ target, today, current, onClose }) {
         <article className="sponsor-report rounded-2xl bg-white p-10 text-[#16181d] shadow-pop print:rounded-none print:p-0 print:shadow-none">
           <header className="flex items-center justify-between gap-6 border-b border-[#e5e7eb] pb-6">
             <div className="min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#027353]">Visningsrapport</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#027353]">{tr('Visningsrapport')}</div>
               <h1 className="m-0 mt-1 text-3xl font-extrabold leading-tight">{data?.name || '…'}</h1>
               <div className="mt-1 text-sm text-[#5b6170]">
                 {periodText(p.from, p.to)}
@@ -108,15 +109,15 @@ export default function SponsorReport({ target, today, current, onClose }) {
           </header>
 
           {!data ? (
-            <p className="py-16 text-center text-sm text-[#5b6170]">Henter tallene …</p>
+            <p className="py-16 text-center text-sm text-[#5b6170]">{tr('Henter tallene …')}</p>
           ) : (
             <>
               <section className="grid grid-cols-2 gap-4 py-8 sm:grid-cols-4">
                 {[
-                  ['Visninger', data.shows.toLocaleString('nb-NO')],
-                  ['Tid på skjerm', duration(data.seconds)],
-                  ['Skjermer', data.screens.length],
-                  ['Snitt per dag', Math.round(data.shows / dayCount).toLocaleString('nb-NO')]
+                  [tr('Visninger'), data.shows.toLocaleString(locale())],
+                  [tr('Tid på skjerm'), duration(data.seconds)],
+                  [tr('Skjermer'), data.screens.length],
+                  [tr('Snitt per dag'), Math.round(data.shows / dayCount).toLocaleString(locale())]
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-xl bg-[#f4f6f5] p-4">
                     <div className="text-xs font-semibold text-[#5b6170]">{label}</div>
@@ -127,7 +128,7 @@ export default function SponsorReport({ target, today, current, onClose }) {
 
               {days.length > 1 && (
                 <section className="pb-8">
-                  <h2 className="m-0 mb-3 text-sm font-bold">Visninger per dag</h2>
+                  <h2 className="m-0 mb-3 text-sm font-bold">{tr('Visninger per dag')}</h2>
                   <div className="flex h-32 items-end gap-[2px] border-b border-[#e5e7eb]">
                     {days.map((d) => (
                       <div key={d.day} className="flex-1 rounded-t bg-[#027353]" style={{ height: `${Math.max(2, (d.shows / maxShows) * 100)}%` }} title={`${fmtDate(d.day, { day: 'numeric', month: 'short' })}: ${d.shows}`} />
@@ -141,16 +142,16 @@ export default function SponsorReport({ target, today, current, onClose }) {
               )}
 
               <section>
-                <h2 className="m-0 mb-2 text-sm font-bold">Per skjerm</h2>
+                <h2 className="m-0 mb-2 text-sm font-bold">{tr('Per skjerm')}</h2>
                 {data.screens.length === 0 ? (
-                  <p className="m-0 text-sm text-[#5b6170]">Ingen visninger i perioden.</p>
+                  <p className="m-0 text-sm text-[#5b6170]">{tr('Ingen visninger i perioden.')}</p>
                 ) : (
                   <table className="w-full border-collapse text-sm">
                     <thead>
                       <tr className="text-left text-xs text-[#5b6170]">
-                        <th className="pb-2 font-semibold">Skjerm</th>
-                        <th className="pb-2 text-right font-semibold">Visninger</th>
-                        <th className="pb-2 text-right font-semibold">Tid på skjerm</th>
+                        <th className="pb-2 font-semibold">{tr('Skjerm')}</th>
+                        <th className="pb-2 text-right font-semibold">{tr('Visninger')}</th>
+                        <th className="pb-2 text-right font-semibold">{tr('Tid på skjerm')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -160,7 +161,7 @@ export default function SponsorReport({ target, today, current, onClose }) {
                             <span className="font-medium">{s.name}</span>
                             {s.location && <span className="text-[#5b6170]"> · {s.location}</span>}
                           </td>
-                          <td className="py-2 text-right tabular-nums">{s.shows.toLocaleString('nb-NO')}</td>
+                          <td className="py-2 text-right tabular-nums">{s.shows.toLocaleString(locale())}</td>
                           <td className="py-2 text-right tabular-nums">{duration(s.seconds)}</td>
                         </tr>
                       ))}
@@ -170,8 +171,8 @@ export default function SponsorReport({ target, today, current, onClose }) {
               </section>
 
               <footer className="mt-10 flex items-center justify-between gap-4 border-t border-[#e5e7eb] pt-4 text-[11px] text-[#5b6170]">
-                <span>Tallene er meldt av skjermene selv hver gang logoen var på skjermen.</span>
-                <span className="shrink-0 font-semibold">Laget med Flatr · flatr.no</span>
+                <span>{tr('Tallene er meldt av skjermene selv hver gang logoen var på skjermen.')}</span>
+                <span className="shrink-0 font-semibold">{tr('Laget med Flatr · flatr.no')}</span>
               </footer>
             </>
           )}

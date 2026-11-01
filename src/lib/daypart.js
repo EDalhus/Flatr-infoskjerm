@@ -1,4 +1,5 @@
-// Tidsstyring: avgjør om en slide skal vises akkurat nå.
+
+import { tr } from './i18n.js';// Tidsstyring: avgjør om en slide skal vises akkurat nå.
 // Felt (alle valgfrie): active_from/active_to "HH:MM", active_days "1,2,..7"
 // (1=man … 7=søn), active_from_date/active_to_date "YYYY-MM-DD".
 
@@ -46,11 +47,11 @@ export function isWithinDaypart(s, now = new Date()) {
 }
 
 export const WEEKDAYS = [
-  { n: 1, label: 'Ma' },
-  { n: 2, label: 'Ti' },
-  { n: 3, label: 'On' },
-  { n: 4, label: 'To' },
-  { n: 5, label: 'Fr' },
-  { n: 6, label: 'Lø' },
-  { n: 7, label: 'Sø' }
+  { n: 1, label: tr('Ma') },
+  { n: 2, label: tr('Ti') },
+  { n: 3, label: tr('On') },
+  { n: 4, label: tr('To') },
+  { n: 5, label: tr('Fr') },
+  { n: 6, label: tr('Lø') },
+  { n: 7, label: tr('Sø') }
 ];

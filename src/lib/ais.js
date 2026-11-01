@@ -1,4 +1,5 @@
-// Felles hjelpere for AIS-appen (skipstrafikk), brukt både i adminpanelet og
+
+import { tr } from './i18n.js';// Felles hjelpere for AIS-appen (skipstrafikk), brukt både i adminpanelet og
 // på skjermene: navigasjonsstatus, avstand, ETA og «sist sett».
 
 // AIS navigasjonsstatus (ITU-R M.1371). 15 = ikke oppgitt.
@@ -6,10 +7,10 @@ export const NAV_STATUS = {
   0: 'Underveis',
   1: 'For anker',
   2: 'Ikke under kommando',
-  3: 'Begrenset manøvrering',
+  3: tr('Begrenset manøvrering'),
   4: 'Begrenset av dypgang',
   5: 'Ved kai',
-  6: 'På grunn',
+  6: tr('På grunn'),
   7: 'Fisker',
   8: 'Underveis (seil)'
 };
@@ -17,14 +18,14 @@ export const NAV_STATUS = {
 // Skipsklasser etter AIS skipstype (ITU-R M.1371), med fargekoden som er vanlig
 // på offentlige og kommersielle AIS-kart (Kystverket, MarineTraffic m.fl.).
 export const SHIP_CLASSES = [
-  { id: 'passenger', label: 'Passasjer', color: '#3b82f6' },
-  { id: 'cargo', label: 'Lasteskip', color: '#4caf50' },
-  { id: 'tanker', label: 'Tankskip', color: '#e5484d' },
-  { id: 'highspeed', label: 'Hurtiggående', color: '#facc15' },
-  { id: 'fishing', label: 'Fiskefartøy', color: '#f59e0b' },
-  { id: 'special', label: 'Slep og spesialfartøy', color: '#2dd4bf' },
-  { id: 'pleasure', label: 'Fritidsbåt', color: '#c084fc' },
-  { id: 'other', label: 'Annet', color: '#9ca3af' }
+  { id: 'passenger', label: tr('Passasjer'), color: '#3b82f6' },
+  { id: 'cargo', label: tr('Lasteskip'), color: '#4caf50' },
+  { id: 'tanker', label: tr('Tankskip'), color: '#e5484d' },
+  { id: 'highspeed', label: tr('Hurtiggående'), color: '#facc15' },
+  { id: 'fishing', label: tr('Fiskefartøy'), color: '#f59e0b' },
+  { id: 'special', label: tr('Slep og spesialfartøy'), color: '#2dd4bf' },
+  { id: 'pleasure', label: tr('Fritidsbåt'), color: '#c084fc' },
+  { id: 'other', label: tr('Annet'), color: '#9ca3af' }
 ];
 const CLASS_BY_ID = Object.fromEntries(SHIP_CLASSES.map((c) => [c.id, c]));
 
@@ -87,7 +88,7 @@ export const formatClock = (date) =>
 export function ago(iso, now = Date.now()) {
   if (!iso) return 'aldri';
   const min = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
-  if (min < 1) return 'nå';
+  if (min < 1) return tr('nå');
   if (min < 60) return `for ${min} min siden`;
   const h = Math.round(min / 60);
   if (h < 48) return `for ${h} t siden`;

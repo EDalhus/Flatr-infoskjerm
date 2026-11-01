@@ -229,6 +229,60 @@ if (cmd === 'wrap') {
     console.log(JSON.stringify(missing, null, 2));
     console.error(`${missing.length} av ${keys.length} mangler i ${path.relative(ROOT, dictFile)}`);
   }
+} else if (cmd === 'force') {
+  // node scripts/i18n.mjs force fil:linje …  – pakker inn all tekst på linjene (fra leftovers), uansett sammenheng.
+  const byFile = new Map();
+  for (const a of args) {
+    const [f, line] = a.split(':');
+    const file = path.resolve(f);
+    if (!byFile.has(file)) byFile.set(file, new Set());
+    byFile.get(file).add(Number(line));
+  }
+  let total = 0;
+  for (const [file, lines] of byFile) {
+    const src = fs.readFileSync(file, 'utf8');
+    const edits = [];
+    walk(parseFile(src).program, [], (node, ancestors) => {
+      if (isTrCall(node) || node.type === 'ImportDeclaration') return false;
+      if (!node.loc || !lines.has(node.loc.start.line)) return;
+      const parent = ancestors[ancestors.length - 1];
+      if (node.type === 'StringLiteral' && LETTER.test(node.value) && !SAME.has(node.value.trim())) {
+        const call = `tr(${lit(node.value)})`;
+        edits.push({ start: node.start, end: node.end, text: parent?.type === 'JSXAttribute' ? `{${call}}` : call });
+        return false;
+      }
+      if (node.type === 'TemplateLiteral' && parent?.type !== 'TaggedTemplateExpression') {
+        const parts = node.quasis.map((x) => x.value.cooked ?? x.value.raw);
+        if (!LETTER.test(parts.join(' ')) || parts.some((x) => /[{}]/.test(x))) return;
+        let fmt = '';
+        parts.forEach((x, i) => {
+          fmt += x;
+          if (i < node.expressions.length) fmt += `{${i}}`;
+        });
+        const vars = node.expressions.map((e) => src.slice(e.start, e.end));
+        edits.push({ start: node.start, end: node.end, text: vars.length ? `tr(${lit(fmt)}, [${vars.join(', ')}])` : `tr(${lit(fmt)})` });
+        return false;
+      }
+      if (node.type === 'JSXText' && LETTER.test(node.value)) {
+        const raw = node.value;
+        const lead = raw.match(/^\s*/)[0];
+        const tail = raw.match(/\s*$/)[0];
+        const inner = decodeEntities(raw.slice(lead.length, raw.length - tail.length).replace(/\s*\n\s*/g, ' '));
+        if (inner) edits.push({ start: node.start + lead.length, end: node.end - tail.length, text: `{tr(${lit(inner)})}` });
+      }
+    });
+    edits.sort((a, b) => b.start - a.start);
+    let out = src;
+    let last = Infinity;
+    for (const e of edits) {
+      if (e.end > last) continue;
+      out = out.slice(0, e.start) + e.text + out.slice(e.end);
+      last = e.start;
+      total++;
+    }
+    if (edits.length) fs.writeFileSync(file, ensureImport(out, file));
+  }
+  console.log(`${total} tekster pakket inn`);
 } else if (cmd === 'leftovers') {
   for (const f of args) {
     const src = fs.readFileSync(f, 'utf8');

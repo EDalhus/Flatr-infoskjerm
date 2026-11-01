@@ -4,6 +4,7 @@ import { MENU_DAYS, weekdayIn } from '../../../lib/menu.js';
 import MenuView from '../../../viewer/slides/MenuView.jsx';
 import { Input, IconButton } from '../ui.jsx';
 import { Section, SaveBar } from './parts.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Dagens meny: ukemenyen dag for dag. Forhåndsvisningen viser valgt dag.
 
@@ -54,7 +55,7 @@ export default function MenuSettings({ app, onSaved }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
       <div className="min-w-0 space-y-5">
-        <Section icon="calendar" title="Ukemeny" hint="Skjermene viser dagens retter automatisk. Merking skilles med komma, f.eks. «V, G».">
+        <Section icon="calendar" title={tr('Ukemeny')} hint={tr('Skjermene viser dagens retter automatisk. Merking skilles med komma, f.eks. «V, G».')}>
           <div className="mb-4 flex flex-wrap items-center gap-1">
             {days.map(([d, name]) => (
               <button
@@ -68,7 +69,7 @@ export default function MenuSettings({ app, onSaved }) {
               </button>
             ))}
             <label className="ml-auto flex items-center gap-1.5 text-xs text-muted">
-              <input type="checkbox" checked={m.weekend} onChange={(e) => setM((x) => ({ ...x, weekend: e.target.checked }))} /> Helg
+              <input type="checkbox" checked={m.weekend} onChange={(e) => setM((x) => ({ ...x, weekend: e.target.checked }))} /> {tr('Helg')}
             </label>
           </div>
 
@@ -76,16 +77,16 @@ export default function MenuSettings({ app, onSaved }) {
             {dishes.map((d, i) => (
               <div key={i} className="grid gap-2 rounded-xl border border-hair bg-paper p-3">
                 <div className="flex items-center gap-2">
-                  <Input value={d.name} onChange={(e) => edit(i, { name: e.target.value })} placeholder="Rett, f.eks. Fiskesuppe" className="font-semibold" />
-                  <Input value={d.price || ''} onChange={(e) => edit(i, { price: e.target.value })} placeholder="Pris" className="!w-24" />
-                  <IconButton name="x" label="Fjern retten" tone="danger" onClick={() => setDishes(dishes.filter((_, j) => j !== i))} />
+                  <Input value={d.name} onChange={(e) => edit(i, { name: e.target.value })} placeholder={tr('Rett, f.eks. Fiskesuppe')} className="font-semibold" />
+                  <Input value={d.price || ''} onChange={(e) => edit(i, { price: e.target.value })} placeholder={tr('Pris')} className="!w-24" />
+                  <IconButton name="x" label={tr('Fjern retten')} tone="danger" onClick={() => setDishes(dishes.filter((_, j) => j !== i))} />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
-                  <Input value={d.desc || ''} onChange={(e) => edit(i, { desc: e.target.value })} placeholder="Beskrivelse (valgfritt)" />
+                  <Input value={d.desc || ''} onChange={(e) => edit(i, { desc: e.target.value })} placeholder={tr('Beskrivelse (valgfritt)')} />
                   <Input
                     value={Array.isArray(d.tags) ? d.tags.join(', ') : d.tags || ''}
                     onChange={(e) => edit(i, { tags: e.target.value })}
-                    placeholder="Merking: V, G, L …"
+                    placeholder={tr('Merking: V, G, L …')}
                     list="menu-tags"
                   />
                 </div>
@@ -98,23 +99,23 @@ export default function MenuSettings({ app, onSaved }) {
             </datalist>
             <div className="flex flex-wrap gap-3 text-sm font-semibold">
               <button type="button" onClick={() => setDishes([...dishes, { name: '', price: '', desc: '', tags: [] }])} className="text-brand hover:underline">
-                + Legg til rett
+                {tr('+ Legg til rett')}
               </button>
               {day !== 1 && (m.week[1] || []).length > 0 && (
                 <button type="button" onClick={() => setDishes((m.week[1] || []).map((x) => ({ ...x })))} className="text-muted hover:text-ink">
-                  Kopier fra mandag
+                  {tr('Kopier fra mandag')}
                 </button>
               )}
             </div>
           </div>
         </Section>
-        <Section icon="edit" title="Fast tekst under menyen (valgfritt)">
-          <Input value={m.note} onChange={(e) => setM((x) => ({ ...x, note: e.target.value }))} placeholder="F.eks. «Spør kantina om allergener» eller «Salatbar hver dag»" />
+        <Section icon="edit" title={tr('Fast tekst under menyen (valgfritt)')}>
+          <Input value={m.note} onChange={(e) => setM((x) => ({ ...x, note: e.target.value }))} placeholder={tr('F.eks. «Spør kantina om allergener» eller «Salatbar hver dag»')} />
         </Section>
       </div>
       <div className="min-w-0">
         <div className="sticky top-4 space-y-2">
-          <div className="text-xs font-semibold text-muted">Forhåndsvisning – {MENU_DAYS.find(([d]) => d === day)?.[1].toLowerCase()}</div>
+          <div className="text-xs font-semibold text-muted">{tr('Forhåndsvisning –')} {MENU_DAYS.find(([d]) => d === day)?.[1].toLowerCase()}</div>
           <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg, #3b2416, #1c120b)', containerType: 'size' }}>
             <MenuView data={{ week: normWeek(m.week), today: day, note: m.note }} />
           </div>

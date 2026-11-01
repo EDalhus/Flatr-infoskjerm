@@ -398,6 +398,8 @@ export async function handleTenantAuthRoute(request, ctx) {
     const patch = {};
     if (THEMES.includes(b.theme)) patch.theme = b.theme;
     if (userColorPalette().includes(b.color)) patch.color = b.color;
+    // Språket (src/lib/i18n.js) – til e-post og annet serveren sender.
+    if (['nb', 'en'].includes(b.lang)) patch.lang = b.lang;
     return json(updatePrefs(ctx.user.user_id, patch));
   }
 

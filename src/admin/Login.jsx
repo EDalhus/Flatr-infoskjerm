@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { authClient } from '../lib/authClient.js';
 import { AuthShell } from '../platform/AuthPages.jsx';
 import { Button } from './components/ui.jsx';
+import { tr } from '../lib/i18n.js';
 
 /** flatr.no/login med retur hit. */
 export function platformLoginUrl(baseDomain, next = window.location.href) {
@@ -15,21 +16,21 @@ export function platformLoginUrl(baseDomain, next = window.location.href) {
 
 export default function Login({ tenant, account, baseDomain }) {
   useEffect(() => {
-    document.title = `Logg inn – ${tenant?.name ?? 'Flatr'}`;
+    document.title = tr('Logg inn – {0}', [tenant?.name ?? 'Flatr']);
     if (!account) window.location.replace(platformLoginUrl(baseDomain));
   }, [tenant, account, baseDomain]);
 
   // Innlogget i Flatr, men ikke medlem av denne organisasjonen.
   if (account) {
     return (
-      <AuthShell title="Ingen tilgang" subtitle={`Du er logget inn som ${account}, men er ikke medlem av ${tenant?.name ?? 'denne organisasjonen'}.`}>
+      <AuthShell title={tr('Ingen tilgang')} subtitle={tr('Du er logget inn som {0}, men er ikke medlem av {1}.', [account, tenant?.name ?? tr('denne organisasjonen')])}>
         <div className="space-y-3">
-          <p className="m-0 text-sm text-muted">Be en eier av organisasjonen om å invitere deg under Team.</p>
+          <p className="m-0 text-sm text-muted">{tr('Be en eier av organisasjonen om å invitere deg under Team.')}</p>
           <a href="/login" className="block text-center text-sm font-semibold text-brand hover:underline" onClick={(e) => (e.preventDefault(), (window.location.href = `${window.location.protocol}//${window.location.host.split('.').slice(1).join('.')}/login`))}>
-            Mine organisasjoner
+            {tr('Mine organisasjoner')}
           </a>
           <Button variant="outline" className="w-full" onClick={() => authClient.signOut().then(() => window.location.reload())}>
-            Logg inn med en annen konto
+            {tr('Logg inn med en annen konto')}
           </Button>
         </div>
       </AuthShell>

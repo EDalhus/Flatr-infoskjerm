@@ -6,11 +6,12 @@ import { api } from '../../lib/api.js';
 import { addDays, localParts } from '../../lib/timeslots.js';
 import { Icon, Input, Button, PageHeader, ErrorText } from './ui.jsx';
 import SponsorReport from './SponsorReport.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
 const PRESETS = [
-  { id: 'today', label: 'I dag', days: 1 },
-  { id: '7', label: '7 dager', days: 7 },
-  { id: '30', label: '30 dager', days: 30 }
+  { id: 'today', label: tr('I dag'), days: 1 },
+  { id: '7', label: tr('7 dager'), days: 7 },
+  { id: '30', label: tr('30 dager'), days: 30 }
 ];
 
 function fmtMinutes(min) {
@@ -20,14 +21,14 @@ function fmtMinutes(min) {
   return m % 60 ? `${h} t ${m % 60} min` : `${h} t`;
 }
 
-const fmtDay = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString('nb-NO', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'numeric' });
+const fmtDay = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString(locale(), { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'numeric' });
 
 function BarList({ title, rows, total }) {
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-5">
       <h2 className="m-0 text-base font-bold text-ink">{title}</h2>
       {rows.length === 0 ? (
-        <p className="m-0 text-sm text-muted">Ingen data i perioden.</p>
+        <p className="m-0 text-sm text-muted">{tr('Ingen data i perioden.')}</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
           {rows.map((r) => {
@@ -67,10 +68,10 @@ function PlaysTable({ title, hint, rows, empty, onReport }) {
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="text-left text-xs text-muted">
-              <th className="pb-2 font-semibold">Navn</th>
-              <th className="w-24 pb-2 text-right font-semibold">Visninger</th>
-              <th className="w-24 pb-2 text-right font-semibold">Tid</th>
-              <th className="w-20 pb-2 text-right font-semibold">Skjermer</th>
+              <th className="pb-2 font-semibold">{tr('Navn')}</th>
+              <th className="w-24 pb-2 text-right font-semibold">{tr('Visninger')}</th>
+              <th className="w-24 pb-2 text-right font-semibold">{tr('Tid')}</th>
+              <th className="w-20 pb-2 text-right font-semibold">{tr('Skjermer')}</th>
               {onReport && <th className="w-20 pb-2" />}
             </tr>
           </thead>
@@ -81,13 +82,13 @@ function PlaysTable({ title, hint, rows, empty, onReport }) {
                   <span className="block truncate font-medium text-ink">{r.name}</span>
                   {r.sub && <span className="block truncate text-xs text-muted">{r.sub}</span>}
                 </td>
-                <td className="py-2 text-right tabular-nums text-ink">{r.shows.toLocaleString('nb-NO')}</td>
+                <td className="py-2 text-right tabular-nums text-ink">{r.shows.toLocaleString(locale())}</td>
                 <td className="py-2 text-right tabular-nums text-muted">{fmtSeconds(r.seconds)}</td>
                 <td className="py-2 text-right tabular-nums text-muted">{r.screens}</td>
                 {onReport && (
                   <td className="py-2 pl-2 text-right">
                     <button type="button" onClick={() => onReport(r)} className="text-xs font-semibold text-brand hover:underline">
-                      Rapport
+                      {tr('Rapport')}
                     </button>
                   </td>
                 )}
@@ -101,14 +102,14 @@ function PlaysTable({ title, hint, rows, empty, onReport }) {
 }
 
 function downloadCsv(report) {
-  const rows = [['Type', 'Navn', 'Minutter']];
-  for (const p of report.playlists) rows.push(['Presentasjon', p.name, p.minutes]);
-  for (const s of report.screens) rows.push(['Skjerm', s.name, s.minutes]);
-  for (const d of report.days) rows.push(['Dag', d.day, d.minutes]);
-  rows.push([], ['Type', 'Navn', 'Visninger', 'Sekunder', 'Skjermer']);
-  for (const s of report.sponsors || []) rows.push(['Sponsor', s.name, s.shows, s.seconds, s.screens]);
-  for (const s of report.logos || []) rows.push(['Bilde i karusell', `${s.folder ? `${s.folder} – ` : ''}${s.name}`, s.shows, s.seconds, s.screens]);
-  for (const s of report.slides || []) rows.push(['Lysbilde', `${s.playlist ? `${s.playlist} – ` : ''}${s.name}`, s.shows, s.seconds, s.screens]);
+  const rows = [[tr('Type'), tr('Navn'), tr('Minutter')]];
+  for (const p of report.playlists) rows.push([tr('Presentasjon'), p.name, p.minutes]);
+  for (const s of report.screens) rows.push([tr('Skjerm'), s.name, s.minutes]);
+  for (const d of report.days) rows.push([tr('Dag'), d.day, d.minutes]);
+  rows.push([], [tr('Type'), tr('Navn'), tr('Visninger'), tr('Sekunder'), tr('Skjermer')]);
+  for (const s of report.sponsors || []) rows.push([tr('Sponsor'), s.name, s.shows, s.seconds, s.screens]);
+  for (const s of report.logos || []) rows.push([tr('Bilde i karusell'), `${s.folder ? `${s.folder} – ` : ''}${s.name}`, s.shows, s.seconds, s.screens]);
+  for (const s of report.slides || []) rows.push([tr('Lysbilde'), `${s.playlist ? `${s.playlist} – ` : ''}${s.name}`, s.shows, s.seconds, s.screens]);
   const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
   const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
@@ -148,13 +149,13 @@ export default function ReportsManager() {
   return (
     <>
       <PageHeader
-        title="Rapporter"
-        subtitle="Hvor lenge innholdet har vært på skjerm. Basert på hva hver tilkoblede skjerm er satt til å vise, minutt for minutt."
+        title={tr('Rapporter')}
+        subtitle={tr('Hvor lenge innholdet har vært på skjerm. Basert på hva hver tilkoblede skjerm er satt til å vise, minutt for minutt.')}
         action={
           report && (
             <Button variant="outline" onClick={() => downloadCsv(report)} disabled={!total && !report.slides?.length}>
               <Icon name="down" className="h-4 w-4" />
-              Last ned CSV
+              {tr('Last ned CSV')}
             </Button>
           )
         }
@@ -180,7 +181,7 @@ export default function ReportsManager() {
               value={range.from}
               max={range.to}
               onChange={(e) => e.target.value && setRange((r) => ({ ...r, preset: null, from: e.target.value }))}
-              aria-label="Fra dato"
+              aria-label={tr('Fra dato')}
               className="!w-40"
             />
             –
@@ -189,7 +190,7 @@ export default function ReportsManager() {
               value={range.to}
               min={range.from}
               onChange={(e) => e.target.value && setRange((r) => ({ ...r, preset: null, to: e.target.value }))}
-              aria-label="Til dato"
+              aria-label={tr('Til dato')}
               className="!w-40"
             />
           </span>
@@ -201,27 +202,27 @@ export default function ReportsManager() {
           <>
             <section className="grid gap-4 md:grid-cols-3">
               <div className="flex flex-col gap-1 rounded-2xl bg-brand p-5 text-onbrand">
-                <span className="text-sm font-semibold opacity-90">Total skjermtid</span>
+                <span className="text-sm font-semibold opacity-90">{tr('Total skjermtid')}</span>
                 <span className="text-[2rem] font-extrabold leading-tight tabular-nums">{fmtMinutes(total)}</span>
-                <span className="text-sm opacity-90">på tvers av alle skjermer</span>
+                <span className="text-sm opacity-90">{tr('på tvers av alle skjermer')}</span>
               </div>
               <div className="flex flex-col gap-1 rounded-2xl border border-line bg-card p-5">
-                <span className="text-sm font-semibold text-muted">Aktive skjermer</span>
+                <span className="text-sm font-semibold text-muted">{tr('Aktive skjermer')}</span>
                 <span className="text-[2rem] font-extrabold leading-tight tabular-nums text-ink">{report.screens.length}</span>
-                <span className="text-sm text-muted">var online i perioden</span>
+                <span className="text-sm text-muted">{tr('var online i perioden')}</span>
               </div>
               <div className="flex flex-col gap-1 rounded-2xl border border-line bg-card p-5">
-                <span className="text-sm font-semibold text-muted">Mest vist</span>
+                <span className="text-sm font-semibold text-muted">{tr('Mest vist')}</span>
                 <span className="truncate text-[2rem] font-extrabold leading-tight text-ink">
                   {report.playlists[0]?.name || '–'}
                 </span>
-                <span className="text-sm text-muted">{report.playlists[0] ? fmtMinutes(report.playlists[0].minutes) : 'Ingen data ennå'}</span>
+                <span className="text-sm text-muted">{report.playlists[0] ? fmtMinutes(report.playlists[0].minutes) : tr('Ingen data ennå')}</span>
               </div>
             </section>
 
             <section className="rounded-2xl border border-line bg-card p-5">
-              <h2 className="m-0 mb-4 text-base font-bold text-ink">Skjermtid pr. dag</h2>
-              <div className="flex h-40 items-end gap-1" role="img" aria-label="Skjermtid pr. dag">
+              <h2 className="m-0 mb-4 text-base font-bold text-ink">{tr('Skjermtid pr. dag')}</h2>
+              <div className="flex h-40 items-end gap-1" role="img" aria-label={tr('Skjermtid pr. dag')}>
                 {days.map((d) => (
                   <div key={d.day} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${fmtDay(d.day)}: ${fmtMinutes(d.minutes)}`}>
                     <div
@@ -236,18 +237,18 @@ export default function ReportsManager() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <BarList
-                title="Presentasjoner"
+                title={tr('Presentasjoner')}
                 total={total}
                 rows={report.playlists.map((p) => ({ key: `${p.playlist_id}-${p.name}`, name: p.name, minutes: p.minutes }))}
               />
-              <BarList title="Skjermer" total={total} rows={report.screens.map((s) => ({ key: s.screen_id, name: s.name, minutes: s.minutes }))} />
+              <BarList title={tr('Skjermer')} total={total} rows={report.screens.map((s) => ({ key: s.screen_id, name: s.name, minutes: s.minutes }))} />
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
               <PlaysTable
-                title="Sponsorer og logoer"
-                hint="Bilder i bildekaruseller og sponsorer: hvor mange ganger de faktisk ble vist. «Rapport» lager en rapport du kan sende sponsoren."
-                empty="Ingen visninger i perioden. Legg sponsorlogoene i en egen mappe i biblioteket og vis dem med en bildekarusell."
+                title={tr('Sponsorer og logoer')}
+                hint={tr('Bilder i bildekaruseller og sponsorer: hvor mange ganger de faktisk ble vist. «Rapport» lager en rapport du kan sende sponsoren.')}
+                empty={tr('Ingen visninger i perioden. Legg sponsorlogoene i en egen mappe i biblioteket og vis dem med en bildekarusell.')}
                 onReport={(r) => setSponsorReport(r.target)}
                 rows={[
                   ...(report.logos || []).map((s) => ({ key: `m${s.media_id}`, name: s.name, sub: s.folder ? `Mappe: ${s.folder}` : null, shows: s.shows, seconds: s.seconds, screens: s.screens, target: { media: s.media_id } })),
@@ -255,17 +256,15 @@ export default function ReportsManager() {
                 ]}
               />
               <PlaysTable
-                title="Lysbilder"
-                hint="Hvor mange ganger hvert lysbilde faktisk ble vist."
-                empty="Ingen lysbildevisninger i perioden."
+                title={tr('Lysbilder')}
+                hint={tr('Hvor mange ganger hvert lysbilde faktisk ble vist.')}
+                empty={tr('Ingen lysbildevisninger i perioden.')}
                 rows={(report.slides || []).slice(0, 50).map((s) => ({ key: `${s.playlist_id}-${s.slide_id}`, name: s.name, sub: s.playlist, shows: s.shows, seconds: s.seconds, screens: s.screens }))}
               />
             </div>
 
             <p className="m-0 text-xs text-muted">
-              Tidssone: {report.timezone}. Skjermtiden telles av serveren hvert minutt for Apple TV-er som er online.
-              Visninger av lysbilder og sponsorer meldes av skjermene selv (Apple TV med ny app og nettleser), og kan
-              komme inn noen minutter etter at de ble vist.
+              {tr('Tidssone:')} {report.timezone}{tr('. Skjermtiden telles av serveren hvert minutt for Apple TV-er som er online. Visninger av lysbilder og sponsorer meldes av skjermene selv (Apple TV med ny app og nettleser), og kan komme inn noen minutter etter at de ble vist.')}
             </p>
           </>
         )}

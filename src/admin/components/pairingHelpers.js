@@ -1,4 +1,5 @@
-// Delte hjelpere for enhets-/parringsvisningen.
+
+import { tr } from '../../lib/i18n.js';// Delte hjelpere for enhets-/parringsvisningen.
 
 export const codeDisplay = (code) => `${code.slice(0, 3)}-${code.slice(3)}`;
 
@@ -8,10 +9,10 @@ export const displayName = (p) =>
 
 // Status-pill: Live / Frakoblet / Venter / Utløpt.
 export function deviceStatus(p) {
-  if (p.status === 'pending') return { key: 'pending', label: 'Venter', cls: 'bg-badge text-badge-ink' };
-  if (p.status === 'expired') return { key: 'expired', label: 'Utløpt', cls: 'bg-danger-tint text-danger' };
-  if (p.online) return { key: 'live', label: 'Online', cls: 'bg-ok-tint text-ok' };
-  return { key: 'offline', label: 'Frakoblet', cls: 'bg-hair text-muted' };
+  if (p.status === 'pending') return { key: 'pending', label: tr('Venter'), cls: 'bg-badge text-badge-ink' };
+  if (p.status === 'expired') return { key: 'expired', label: tr('Utløpt'), cls: 'bg-danger-tint text-danger' };
+  if (p.online) return { key: 'live', label: tr('Online'), cls: 'bg-ok-tint text-ok' };
+  return { key: 'offline', label: tr('Frakoblet'), cls: 'bg-hair text-muted' };
 }
 
 // "arm64 · tvOS 18.2 · app 1.0.3 · 1920×1080"
@@ -28,7 +29,7 @@ export function clientSummary(ci) {
 export function timeAgo(iso) {
   if (!iso) return '–';
   const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
-  if (s < 60) return 'nå nettopp';
+  if (s < 60) return tr('nå nettopp');
   if (s < 3600) return `${Math.floor(s / 60)} min siden`;
   if (s < 86400) return `${Math.floor(s / 3600)} t siden`;
   return `${Math.floor(s / 86400)} d siden`;

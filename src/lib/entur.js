@@ -1,20 +1,21 @@
-// Avganger fra Entur: felles for tavla på skjermen (DeparturesView), redigeringen
+
+import { tr } from './i18n.js';// Avganger fra Entur: felles for tavla på skjermen (DeparturesView), redigeringen
 // og innstillingene. Apple TV har det samme i EnturWidget (AppWidgetViews.swift).
 
 export const MODES = [
-  { id: 'bus', label: 'Buss' },
-  { id: 'tram', label: 'Trikk' },
-  { id: 'metro', label: 'T-bane' },
-  { id: 'rail', label: 'Tog' },
-  { id: 'water', label: 'Båt' },
-  { id: 'coach', label: 'Ekspressbuss' }
+  { id: 'bus', label: tr('Buss') },
+  { id: 'tram', label: tr('Trikk') },
+  { id: 'metro', label: tr('T-bane') },
+  { id: 'rail', label: tr('Tog') },
+  { id: 'water', label: tr('Båt') },
+  { id: 'coach', label: tr('Ekspressbuss') }
 ];
 export const MODE_LABEL = { ...Object.fromEntries(MODES.map((m) => [m.id, m.label])), air: 'Fly', lift: 'Taubane' };
 
 /** «Nå», «5 min» (under et kvarter) eller klokkeslett. */
 export function departureText(iso, now, tz = 'Europe/Oslo') {
   const ms = Date.parse(iso) - now;
-  if (ms < 60_000) return 'Nå';
+  if (ms < 60_000) return tr('Nå');
   const min = Math.floor(ms / 60_000);
   if (min < 15) return `${min} min`;
   return new Date(iso).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: tz });

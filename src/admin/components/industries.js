@@ -6,6 +6,7 @@
 // gir lysbilder i samme form som POST /api/deck-slides.
 
 import { defaultElement } from '../../lib/deck.js';
+import { tr } from '../../lib/i18n.js';
 
 const el = (kind, x, y, w, h, config = {}, z = 0) => {
   const d = defaultElement(kind, z);
@@ -43,23 +44,23 @@ const appSlide = (name, appId, config, background, title) => ({
 export const INDUSTRIES = [
   {
     id: 'sport',
-    title: 'Idrettslag og klubb',
-    text: 'Kamper, sponsorer og beskjeder i klubbhuset.',
+    title: tr('Idrettslag og klubb'),
+    text: tr('Kamper, sponsorer og beskjeder i klubbhuset.'),
     icon: 'calendar',
     apps: [
       { kind: 'fixtures', why: 'Neste kamper rett fra fotball.no eller handball.no' },
-      { kind: 'poll', why: 'Avstemninger og spørsmål på medlemsmøter og klubbkvelder' }
+      { kind: 'poll', why: tr('Avstemninger og spørsmål på medlemsmøter og klubbkvelder') }
     ],
-    tips: ['Legg sponsorlogoene i mappen «Sponsorer» i Biblioteket, så går de rundt på sponsorlysbildet.'],
+    tips: [tr('Legg sponsorlogoene i mappen «Sponsorer» i Biblioteket, så går de rundt på sponsorlysbildet.')],
     slides: ({ org, app }) => [
-      welcome(`Velkommen til ${org}`, 'Heia oss!', BG.green),
-      ...(app('fixtures') ? [appSlide('Neste kamper', app('fixtures'), { fixturesView: 'list', max: 6, title: 'Neste kamper' }, BG.slate)] : []),
+      welcome(tr('Velkommen til {0}', [org]), tr('Heia oss!'), BG.green),
+      ...(app('fixtures') ? [appSlide('Neste kamper', app('fixtures'), { fixturesView: 'list', max: 6, title: tr('Neste kamper') }, BG.slate)] : []),
       {
         name: 'Sponsorer',
         duration_seconds: 15,
         background: { type: 'color', color: '#ffffff' },
         elements: [
-          text(6, 7, 88, 12, 'Takk til sponsorene våre', { size: 72, weight: 800, color: '#0f172a', align: 'center' }),
+          text(6, 7, 88, 12, tr('Takk til sponsorene våre'), { size: 72, weight: 800, color: '#0f172a', align: 'center' }),
           el('carousel', 15, 25, 70, 65, { folder: 'Sponsorer', seconds: 6, fit: 'contain' }, 2)
         ]
       },
@@ -67,14 +68,14 @@ export const INDUSTRIES = [
         name: 'Kiosken',
         duration_seconds: 10,
         background: BG.warm,
-        elements: [text(7, 28, 80, 24, 'Kiosken er åpen i pausen', { size: 110, weight: 800 }), text(7, 55, 70, 12, 'Vi tar Vipps og kort', { size: 56, weight: 500 }, 2)]
+        elements: [text(7, 28, 80, 24, tr('Kiosken er åpen i pausen'), { size: 110, weight: 800 }), text(7, 55, 70, 12, tr('Vi tar Vipps og kort'), { size: 56, weight: 500 }, 2)]
       }
     ]
   },
   {
     id: 'canteen',
-    title: 'Kantine og lunsjrom',
-    text: 'Dagens meny, bursdager og beskjeder til de ansatte.',
+    title: tr('Kantine og lunsjrom'),
+    text: tr('Dagens meny, bursdager og beskjeder til de ansatte.'),
     icon: 'calendar',
     apps: [
       { kind: 'menu', why: 'Dagens og ukens meny, lagt inn i Flatr' },
@@ -88,22 +89,22 @@ export const INDUSTRIES = [
         name: 'Husk',
         duration_seconds: 10,
         background: BG.slate,
-        elements: [text(7, 30, 80, 30, 'Husk å sette brettet tilbake 🙏', { size: 110, weight: 800 })]
+        elements: [text(7, 30, 80, 30, tr('Husk å sette brettet tilbake 🙏'), { size: 110, weight: 800 })]
       }
     ]
   },
   {
     id: 'reception',
-    title: 'Resepsjon og kontor',
-    text: 'Velkommen, avganger og praktisk informasjon til besøkende.',
+    title: tr('Resepsjon og kontor'),
+    text: tr('Velkommen, avganger og praktisk informasjon til besøkende.'),
     icon: 'home',
     apps: [
-      { kind: 'entur', why: 'Avganger fra holdeplassen i nærheten, i sanntid' },
-      { kind: 'weather', why: 'Været fra Yr på skjermen' }
+      { kind: 'entur', why: tr('Avganger fra holdeplassen i nærheten, i sanntid') },
+      { kind: tr('weather'), why: tr('Været fra Yr på skjermen') }
     ],
-    tips: ['Skriv inn navnet og passordet til gjestenettet på lysbildet «Gjestenett».'],
+    tips: [tr('Skriv inn navnet og passordet til gjestenettet på lysbildet «Gjestenett».')],
     slides: ({ org, app }) => [
-      welcome(`Velkommen til ${org}`, 'Meld deg i resepsjonen', BG.night),
+      welcome(tr('Velkommen til {0}', [org]), tr('Meld deg i resepsjonen'), BG.night),
       ...(app('entur') ? [appSlide('Avganger', app('entur'), { max: 8, walkMinutes: 3 }, BG.slate)] : []),
       {
         name: 'Gjestenett',
@@ -118,15 +119,15 @@ export const INDUSTRIES = [
   },
   {
     id: 'event',
-    title: 'Arrangement og konferanse',
-    text: 'Program, nedtelling og avstemninger fra salen.',
+    title: tr('Arrangement og konferanse'),
+    text: tr('Program, nedtelling og avstemninger fra salen.'),
     icon: 'megaphone',
     apps: [
       { kind: 'events', why: 'Programmet med scener og tider, og nedtelling til neste post' },
-      { kind: 'poll', why: 'Publikum stemmer og stiller spørsmål fra mobilen' }
+      { kind: 'poll', why: tr('Publikum stemmer og stiller spørsmål fra mobilen') }
     ],
     slides: ({ org, app, poll }) => [
-      welcome(`Velkommen til ${org}`, 'Godt arrangement!', BG.violet),
+      welcome(tr('Velkommen til {0}', [org]), tr('Godt arrangement!'), BG.violet),
       ...(app('events')
         ? [
             { name: 'Program', duration_seconds: 15, background: BG.slate, elements: [text(6, 6, 80, 11, 'Program', { size: 72, weight: 800 }), el('program', 6, 19, 88, 74, { mode: 'agenda', max: 8 }, 2)] },
@@ -138,15 +139,15 @@ export const INDUSTRIES = [
   },
   {
     id: 'harbor',
-    title: 'Havn og sjø',
-    text: 'Skipstrafikk, tidevann og vær for havna og kaia.',
+    title: tr('Havn og sjø'),
+    text: tr('Skipstrafikk, tidevann og vær for havna og kaia.'),
     icon: 'pin',
     apps: [
-      { kind: 'tides', why: 'Tidevann, bølger og sjøtemperatur fra Kartverket og MET' },
-      { kind: 'ais', why: 'Båtene i sanntid på kart (krever en gratis nøkkel fra BarentsWatch)' }
+      { kind: 'tides', why: tr('Tidevann, bølger og sjøtemperatur fra Kartverket og MET') },
+      { kind: 'ais', why: tr('Båtene i sanntid på kart (krever en gratis nøkkel fra BarentsWatch)') }
     ],
     slides: ({ org, app }) => [
-      welcome(`Velkommen til ${org}`, 'Skipstrafikk og tidevann', BG.sea),
+      welcome(tr('Velkommen til {0}', [org]), tr('Skipstrafikk og tidevann'), BG.sea),
       ...(app('tides') ? [appSlide('Tidevann', app('tides'), { tideView: 'both' }, BG.slate)] : []),
       ...(app('ais') ? [appSlide('Skipstrafikk', app('ais'), { view: 'map' }, BG.slate)] : [])
     ]
@@ -154,4 +155,4 @@ export const INDUSTRIES = [
 ];
 
 /** Eksempelavstemning for arrangementer (lages bare når Avstemning er valgt). */
-export const EXAMPLE_POLL = { kind: 'choice', question: 'Hva synes du om arrangementet så langt?', options: ['Kjempebra', 'Bra', 'Middels', 'Kunne vært bedre'] };
+export const EXAMPLE_POLL = { kind: 'choice', question: tr('Hva synes du om arrangementet så langt?'), options: [tr('Kjempebra'), tr('Bra'), tr('Middels'), tr('Kunne vært bedre')] };

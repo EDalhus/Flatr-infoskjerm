@@ -8,6 +8,7 @@ import LiveScreenView from './LiveScreenView.jsx';
 import Editor from './editor/Editor.jsx';
 import TemplatesManager from './TemplatesManager.jsx';
 import { useUrlParam } from '../useUrlParam.js';
+import { tr } from '../../lib/i18n.js';
 
 const fmtDuration = (sec) => {
   const s = Math.max(0, Number(sec) || 0);
@@ -39,21 +40,21 @@ function NewPlaylist({ onCreated, onCancel }) {
       onSubmit={submit}
       className="grid gap-4 rounded-2xl border border-line bg-card p-5 shadow-card sm:grid-cols-[1fr_200px_auto] sm:items-end"
     >
-      <Field label="Navn">
-        <Input autoFocus required value={name} onChange={(e) => setName(e.target.value)} placeholder="Velkommen – morgen" />
+      <Field label={tr('Navn')}>
+        <Input autoFocus required value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('Velkommen – morgen')} />
       </Field>
-      <Field label="Format">
+      <Field label={tr('Format')}>
         <Select value={orientation} onChange={(e) => setOrientation(e.target.value)}>
-          <option value="landscape">Liggende 16:9</option>
-          <option value="portrait">Stående 9:16</option>
+          <option value="landscape">{tr('Liggende 16:9')}</option>
+          <option value="portrait">{tr('Stående 9:16')}</option>
         </Select>
       </Field>
       <div className="flex gap-2">
         <Button type="submit" disabled={busy}>
-          {busy ? 'Oppretter …' : 'Opprett og rediger'}
+          {busy ? tr('Oppretter …') : tr('Opprett og rediger')}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Avbryt
+          {tr('Avbryt')}
         </Button>
       </div>
       {error && (
@@ -68,21 +69,21 @@ function NewPlaylist({ onCreated, onCancel }) {
 function PlaylistCard({ p, onEdit, onDuplicate, onDelete }) {
   return (
     <article className="flex flex-col gap-3 rounded-2xl border border-hair bg-card p-2.5 shadow-card">
-      <button type="button" onClick={() => onEdit(p.id)} className="block text-left" aria-label={`Rediger ${p.name}`}>
+      <button type="button" onClick={() => onEdit(p.id)} className="block text-left" aria-label={tr('Rediger {0}', [p.name])}>
         <LiveScreenView playlistId={p.id} orientation={p.orientation} />
       </button>
       <div className="flex flex-col gap-2 px-1.5 pb-1.5">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <h3 className="m-0 truncate text-base font-bold text-ink">{p.name}</h3>
-            {p.review_requested_at && <span className="mt-0.5 inline-block rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-semibold text-warn">Venter på godkjenning</span>}
+            {p.review_requested_at && <span className="mt-0.5 inline-block rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-semibold text-warn">{tr('Venter på godkjenning')}</span>}
             <p className="m-0 text-sm text-muted">
-              {p.slide_count} lysbilde{p.slide_count === 1 ? '' : 'r'} · {fmtDuration(p.total_seconds)} ·{' '}
-              {p.orientation === 'portrait' ? 'Stående' : 'Liggende'}
+              {p.slide_count} {tr('lysbilde')}{p.slide_count === 1 ? '' : 'r'} · {fmtDuration(p.total_seconds)} ·{' '}
+              {p.orientation === 'portrait' ? tr('Stående') : tr('Liggende')}
             </p>
           </div>
-          <IconButton name="copy" label="Dupliser" onClick={() => onDuplicate(p)} />
-          <IconButton name="trash" label="Slett" tone="danger" onClick={() => onDelete(p)} />
+          <IconButton name="copy" label={tr('Dupliser')} onClick={() => onDuplicate(p)} />
+          <IconButton name="trash" label={tr('Slett')} tone="danger" onClick={() => onDelete(p)} />
         </div>
         <div className="flex flex-wrap gap-1.5">
           {p.used_by.length ? (
@@ -93,12 +94,12 @@ function PlaylistCard({ p, onEdit, onDuplicate, onDelete }) {
               </span>
             ))
           ) : (
-            <span className="text-xs text-muted">Ikke i bruk på noen skjerm</span>
+            <span className="text-xs text-muted">{tr('Ikke i bruk på noen skjerm')}</span>
           )}
         </div>
         <Button variant="outline" onClick={() => onEdit(p.id)} className="mt-1">
           <Icon name="edit" className="h-4 w-4" />
-          Rediger innhold
+          {tr('Rediger innhold')}
         </Button>
       </div>
     </article>
@@ -131,7 +132,7 @@ function PlaylistList({ onEdit, onChange, tab, setTab, onNavigate }) {
 
   const remove = async (p) => {
     const warn = p.used_by.length
-      ? `«${p.name}» vises på ${p.used_by.map((u) => u.name).join(', ')}. Skjermene blir tomme til du velger en annen presentasjon.\n\nSlette likevel? Den havner i papirkurven.`
+      ? tr('«{0}» vises på {1}. Skjermene blir tomme til du velger en annen presentasjon.\n\nSlette likevel? Den havner i papirkurven.', [p.name, p.used_by.map((u) => u.name).join(', ')])
       : `Slette «${p.name}»? Den havner i papirkurven.`;
     if (!confirm(warn)) return;
     try {
@@ -146,14 +147,14 @@ function PlaylistList({ onEdit, onChange, tab, setTab, onNavigate }) {
   return (
     <>
       <PageHeader
-        title="Presentasjoner"
-        subtitle="Det skjermene viser: lysbilder med tekst, bilder og widgeter. Velg på hver skjerm hvilken presentasjon den viser."
+        title={tr('Presentasjoner')}
+        subtitle={tr('Det skjermene viser: lysbilder med tekst, bilder og widgeter. Velg på hver skjerm hvilken presentasjon den viser.')}
         action={
           !creating &&
           tab !== 'templates' && (
             <Button onClick={() => setCreating(true)}>
               <Icon name="plus" className="h-4 w-4" />
-              Ny presentasjon
+              {tr('Ny presentasjon')}
             </Button>
           )
         }
@@ -187,11 +188,11 @@ function PlaylistList({ onEdit, onChange, tab, setTab, onNavigate }) {
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-tint text-brand">
               <Icon name="layers" className="h-7 w-7" />
             </div>
-            <h2 className="m-0 text-xl font-bold text-ink">Ingen presentasjoner ennå</h2>
+            <h2 className="m-0 text-xl font-bold text-ink">{tr('Ingen presentasjoner ennå')}</h2>
             <p className="m-0 max-w-md text-sm text-muted">
-              En presentasjon er innholdet en skjerm viser – lysbilder med tekst, bilder, program og mer.
+              {tr('En presentasjon er innholdet en skjerm viser – lysbilder med tekst, bilder, program og mer.')}
             </p>
-            <Button onClick={() => setCreating(true)}>Lag din første presentasjon</Button>
+            <Button onClick={() => setCreating(true)}>{tr('Lag din første presentasjon')}</Button>
           </div>
         )}
 

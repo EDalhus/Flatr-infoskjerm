@@ -19,6 +19,7 @@ import ReviewBar from './ReviewBar.jsx';
 import SlideRail from './SlideRail.jsx';
 import { bbox, clamp, round } from './geometry.js';
 import { hostOf, videoSeconds, ImportBanner } from './media.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 const PRIMARY = ['text', 'image', 'shape', 'video'];
 const CLIPBOARD_KEY = 'flatr.editor.clipboard';
@@ -490,7 +491,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
       }),
       'now'
     );
-    say('Gruppen er løst opp');
+    say(tr('Gruppen er løst opp'));
   };
 
   const nudge = (dx, dy) => {
@@ -568,8 +569,8 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   };
   const deleteSlide = async (sid) => {
     const fixed = slides.find((s) => s.id === sid)?.layer === 'overlay';
-    if (!fixed && regular.length <= 1) return setErr('En presentasjon må ha minst ett lysbilde.');
-    if (!confirm(fixed ? 'Fjerne det faste feltet? Det havner i «Nylig slettet».' : 'Slette lysbildet? Det havner i «Nylig slettet».')) return;
+    if (!fixed && regular.length <= 1) return setErr(tr('En presentasjon må ha minst ett lysbilde.'));
+    if (!confirm(fixed ? tr('Fjerne det faste feltet? Det havner i «Nylig slettet».') : tr('Slette lysbildet? Det havner i «Nylig slettet».'))) return;
     try {
       await api.deck.slide.remove(sid);
       await afterStructural();
@@ -594,10 +595,10 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   const addMediaSlide = async ({ kind, url, name, refresh }) => {
     const full = { x: 0, y: 0, w: 100, h: 100, z: 0, rotation: 0 };
     const spec = {
-      image: { el: { kind: 'image', config: { url, fit: 'contain', radius: 0 } }, title: name || 'Bilde', secs: 10 },
-      video: { el: { kind: 'video', config: { url, loop: false, mute: true, fit: 'contain' } }, title: name || 'Video', secs: 30 },
+      image: { el: { kind: 'image', config: { url, fit: 'contain', radius: 0 } }, title: name || tr('Bilde'), secs: 10 },
+      video: { el: { kind: 'video', config: { url, loop: false, mute: true, fit: 'contain' } }, title: name || tr('Video'), secs: 30 },
       youtube: { el: { kind: 'video', config: { url, loop: false, mute: true, fit: 'contain' } }, title: 'YouTube', secs: 60 },
-      web: { el: { kind: 'web', config: { url, refreshMinutes: refresh ?? 15 } }, title: hostOf(url) || 'Nettside', secs: 20 }
+      web: { el: { kind: 'web', config: { url, refreshMinutes: refresh ?? 15 } }, title: hostOf(url) || tr('Nettside'), secs: 20 }
     }[kind];
     if (!spec) return;
     const secs = kind === 'video' ? (await videoSeconds(url)) || spec.secs : spec.secs;
@@ -623,7 +624,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
         await new Promise((r) => setTimeout(r, 1200));
         const st = await api.imports.status(job);
         setImporting((cur) => cur && { ...cur, phase: st.phase, done: st.done, total: st.total });
-        if (st.status === 'error') throw new Error(st.error || 'Importen feilet');
+        if (st.status === 'error') throw new Error(st.error || tr('Importen feilet'));
         if (st.status === 'done') {
           await afterStructural(st.slide_ids?.[0]);
           setImporting(null);
@@ -636,7 +637,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
   };
 
   const saveTemplate = async (s) => {
-    const name = window.prompt('Navn på lysbilde-mal:');
+    const name = window.prompt(tr('Navn på lysbilde-mal:'));
     if (!name) return;
     const payload = {
       name: s.name,
@@ -733,10 +734,10 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
     <div className="flex h-full flex-col overflow-hidden bg-paper">
       {/* ------------------------------- toppfelt ------------------------------- */}
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-card px-3 py-2">
-        <ToolButton icon="back" label="Tilbake til presentasjoner" onClick={() => (flush(), onBack())} />
+        <ToolButton icon="back" label={tr('Tilbake til presentasjoner')} onClick={() => (flush(), onBack())} />
         <div className="flex min-w-0 flex-col pr-2">
           <label className="sr-only" htmlFor="playlist-name">
-            Navn på presentasjonen
+            {tr('Navn på presentasjonen')}
           </label>
           <input
             id="playlist-name"
@@ -747,18 +748,18 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
             className="w-56 min-w-0 rounded-md bg-transparent px-1 text-sm font-bold text-ink hover:bg-zone focus:bg-paper focus:outline-none focus:ring-2 focus:ring-focus/30"
           />
           <span className="truncate px-1 text-[11px] text-muted">
-            {playlist?.used_by?.length ? `Vises på ${playlist.used_by.map((u) => u.name).join(', ')}` : 'Ikke i bruk på noen skjerm'}
+            {playlist?.used_by?.length ? tr('Vises på {0}', [playlist.used_by.map((u) => u.name).join(', ')]) : tr('Ikke i bruk på noen skjerm')}
           </span>
         </div>
 
         <span className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
 
         {/* sett inn */}
-        <div className="flex items-center gap-0.5" role="toolbar" aria-label="Sett inn">
-          <ToolButton icon="text" label="Tekst" onClick={() => insert('text')} />
-          <ToolButton icon="image" label="Bilde fra biblioteket" onClick={() => insertFromLibrary('image')} />
-          <ToolButton icon="square" label="Figur" onClick={() => insert('shape')} />
-          <ToolButton icon="play" label="Video fra biblioteket" onClick={() => insertFromLibrary('video')} />
+        <div className="flex items-center gap-0.5" role="toolbar" aria-label={tr('Sett inn')}>
+          <ToolButton icon="text" label={tr('Tekst')} onClick={() => insert('text')} />
+          <ToolButton icon="image" label={tr('Bilde fra biblioteket')} onClick={() => insertFromLibrary('image')} />
+          <ToolButton icon="square" label={tr('Figur')} onClick={() => insert('shape')} />
+          <ToolButton icon="play" label={tr('Video fra biblioteket')} onClick={() => insertFromLibrary('video')} />
           <div className="relative">
             <button
               type="button"
@@ -766,7 +767,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
               aria-expanded={moreOpen}
               className="flex h-9 items-center gap-1 rounded-lg px-2.5 text-sm font-semibold text-ink hover:bg-zone"
             >
-              Widgeter
+              {tr('Widgeter')}
               <Icon name="down" className="h-4 w-4" />
             </button>
             {moreOpen && (
@@ -790,7 +791,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
                     className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-ink hover:bg-zone"
                   >
                     <Icon name={a.definition?.icon || { ais: 'pin', birthdays: 'users', menu: 'calendar', tides: 'sun', football: 'chart', fixtures: 'calendar', entur: 'bus', sheet: 'table', poll: 'chart' }[a.kind] || 'sparkle'} className="h-4 w-4 text-muted" />
-                    <span className="truncate">{a.name}</span>
+                    <span className="truncate">{tr(a.name)}</span>
                   </button>
                 ))}
                 {dataApps
@@ -804,7 +805,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
                       className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-ink hover:bg-zone"
                     >
                       <span className="w-4 text-center text-sm" aria-hidden="true">🎂</span>
-                      <span className="truncate">Kakeregn</span>
+                      <span className="truncate">{tr('Kakeregn')}</span>
                     </button>
                   ))}
                 <a
@@ -812,7 +813,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
                   className="col-span-2 mt-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line px-2.5 py-2 text-sm font-semibold text-brand hover:bg-brand-tint"
                 >
                   <Icon name="sparkle" className="h-4 w-4" />
-                  Finn flere i Flatr Apps
+                  {tr('Finn flere i Flatr Apps')}
                 </a>
               </div>
             )}
@@ -820,15 +821,15 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
         </div>
 
         <span className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
-        <ToolButton icon="back" label="Angre" shortcut={`${MOD}Z`} onClick={undo} disabled={!canUndo} />
-        <ToolButton icon="chevron" label="Gjør om" shortcut={`${isMac ? '⇧⌘' : 'Ctrl+'}${isMac ? 'Z' : 'Y'}`} onClick={redo} disabled={!canRedo} />
+        <ToolButton icon="back" label={tr('Angre')} shortcut={`${MOD}Z`} onClick={undo} disabled={!canUndo} />
+        <ToolButton icon="chevron" label={tr('Gjør om')} shortcut={`${isMac ? '⇧⌘' : 'Ctrl+'}${isMac ? 'Z' : 'Y'}`} onClick={redo} disabled={!canRedo} />
 
         <div className="ml-auto flex items-center gap-2">
           {/* hvem er her */}
-          <div className="flex items-center -space-x-1.5" aria-label="Hvem jobber i presentasjonen">
+          <div className="flex items-center -space-x-1.5" aria-label={tr('Hvem jobber i presentasjonen')}>
             {me && (
               <span
-                title={`${me.name} (deg)`}
+                title={tr('{0} (deg)', [me.name])}
                 className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold text-white ring-2 ring-card"
                 style={{ background: me.color }}
               >
@@ -840,7 +841,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
                 key={p.id}
                 type="button"
                 onClick={() => p.slide && setSelSlide(p.slide)}
-                title={`${p.name} – klikk for å gå til lysbildet`}
+                title={tr('{0} – klikk for å gå til lysbildet', [p.name])}
                 className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold text-white ring-2 ring-card transition-transform hover:z-10 hover:scale-110"
                 style={{ background: p.color }}
               >
@@ -850,7 +851,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           </div>
           <span
             className={`h-2 w-2 rounded-full ${collab.connected ? 'bg-ok' : 'bg-warn'}`}
-            title={collab.connected ? 'Live – endringer synkroniseres' : 'Kobler til …'}
+            title={collab.connected ? tr('Live – endringer synkroniseres') : tr('Kobler til …')}
           />
 
           <span className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
@@ -868,27 +869,27 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
             ))}
           </div>
           <div className="flex items-center rounded-lg border border-line">
-            <button type="button" onClick={() => setZoom((z) => ZOOMS[Math.max(0, ZOOMS.indexOf(z) - 1)] ?? 0.5)} className="h-8 w-8 text-ink hover:bg-zone" aria-label="Zoom ut">
+            <button type="button" onClick={() => setZoom((z) => ZOOMS[Math.max(0, ZOOMS.indexOf(z) - 1)] ?? 0.5)} className="h-8 w-8 text-ink hover:bg-zone" aria-label={tr('Zoom ut')}>
               −
             </button>
-            <button type="button" onClick={() => setZoom(1)} className="h-8 min-w-[3.5rem] text-xs font-semibold tabular-nums text-ink hover:bg-zone" title="Tilpass til vinduet">
-              {zoom === 1 ? 'Tilpass' : `${Math.round(zoom * 100)} %`}
+            <button type="button" onClick={() => setZoom(1)} className="h-8 min-w-[3.5rem] text-xs font-semibold tabular-nums text-ink hover:bg-zone" title={tr('Tilpass til vinduet')}>
+              {zoom === 1 ? tr('Tilpass') : `${Math.round(zoom * 100)} %`}
             </button>
-            <button type="button" onClick={() => setZoom((z) => ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + 1)] ?? 1.5)} className="h-8 w-8 text-ink hover:bg-zone" aria-label="Zoom inn">
+            <button type="button" onClick={() => setZoom((z) => ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + 1)] ?? 1.5)} className="h-8 w-8 text-ink hover:bg-zone" aria-label={tr('Zoom inn')}>
               +
             </button>
           </div>
-          <ToolButton icon="layers" label={snap ? 'Snapping på' : 'Snapping av'} active={snap} onClick={() => setSnap((v) => !v)} />
-          <ToolButton icon="clock" label="Versjonshistorikk" onClick={() => (flush(), setHistoryOpen(true))} />
+          <ToolButton icon="layers" label={snap ? tr('Snapping på') : tr('Snapping av')} active={snap} onClick={() => setSnap((v) => !v)} />
+          <ToolButton icon="clock" label={tr('Versjonshistorikk')} onClick={() => (flush(), setHistoryOpen(true))} />
           {aiEnabled && (
           <button
             type="button"
             onClick={() => setPanelTab((t) => (t === 'ai' ? 'design' : 'ai'))}
             className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold ${panelTab === 'ai' ? 'bg-brand-tint text-brand' : 'text-ink hover:bg-zone'}`}
-            title={`AI-assistent (${MOD}K)`}
+            title={tr('AI-assistent ({0}K)', [MOD])}
           >
             <Icon name="sparkle" className="h-4 w-4" />
-            AI
+            {tr('AI')}
           </button>
           )}
           <a
@@ -898,7 +899,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-semibold text-onbrand hover:bg-brand-dark"
           >
             <Icon name="eye" className="h-4 w-4" />
-            Forhåndsvis
+            {tr('Forhåndsvis')}
           </a>
         </div>
       </header>
@@ -910,7 +911,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
             <ErrorText>{err}</ErrorText>
           </div>
           <button type="button" onClick={() => setErr('')} className="text-sm font-semibold text-muted hover:text-ink">
-            Lukk
+            {tr('Lukk')}
           </button>
         </div>
       )}
@@ -938,9 +939,9 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
               ? (s, kind) => {
                   const ref = `lysbilde ${regular.findIndex((x) => x.id === s.id) + 1}${s.name ? ` «${s.name}»` : ''} (id ${s.id})`;
                   const text = {
-                    better: `Forbedre designet på ${ref}. Behold innholdet og budskapet, men gjør komposisjonen, hierarkiet og typografien bedre. Se på det før og etter.`,
-                    variants: `Lag 3 varianter av ${ref} som nye lysbilder rett etter det, med ulik komposisjon og stil men samme innhold. Gi dem navn som «Variant A/B/C». Ikke endre originalen.`,
-                    shorter: `Gjør teksten på ${ref} kortere og tydeligere, lesbar på avstand på et par sekunder. Behold designet.`
+                    better: tr('Forbedre designet på {0}. Behold innholdet og budskapet, men gjør komposisjonen, hierarkiet og typografien bedre. Se på det før og etter.', [ref]),
+                    variants: tr('Lag 3 varianter av {0} som nye lysbilder rett etter det, med ulik komposisjon og stil men samme innhold. Gi dem navn som «Variant A/B/C». Ikke endre originalen.', [ref]),
+                    shorter: tr('Gjør teksten på {0} kortere og tydeligere, lesbar på avstand på et par sekunder. Behold designet.', [ref])
                   }[kind];
                   setPanelTab('ai');
                   setAiPending({ id: Date.now(), text });
@@ -950,7 +951,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
           onCopyTo={async (sid, target) => {
             try {
               await api.deck.slide.copyTo(sid, target.id);
-              say(`Kopiert til «${target.name}»`);
+              say(tr('Kopiert til «{0}»', [target.name]));
             } catch (e) {
               setErr(e.message);
             }
@@ -960,7 +961,7 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
         <main className={`relative min-w-0 flex-1 ${readOnly ? '[&>*:first-child]:pointer-events-none' : ''}`}>
           {readOnly && (
             <div className="absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full bg-card px-4 py-1.5 text-xs font-semibold text-muted shadow-card">
-              Du har lesetilgang – du kan se, men ikke endre
+              {tr('Du har lesetilgang – du kan se, men ikke endre')}
             </div>
           )}
           {slide ? (
@@ -985,14 +986,14 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
                 if (found) change([{ id, patch: { config: { ...found.el.config, ...patch } } }], false);
               }}
               onTextCommit={() => flush()}
-              onLockedClick={(p) => say(`${p.name} jobber med dette elementet akkurat nå`)}
+              onLockedClick={(p) => say(tr('{0} jobber med dette elementet akkurat nå', [p.name]))}
             />
           ) : (
-            <div className="grid h-full place-items-center text-muted">Ingen lysbilder.</div>
+            <div className="grid h-full place-items-center text-muted">{tr('Ingen lysbilder.')}</div>
           )}
 
           <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-card/90 px-3 py-1 text-[11px] text-muted shadow-card">
-            Dobbeltklikk tekst for å skrive · Shift-klikk for flere · {MOD}G grupper · Alt-klikk velger én i en gruppe · {MOD}Z angre
+            {tr('Dobbeltklikk tekst for å skrive · Shift-klikk for flere ·')} {MOD}{tr('G grupper · Alt-klikk velger én i en gruppe ·')} {MOD}{tr('Z angre')}
           </div>
           {toast && (
             <div role="status" className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper shadow-pop">

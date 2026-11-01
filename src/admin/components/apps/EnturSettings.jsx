@@ -4,6 +4,7 @@ import { MODE_LABEL } from '../../../lib/entur.js';
 import DeparturesView from '../../../viewer/slides/DeparturesView.jsx';
 import { Input, IconButton } from '../ui.jsx';
 import { Section } from './parts.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Avganger (Entur): holdeplassene kunden vil vise avganger fra. Søket går mot
 // Enturs holdeplassregister; hvert element på et lysbilde velger én av dem.
@@ -71,19 +72,19 @@ export default function EnturSettings({ app, onSaved }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
       <div className="min-w-0 space-y-5">
-        <Section icon="bus" title="Holdeplasser" count={stops.length} hint="Søk opp holdeplassene i nærheten. Hvert element på et lysbilde viser én av dem.">
+        <Section icon="bus" title={tr('Holdeplasser')} count={stops.length} hint={tr('Søk opp holdeplassene i nærheten. Hvert element på et lysbilde viser én av dem.')}>
           <div>
             <Input
               id="entur-search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Søk etter holdeplass, stasjon eller kai …"
+              placeholder={tr('Søk etter holdeplass, stasjon eller kai …')}
               disabled={stops.length >= MAX_STOPS}
               autoComplete="off"
             />
             {(hits.length > 0 || searching) && (
               <ul className="m-0 mt-1 max-h-72 list-none overflow-y-auto rounded-xl border border-line bg-card p-1">
-                {searching && !hits.length && <li className="px-3 py-2 text-sm text-muted">Søker …</li>}
+                {searching && !hits.length && <li className="px-3 py-2 text-sm text-muted">{tr('Søker …')}</li>}
                 {hits.map((h) => (
                   <li key={h.id}>
                     <button type="button" onClick={() => add(h)} className="flex w-full items-baseline gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-zone">
@@ -102,18 +103,18 @@ export default function EnturSettings({ app, onSaved }) {
             {stops.map((s) => (
               <li key={s.id} className="flex items-center gap-3 py-2 text-sm">
                 <span className="min-w-0 flex-1 truncate font-medium text-ink">{s.name}</span>
-                <IconButton name="x" label={`Fjern ${s.name}`} tone="danger" onClick={() => save(stops.filter((x) => x.id !== s.id))} />
+                <IconButton name="x" label={tr('Fjern {0}', [s.name])} tone="danger" onClick={() => save(stops.filter((x) => x.id !== s.id))} />
               </li>
             ))}
           </ul>
-          {!stops.length && <p className="m-0 mt-2 text-sm text-muted">Ingen holdeplasser ennå. Du kan legge til opptil {MAX_STOPS}.</p>}
+          {!stops.length && <p className="m-0 mt-2 text-sm text-muted">{tr('Ingen holdeplasser ennå. Du kan legge til opptil')} {MAX_STOPS}.</p>}
         </Section>
       </div>
       <div className="min-w-0">
         <div className="sticky top-4 space-y-2">
-          <div className="text-xs font-semibold text-muted">Forhåndsvisning</div>
+          <div className="text-xs font-semibold text-muted">{tr('Forhåndsvisning')}</div>
           <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', containerType: 'size' }}>
-            {live ? <DeparturesView data={live} max={6} now={now} /> : <p className="text-sm opacity-70">{stops.length ? 'Henter avganger …' : 'Legg til en holdeplass.'}</p>}
+            {live ? <DeparturesView data={live} max={6} now={now} /> : <p className="text-sm opacity-70">{stops.length ? tr('Henter avganger …') : tr('Legg til en holdeplass.')}</p>}
           </div>
         </div>
       </div>

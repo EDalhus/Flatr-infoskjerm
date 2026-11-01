@@ -3,6 +3,7 @@ import { api } from '../../../lib/api.js';
 import FootballView from '../../../viewer/slides/FootballView.jsx';
 import { Button, Input, IconButton } from '../ui.jsx';
 import { Section, Dot } from './parts.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Fotball: API-Football-nøkkel, lagene og ligaene som følges.
 
@@ -26,13 +27,13 @@ function Search({ appId, kind, onPick, chosen }) {
   return (
     <div>
       <form onSubmit={search} className="flex gap-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={kind === 'team' ? 'Søk etter lag, f.eks. Aalesund' : 'Søk etter liga, f.eks. Eliteserien'} />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={kind === 'team' ? tr('Søk etter lag, f.eks. Aalesund') : tr('Søk etter liga, f.eks. Eliteserien')} />
         <Button type="submit" size="sm" disabled={busy || q.trim().length < 3}>
-          {busy ? 'Søker …' : 'Søk'}
+          {busy ? tr('Søker …') : tr('Søk')}
         </Button>
       </form>
       {error && <p className="m-0 mt-2 text-xs text-danger">{error}</p>}
-      {hits?.length === 0 && <p className="m-0 mt-2 text-xs text-muted">Ingen treff (skriv minst tre bokstaver, gjerne på engelsk).</p>}
+      {hits?.length === 0 && <p className="m-0 mt-2 text-xs text-muted">{tr('Ingen treff (skriv minst tre bokstaver, gjerne på engelsk).')}</p>}
       {hits?.length > 0 && (
         <ul className="m-0 mt-2 max-h-60 list-none overflow-y-auto rounded-xl border border-hair p-1">
           {hits.map((h) => (
@@ -86,7 +87,7 @@ export default function FootballSettings({ app, onSaved }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
       <div className="min-w-0 space-y-5">
-        <Section icon="lock" title="API-Football-nøkkel" hint={edit ? 'Gratis på dashboard.api-football.com. Steg-for-steg under «Om appen».' : null} flush={!edit}>
+        <Section icon="lock" title={tr('API-Football-nøkkel')} hint={edit ? tr('Gratis på dashboard.api-football.com. Steg-for-steg under «Om appen».') : null} flush={!edit}>
           {edit ? (
             <form
               onSubmit={async (e) => {
@@ -98,18 +99,18 @@ export default function FootballSettings({ app, onSaved }) {
               }}
               className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"
             >
-              <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="API-nøkkel" autoComplete="off" className="h-10 rounded-xl border border-line bg-paper px-3 font-mono text-sm text-ink outline-none focus:border-focus" />
+              <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder={tr('API-nøkkel')} autoComplete="off" className="h-10 rounded-xl border border-line bg-paper px-3 font-mono text-sm text-ink outline-none focus:border-focus" />
               <Button type="submit" disabled={busy || !key.trim()}>
-                {busy ? 'Sjekker …' : 'Lagre nøkkel'}
+                {busy ? tr('Sjekker …') : tr('Lagre nøkkel')}
               </Button>
             </form>
           ) : (
             <div className="flex items-center gap-2 px-5 pb-4 text-sm">
               <Dot tone="ok" />
-              <span className="text-ink">Tilkoblet</span>
+              <span className="text-ink">{tr('Tilkoblet')}</span>
               <span className="font-mono text-muted">· {app.config?.key_hint || 'lagret'}</span>
               <button type="button" onClick={() => setEdit(true)} className="ml-auto text-xs font-semibold text-brand hover:underline">
-                Bytt
+                {tr('Bytt')}
               </button>
             </div>
           )}
@@ -117,19 +118,19 @@ export default function FootballSettings({ app, onSaved }) {
         {error && <p className="m-0 text-sm text-danger">{error}</p>}
         {app.has_secret && (
           <>
-            <Section icon="users" title="Lag" count={teams.length} hint="Neste kamper og siste resultater. Maks fire lag.">
+            <Section icon="users" title={tr('Lag')} count={teams.length} hint={tr('Neste kamper og siste resultater. Maks fire lag.')}>
               <ul className="m-0 mb-3 list-none p-0">
                 {teams.map((t) => (
                   <li key={t.id} className="flex items-center gap-2 py-1.5 text-sm">
                     {t.logo && <img src={t.logo} alt="" className="h-5 w-5 object-contain" />}
                     <span className="flex-1 text-ink">{t.name}</span>
-                    <IconButton name="x" label={`Fjern ${t.name}`} tone="danger" onClick={() => update({ config: { teams: teams.filter((x) => x.id !== t.id) } })} />
+                    <IconButton name="x" label={tr('Fjern {0}', [t.name])} tone="danger" onClick={() => update({ config: { teams: teams.filter((x) => x.id !== t.id) } })} />
                   </li>
                 ))}
               </ul>
               {teams.length < 4 && <Search appId={app.id} kind="team" chosen={new Set(teams.map((t) => t.id))} onPick={(h) => update({ config: { teams: [...teams, h] } })} />}
             </Section>
-            <Section icon="chart" title="Ligaer" count={leagues.length} hint="Tabeller. Maks tre ligaer.">
+            <Section icon="chart" title={tr('Ligaer')} count={leagues.length} hint={tr('Tabeller. Maks tre ligaer.')}>
               <ul className="m-0 mb-3 list-none p-0">
                 {leagues.map((l) => (
                   <li key={l.id} className="flex items-center gap-2 py-1.5 text-sm">
@@ -137,7 +138,7 @@ export default function FootballSettings({ app, onSaved }) {
                     <span className="flex-1 text-ink">
                       {l.name} <span className="text-muted">{l.season}</span>
                     </span>
-                    <IconButton name="x" label={`Fjern ${l.name}`} tone="danger" onClick={() => update({ config: { leagues: leagues.filter((x) => x.id !== l.id) } })} />
+                    <IconButton name="x" label={tr('Fjern {0}', [l.name])} tone="danger" onClick={() => update({ config: { leagues: leagues.filter((x) => x.id !== l.id) } })} />
                   </li>
                 ))}
               </ul>
@@ -149,7 +150,7 @@ export default function FootballSettings({ app, onSaved }) {
       <div className="min-w-0">
         {live && (
           <div className="sticky top-4 space-y-2">
-            <div className="text-xs font-semibold text-muted">Forhåndsvisning</div>
+            <div className="text-xs font-semibold text-muted">{tr('Forhåndsvisning')}</div>
             <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg, #14532d, #052e16)', containerType: 'size' }}>
               <FootballView data={live} view={teams.length ? 'next' : 'table'} />
             </div>

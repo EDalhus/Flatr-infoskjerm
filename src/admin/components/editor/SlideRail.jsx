@@ -6,6 +6,7 @@ import { api } from '../../../lib/api.js';
 import { useListDnd } from '../../../hooks/useListDnd.js';
 import { Icon } from '../ui.jsx';
 import SlideThumb from '../deck/SlideThumb.jsx';
+import { tr, locale } from '../../../lib/i18n.js';
 
 const initials = (name = '') =>
   name
@@ -19,10 +20,10 @@ const initials = (name = '') =>
 /** Merke for dato-begrensning: «Utløpt», «Til 3. nov», «Fra 5. nov». */
 function period(s) {
   const today = new Date().toISOString().slice(0, 10);
-  const fmt = (d) => new Date(`${d}T12:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', '');
-  if (s.active_to_date && s.active_to_date < today) return { text: 'Utløpt', tone: 'bg-danger-tint text-danger' };
-  if (s.active_from_date && s.active_from_date > today) return { text: `Fra ${fmt(s.active_from_date)}`, tone: 'bg-zone text-muted' };
-  if (s.active_to_date) return { text: `Til ${fmt(s.active_to_date)}`, tone: 'bg-warn/15 text-warn' };
+  const fmt = (d) => new Date(`${d}T12:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'short' }).replace('.', '');
+  if (s.active_to_date && s.active_to_date < today) return { text: tr('Utløpt'), tone: 'bg-danger-tint text-danger' };
+  if (s.active_from_date && s.active_from_date > today) return { text: tr('Fra {0}', [fmt(s.active_from_date)]), tone: 'bg-zone text-muted' };
+  if (s.active_to_date) return { text: tr('Til {0}', [fmt(s.active_to_date)]), tone: 'bg-warn/15 text-warn' };
   return null;
 }
 
@@ -44,15 +45,15 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
   }, [copyFor, others, playlistId]);
 
   return (
-    <nav aria-label="Lysbilder" className="flex h-full w-56 shrink-0 flex-col border-r border-line bg-card">
+    <nav aria-label={tr('Lysbilder')} className="flex h-full w-56 shrink-0 flex-col border-r border-line bg-card">
       <div className="flex items-center justify-between px-4 pb-2 pt-3">
-        <span className="text-xs font-semibold text-muted">Lysbilder · {slides.length}</span>
+        <span className="text-xs font-semibold text-muted">{tr('Lysbilder ·')} {slides.length}</span>
         <button
           type="button"
           onClick={onAdd}
           className="grid h-7 w-7 place-items-center rounded-lg text-brand hover:bg-brand-tint"
-          aria-label="Nytt lysbilde"
-          title="Nytt lysbilde"
+          aria-label={tr('Nytt lysbilde')}
+          title={tr('Nytt lysbilde')}
         >
           <Icon name="plus" className="h-4 w-4" />
         </button>
@@ -71,8 +72,8 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
             <SlideThumb slide={{ ...overlay, background: OVERLAY_THUMB_BG }} orientation={orientation} />
             <div className="flex items-center gap-1.5 px-0.5 pt-1.5 text-xs">
               <Icon name="layers" className="h-3.5 w-3.5 shrink-0 text-brand" />
-              <span className="min-w-0 flex-1 truncate font-semibold text-ink">Fast felt</span>
-              <span className="shrink-0 text-muted">{overlay.enabled === 0 ? 'Av' : 'Over alle'}</span>
+              <span className="min-w-0 flex-1 truncate font-semibold text-ink">{tr('Fast felt')}</span>
+              <span className="shrink-0 text-muted">{overlay.enabled === 0 ? tr('Av') : tr('Over alle')}</span>
             </div>
           </button>
         ) : (
@@ -80,13 +81,13 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
             <button
               type="button"
               onClick={onAddOverlay}
-              title="Logo, klokke eller nyhetslinje som ligger over alle lysbildene"
+              title={tr('Logo, klokke eller nyhetslinje som ligger over alle lysbildene')}
               className="flex w-full items-center gap-2 rounded-xl border border-dashed border-line px-2.5 py-2 text-left text-xs text-muted hover:bg-zone hover:text-ink"
             >
               <Icon name="layers" className="h-4 w-4 shrink-0 text-brand" />
               <span>
-                <span className="block font-semibold text-ink">Fast felt</span>
-                Over alle lysbildene
+                <span className="block font-semibold text-ink">{tr('Fast felt')}</span>
+                {tr('Over alle lysbildene')}
               </span>
             </button>
           )
@@ -114,7 +115,7 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
                       {here.slice(0, 3).map((p) => (
                         <span
                           key={p.id}
-                          title={`${p.name} er her`}
+                          title={tr('{0} er her', [p.name])}
                           className="grid h-5 w-5 place-items-center rounded-full text-[9px] font-bold text-white ring-2 ring-card"
                           style={{ background: p.color }}
                         >
@@ -126,13 +127,13 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
                 </div>
                 <div className="flex items-center gap-1.5 px-0.5 pt-1.5 text-xs">
                   <span className="font-semibold text-muted">{i + 1}</span>
-                  <span className="min-w-0 flex-1 truncate text-ink">{s.name || 'Lysbilde'}</span>
+                  <span className="min-w-0 flex-1 truncate text-ink">{s.name || tr('Lysbilde')}</span>
                   {commentCounts[s.id] > 0 && (
-                    <span className="shrink-0 rounded-full bg-brand-tint px-1.5 text-[10px] font-semibold text-brand" title={`${commentCounts[s.id]} åpne kommentarer`}>
+                    <span className="shrink-0 rounded-full bg-brand-tint px-1.5 text-[10px] font-semibold text-brand" title={tr('{0} åpne kommentarer', [commentCounts[s.id]])}>
                       💬 {commentCounts[s.id]}
                     </span>
                   )}
-                  <span className="shrink-0 tabular-nums text-muted">{s.duration_seconds}s</span>
+                  <span className="shrink-0 tabular-nums text-muted">{s.duration_seconds}{tr('s')}</span>
                 </div>
                 {period(s) && (
                   <div className={`mx-0.5 mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${period(s).tone}`}>{period(s).text}</div>
@@ -143,8 +144,8 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
                   type="button"
                   onClick={() => onDuplicate(s.id)}
                   className="grid h-6 w-6 place-items-center rounded-md bg-card/90 text-ink shadow-card hover:bg-card"
-                  aria-label="Dupliser lysbilde"
-                  title="Dupliser"
+                  aria-label={tr('Dupliser lysbilde')}
+                  title={tr('Dupliser')}
                 >
                   <Icon name="copy" className="h-3.5 w-3.5" />
                 </button>
@@ -153,8 +154,8 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
                     type="button"
                     onClick={() => setAiFor(aiFor === s.id ? null : s.id)}
                     className="grid h-6 w-6 place-items-center rounded-md bg-card/90 text-brand shadow-card hover:bg-card"
-                    aria-label="AI for dette lysbildet"
-                    title="AI for dette lysbildet"
+                    aria-label={tr('AI for dette lysbildet')}
+                    title={tr('AI for dette lysbildet')}
                   >
                     <Icon name="sparkle" className="h-3.5 w-3.5" />
                   </button>
@@ -164,8 +165,8 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
                     type="button"
                     onClick={() => setCopyFor(copyFor === s.id ? null : s.id)}
                     className="grid h-6 w-6 place-items-center rounded-md bg-card/90 text-ink shadow-card hover:bg-card"
-                    aria-label="Kopier til en annen presentasjon"
-                    title="Kopier til en annen presentasjon"
+                    aria-label={tr('Kopier til en annen presentasjon')}
+                    title={tr('Kopier til en annen presentasjon')}
                   >
                     <Icon name="share" className="h-3.5 w-3.5" />
                   </button>
@@ -174,8 +175,8 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
                   type="button"
                   onClick={() => onDelete(s.id)}
                   className="grid h-6 w-6 place-items-center rounded-md bg-card/90 text-danger shadow-card hover:bg-card"
-                  aria-label="Slett lysbilde"
-                  title="Slett"
+                  aria-label={tr('Slett lysbilde')}
+                  title={tr('Slett')}
                 >
                   <Icon name="trash" className="h-3.5 w-3.5" />
                 </button>
@@ -203,9 +204,9 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
               )}
               {copyFor === s.id && (
                 <div className="absolute left-2 right-2 top-9 z-20 max-h-64 overflow-y-auto rounded-xl border border-line bg-card p-1 shadow-pop">
-                  <div className="px-2 py-1.5 text-[11px] font-semibold text-muted">Kopier til …</div>
-                  {!others && <div className="px-2 py-1.5 text-xs text-muted">Laster …</div>}
-                  {others?.length === 0 && <div className="px-2 py-1.5 text-xs text-muted">Ingen andre presentasjoner.</div>}
+                  <div className="px-2 py-1.5 text-[11px] font-semibold text-muted">{tr('Kopier til …')}</div>
+                  {!others && <div className="px-2 py-1.5 text-xs text-muted">{tr('Laster …')}</div>}
+                  {others?.length === 0 && <div className="px-2 py-1.5 text-xs text-muted">{tr('Ingen andre presentasjoner.')}</div>}
                   {others?.map((p) => (
                     <button
                       key={p.id}
@@ -231,7 +232,7 @@ export default function SlideRail({ slides, overlay, orientation, selectedId, pe
         className="m-3 mt-0 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line py-2.5 text-sm font-semibold text-brand hover:bg-brand-tint"
       >
         <Icon name="plus" className="h-4 w-4" />
-        Nytt lysbilde
+        {tr('Nytt lysbilde')}
       </button>
     </nav>
   );

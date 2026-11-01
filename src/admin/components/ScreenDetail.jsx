@@ -9,6 +9,7 @@ import { CodeInput, CopyLink } from './AddScreen.jsx';
 import { StatusPill } from './screenStatus.jsx';
 import { timeAgo, fmtUptime, aspectOf } from './pairingHelpers.js';
 import HoursEditor from './HoursEditor.jsx';
+import { tr } from '../../lib/i18n.js';
 
 // Fjernstyrt rotasjon for fysisk montering (grader).
 const ROTATION_OPTIONS = [0, 90, 180, 270];
@@ -95,15 +96,15 @@ function TvScreenshot({ device, screenId, orientation }) {
     <div className="mb-3">
       <div className={`overflow-hidden rounded-xl bg-black ${orientation === 'portrait' ? 'mx-auto aspect-[9/16] w-1/2' : 'aspect-video w-full'}`}>
         {missing ? (
-          <div className="grid h-full place-items-center px-4 text-center text-xs text-white/60">Ingen skjermbilde ennå</div>
+          <div className="grid h-full place-items-center px-4 text-center text-xs text-white/60">{tr('Ingen skjermbilde ennå')}</div>
         ) : (
-          <img src={api.pairing.screenshotUrl(device.device_id, version)} alt="Slik ser TV-en ut" className={`h-full w-full object-contain ${busy ? 'opacity-50' : ''}`} onError={() => setMissing(true)} />
+          <img src={api.pairing.screenshotUrl(device.device_id, version)} alt={tr('Slik ser TV-en ut')} className={`h-full w-full object-contain ${busy ? 'opacity-50' : ''}`} onError={() => setMissing(true)} />
         )}
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted">
-        <span>{takenAt ? `Fra TV-en ${timeAgo(takenAt)}` : 'Skjermbilde fra TV-en'}</span>
+        <span>{takenAt ? tr('Fra TV-en {0}', [timeAgo(takenAt)]) : tr('Skjermbilde fra TV-en')}</span>
         <button type="button" onClick={refresh} disabled={busy} className="font-semibold text-brand hover:underline disabled:opacity-50">
-          {busy ? 'Henter …' : 'Oppdater'}
+          {busy ? tr('Henter …') : tr('Oppdater')}
         </button>
       </div>
     </div>
@@ -125,7 +126,7 @@ function PairTv({ label, onSubmit, onCancel }) {
         if (code.length === 6) onSubmit(code);
       }}
     >
-      <span className="text-xs text-muted">Tast koden som står på TV-en.</span>
+      <span className="text-xs text-muted">{tr('Tast koden som står på TV-en.')}</span>
       <CodeInput value={code} onChange={setCode} />
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={code.length < 6}>
@@ -133,7 +134,7 @@ function PairTv({ label, onSubmit, onCancel }) {
         </Button>
         {onCancel && (
           <Button type="button" size="sm" variant="outline" onClick={onCancel}>
-            Avbryt
+            {tr('Avbryt')}
           </Button>
         )}
       </div>
@@ -190,13 +191,13 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
                 saveName();
               }}
             >
-              <Input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder="Navn på skjermen" />
-              <IconButton name="check" label="Lagre navn" tone="brand" type="submit" />
-              <IconButton name="x" label="Avbryt" onClick={cancelEdit} />
+              <Input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder={tr('Navn på skjermen')} />
+              <IconButton name="check" label={tr('Lagre navn')} tone="brand" type="submit" />
+              <IconButton name="x" label={tr('Avbryt')} onClick={cancelEdit} />
             </form>
           ) : (
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setEditingName(true)} title="Gi skjermen nytt navn" className="group flex min-w-0 items-center gap-1.5 text-left">
+              <button type="button" onClick={() => setEditingName(true)} title={tr('Gi skjermen nytt navn')} className="group flex min-w-0 items-center gap-1.5 text-left">
                 <span className="truncate text-xl font-bold text-ink">{s.name}</span>
                 <Icon name="edit" className="h-4 w-4 shrink-0 text-muted opacity-60 transition-opacity group-hover:opacity-100" />
               </button>
@@ -205,28 +206,28 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
           )}
           {d && !d.online && d.last_seen && (
             <p className="m-0 mt-1 text-sm text-muted">
-              Sist sett {timeAgo(d.last_seen)} · TV-en viser fortsatt sist lagrede innhold og følger åpningstidene til den får nett igjen.
+              {tr('Sist sett')} {timeAgo(d.last_seen)} {tr('· TV-en viser fortsatt sist lagrede innhold og følger åpningstidene til den får nett igjen.')}
             </p>
           )}
         </div>
-        <IconButton name="x" label="Lukk" onClick={onClose} />
+        <IconButton name="x" label={tr('Lukk')} onClick={onClose} />
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-5">
-        <Card title="Live">
+        <Card title={tr('Live')}>
           <LiveScreenView screenId={s.id} orientation={s.orientation} />
         </Card>
 
-        <Card title="Innhold">
+        <Card title={tr('Innhold')}>
           <div className="space-y-3">
             <label className="block">
-              <Label>Viser presentasjonen</Label>
+              <Label>{tr('Viser presentasjonen')}</Label>
               <div className="flex gap-2">
                 <Select
                   value={s.playlist_id ?? ''}
                   onChange={(e) => onPatch({ playlist_id: e.target.value ? Number(e.target.value) : null }, 'Skjermen viser ny presentasjon.')}
                 >
-                  <option value="">Ingenting</option>
+                  <option value="">{tr('Ingenting')}</option>
                   {playlists.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -235,7 +236,7 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
                 </Select>
                 <Button variant="outline" disabled={!s.playlist_id} onClick={() => onEditContent(s.playlist_id)}>
                   <Icon name="edit" className="h-4 w-4" />
-                  Rediger
+                  {tr('Rediger')}
                 </Button>
               </div>
             </label>
@@ -247,15 +248,15 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
             >
               <Icon name="clock" className="h-4 w-4 text-muted" />
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-ink">Tidsplan</span>
+                <span className="block font-semibold text-ink">{tr('Tidsplan')}</span>
                 <span className="block truncate text-xs text-muted">
                   {s.now_closed
-                    ? 'Skjermen er av nå – utenfor åpningstid'
+                    ? tr('Skjermen er av nå – utenfor åpningstid')
                     : s.now_off
-                    ? 'Skjermen er av nå ifølge tidsplanen'
+                    ? tr('Skjermen er av nå ifølge tidsplanen')
                     : s.now_slot
-                      ? `Nå: ${s.now_playlist_name || s.now_slot.title} (overstyrer presentasjonen over)`
-                      : 'Vis andre presentasjoner til bestemte tider'}
+                      ? tr('Nå: {0} (overstyrer presentasjonen over)', [s.now_playlist_name || s.now_slot.title])
+                      : tr('Vis andre presentasjoner til bestemte tider')}
                 </span>
               </span>
               <Icon name="chevron" className="h-4 w-4 text-muted" />
@@ -265,33 +266,33 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
         </Card>
 
         {d && (
-          <Card title="Fjernkontroll">
+          <Card title={tr('Fjernkontroll')}>
             <TvScreenshot key={d.device_id} device={d} screenId={s.id} orientation={s.orientation} />
             <div className="grid grid-cols-2 gap-2">
-              <ActionButton icon="pin" label="Identifiser" onClick={() => onCommand('identify', 'Identifiser')} />
-              <ActionButton icon="refresh" label="Last inn" onClick={() => onCommand('reload', 'Last inn')} />
-              <ActionButton icon="trash" label="Tøm cache" onClick={() => onCommand('clear_cache', 'Tøm cache')} />
-              <ActionButton icon="power" label="Start på nytt" onClick={() => onCommand('reboot', 'Restart')} />
+              <ActionButton icon="pin" label={tr('Identifiser')} onClick={() => onCommand('identify', 'Identifiser')} />
+              <ActionButton icon="refresh" label={tr('Last inn')} onClick={() => onCommand('reload', 'Last inn')} />
+              <ActionButton icon={'trash'} label={tr('Tøm cache')} onClick={() => onCommand('clear_cache', tr('Tøm cache'))} />
+              <ActionButton icon="power" label={tr('Start på nytt')} onClick={() => onCommand('reboot', 'Restart')} />
             </div>
           </Card>
         )}
 
-        <Card title="Innstillinger">
+        <Card title={tr('Innstillinger')}>
           <div className="space-y-3">
             <div className="grid grid-cols-[1fr_auto] gap-2">
               <label className="block">
-                <Label>Plassering</Label>
+                <Label>{tr('Plassering')}</Label>
                 <Input
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   onBlur={saveLocation}
                   onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  placeholder="1. etasje"
+                  placeholder={tr('1. etasje')}
                 />
               </label>
               <label className="block">
-                <Label>Rotasjon</Label>
-                <Select value={s.rotation ?? 0} onChange={(e) => onPatch({ rotation: Number(e.target.value) })} className="!w-24" title="For skjermer som henger på høykant eller opp-ned">
+                <Label>{tr('Rotasjon')}</Label>
+                <Select value={s.rotation ?? 0} onChange={(e) => onPatch({ rotation: Number(e.target.value) })} className="!w-24" title={tr('For skjermer som henger på høykant eller opp-ned')}>
                   {[...new Set([...ROTATION_OPTIONS, s.rotation ?? 0])].map((r) => (
                     <option key={r} value={r}>
                       {r}°
@@ -301,62 +302,62 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
               </label>
             </div>
             <label className="block">
-              <Label>Grupper</Label>
+              <Label>{tr('Grupper')}</Label>
               <Input
                 value={tagsDraft}
                 onChange={(e) => setTagsDraft(e.target.value)}
                 onBlur={saveTags}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                placeholder="2. etasje, Resepsjon"
+                placeholder={tr('2. etasje, Resepsjon')}
               />
-              <span className="mt-1 block text-xs text-muted">Skill med komma. Bruk grupper til å sende varsler, velge og endre mange skjermer samtidig.</span>
+              <span className="mt-1 block text-xs text-muted">{tr('Skill med komma. Bruk grupper til å sende varsler, velge og endre mange skjermer samtidig.')}</span>
             </label>
           </div>
         </Card>
 
-        <Card title="Åpningstider">
-          <HoursEditor value={s.hours} onSave={(hours) => onPatch({ hours }, 'Åpningstidene er lagret.')} />
+        <Card title={tr('Åpningstider')}>
+          <HoursEditor value={s.hours} onSave={(hours) => onPatch({ hours }, tr('Åpningstidene er lagret.'))} />
         </Card>
 
-        <Card title={d ? deviceKind(ci) : 'TV'}>
+        <Card title={d ? deviceKind(ci) : tr('TV')}>
           {d && !pairing ? (
             <>
-              <Row label="Navn på TV-en" value={ci.device_name} />
-              <Row label="Modell" value={ci.model} />
-              <Row label="Operativsystem" value={ci.os_version || (ci.tvos_version ? `tvOS ${ci.tvos_version}` : null)} />
-              <Row label="Flatr-app" value={ci.app_version || ci.player_version} />
-              <Row label="Oppløsning" value={ci.resolution ? ci.resolution.replace('x', '×') : null} sub={aspectOf(ci.resolution)} />
-              <Row label="Oppetid" value={fmtUptime(ci.uptime_seconds)} />
-              <Row label="Nettverk" value={NETWORK[ci.network] || ci.network} />
-              <Row label="Sanntid" value={ci.live == null ? null : ci.live ? 'Tilkoblet' : 'Ikke tilkoblet – henter hvert 30. sekund'} />
-              <Row label="Innhold hentet" value={ci.content_at ? timeAgo(ci.content_at) : null} />
-              <Row label="Automatiske omstarter" value={ci.restarts ? `${ci.restarts} siden appen startet` : null} />
-              <Row label="Lagring" value={ci.storage_pct != null ? `${ci.storage_pct} %` : null} pct={ci.storage_pct} />
-              <Row label="Minne" value={ci.memory_pct != null ? `${ci.memory_pct} %` : null} pct={ci.memory_pct} />
-              <Row label="CPU-temperatur" value={ci.cpu_temp != null ? `${ci.cpu_temp} °C` : null} />
-              <Row label="GPU-temperatur" value={ci.gpu_temp != null ? `${ci.gpu_temp} °C` : null} />
-              <Row label="IP-adresse" value={ci.ip} mono />
-              <Row label="Koblet til" value={d.paired_at ? timeAgo(d.paired_at) : null} />
+              <Row label={tr('Navn på TV-en')} value={ci.device_name} />
+              <Row label={tr('Modell')} value={ci.model} />
+              <Row label={tr('Operativsystem')} value={ci.os_version || (ci.tvos_version ? `tvOS ${ci.tvos_version}` : null)} />
+              <Row label={tr('Flatr-app')} value={ci.app_version || ci.player_version} />
+              <Row label={tr('Oppløsning')} value={ci.resolution ? ci.resolution.replace('x', '×') : null} sub={aspectOf(ci.resolution)} />
+              <Row label={tr('Oppetid')} value={fmtUptime(ci.uptime_seconds)} />
+              <Row label={tr('Nettverk')} value={NETWORK[ci.network] || ci.network} />
+              <Row label={tr('Sanntid')} value={ci.live == null ? null : ci.live ? 'Tilkoblet' : 'Ikke tilkoblet – henter hvert 30. sekund'} />
+              <Row label={tr('Innhold hentet')} value={ci.content_at ? timeAgo(ci.content_at) : null} />
+              <Row label={tr('Automatiske omstarter')} value={ci.restarts ? `${ci.restarts} siden appen startet` : null} />
+              <Row label={tr('Lagring')} value={ci.storage_pct != null ? `${ci.storage_pct} %` : null} pct={ci.storage_pct} />
+              <Row label={tr('Minne')} value={ci.memory_pct != null ? `${ci.memory_pct} %` : null} pct={ci.memory_pct} />
+              <Row label={tr('CPU-temperatur')} value={ci.cpu_temp != null ? `${ci.cpu_temp} °C` : null} />
+              <Row label={tr('GPU-temperatur')} value={ci.gpu_temp != null ? `${ci.gpu_temp} °C` : null} />
+              <Row label={tr('IP-adresse')} value={ci.ip} mono />
+              <Row label={tr('Koblet til')} value={d.paired_at ? timeAgo(d.paired_at) : null} />
               <div className="mt-3 flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setPairing(true)}>
-                  Bytt TV
+                  {tr('Bytt TV')}
                 </Button>
                 <Button variant="outline" size="sm" onClick={onUnpairTv}>
-                  Koble fra TV-en
+                  {tr('Koble fra TV-en')}
                 </Button>
               </div>
               {ci.tvos_version && (
                 <p className="m-0 mt-3 text-xs text-muted">
-                  Starter ikke Flatr av seg selv etter strømbrudd?{' '}
+                  {tr('Starter ikke Flatr av seg selv etter strømbrudd?')}{' '}
                   <a href={`${location.protocol}//${platformHost()}/hjelp/apple-tv`} target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">
-                    Lås Apple TV til Flatr
+                    {tr('Lås Apple TV til Flatr')}
                   </a>
                 </p>
               )}
             </>
           ) : pairing ? (
             <PairTv
-              label="Koble til"
+              label={tr('Koble til')}
               onSubmit={(code) => {
                 onReplaceTv(code);
                 setPairing(false);
@@ -366,27 +367,27 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
           ) : (
             <>
               <p className="m-0 mb-3 text-sm text-muted">
-                Ingen TV er koblet til. Åpne Flatr-appen på Apple TV eller Android TV, eller flatr.no/tv i en nettleser, og tast koden den viser.
+                {tr('Ingen TV er koblet til. Åpne Flatr-appen på Apple TV eller Android TV, eller flatr.no/tv i en nettleser, og tast koden den viser.')}
               </p>
               <Button variant="outline" size="sm" onClick={() => setPairing(true)}>
-                Koble til en TV
+                {tr('Koble til en TV')}
               </Button>
             </>
           )}
         </Card>
 
-        <Card title="Vis i nettleser">
-          <p className="m-0 mb-2 text-xs text-muted">For smart-TV, PC eller annen skjerm med nettleser.</p>
+        <Card title={tr('Vis i nettleser')}>
+          <p className="m-0 mb-2 text-xs text-muted">{tr('For smart-TV, PC eller annen skjerm med nettleser.')}</p>
           <CopyLink link={link} />
         </Card>
 
         <section className="flex items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger-tint/40 p-4">
           <div className="min-w-0">
-            <div className="text-sm font-bold text-ink">Slett skjermen</div>
-            <div className="text-xs text-muted">Presentasjonen beholdes. En TV som er koblet til viser en ny kode.</div>
+            <div className="text-sm font-bold text-ink">{tr('Slett skjermen')}</div>
+            <div className="text-xs text-muted">{tr('Presentasjonen beholdes. En TV som er koblet til viser en ny kode.')}</div>
           </div>
           <button type="button" onClick={onDelete} className="h-10 shrink-0 rounded-xl bg-danger-tint px-4 text-sm font-semibold text-danger hover:bg-danger-hover">
-            Slett
+            {tr('Slett')}
           </button>
         </section>
       </div>

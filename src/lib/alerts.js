@@ -1,17 +1,18 @@
-// Hastemeldinger: alvorlighet, visning, ferdige maler og farger.
+
+import { tr } from './i18n.js';// Hastemeldinger: alvorlighet, visning, ferdige maler og farger.
 // Felles for server (src/api/alerts.js, buildState) og nettleser (Hjem, skjermene).
 // Apple TV-appen har de samme fargene i DisplayView.swift.
 
 export const SEVERITIES = [
-  { value: 'info', label: 'Informasjon', bg: '#1d4ed8', fg: '#ffffff' },
-  { value: 'warning', label: 'Viktig', bg: '#f59e0b', fg: '#1a1205' },
-  { value: 'critical', label: 'Kritisk', bg: '#dc2626', fg: '#ffffff' }
+  { value: 'info', label: tr('Informasjon'), bg: '#1d4ed8', fg: '#ffffff' },
+  { value: 'warning', label: tr('Viktig'), bg: '#f59e0b', fg: '#1a1205' },
+  { value: 'critical', label: tr('Kritisk'), bg: '#dc2626', fg: '#ffffff' }
 ];
 
 export const DISPLAYS = [
-  { value: 'flash', label: 'Hele skjermen i 30 sekunder, så banner' },
-  { value: 'full', label: 'Hele skjermen hele tiden' },
-  { value: 'banner', label: 'Bare banner nederst' }
+  { value: 'flash', label: tr('Hele skjermen i 30 sekunder, så banner') },
+  { value: 'full', label: tr('Hele skjermen hele tiden') },
+  { value: 'banner', label: tr('Bare banner nederst') }
 ];
 
 /** Hvor lenge «flash» dekker hele skjermen før den blir et banner. */
@@ -19,50 +20,50 @@ export const FLASH_MS = 30_000;
 
 // Farevarsler fra MET har farge etter nivå, som på yr.no.
 export const MET_LEVELS = {
-  yellow: { label: 'Gult', bg: '#facc15', fg: '#1a1205' },
-  orange: { label: 'Oransje', bg: '#f97316', fg: '#1a1205' },
-  red: { label: 'Rødt', bg: '#dc2626', fg: '#ffffff' }
+  yellow: { label: tr('Gult'), bg: '#facc15', fg: '#1a1205' },
+  orange: { label: tr('Oransje'), bg: '#f97316', fg: '#1a1205' },
+  red: { label: tr('Rødt'), bg: '#dc2626', fg: '#ffffff' }
 };
 
 export const TEMPLATES = [
   {
     id: 'evacuate',
-    label: 'Evakuering',
+    label: tr('Evakuering'),
     severity: 'critical',
     display: 'full',
-    title: 'Evakuer bygget',
-    message: 'Forlat bygget rolig gjennom nærmeste nødutgang og gå til møteplassen.'
+    title: tr('Evakuer bygget'),
+    message: tr('Forlat bygget rolig gjennom nærmeste nødutgang og gå til møteplassen.')
   },
   {
     id: 'drill',
-    label: 'Brannøvelse',
+    label: tr('Brannøvelse'),
     severity: 'warning',
     display: 'flash',
-    title: 'Brannøvelse',
-    message: 'Brannøvelse pågår. Forlat lokalet rolig gjennom nærmeste utgang.'
+    title: tr('Brannøvelse'),
+    message: tr('Brannøvelse pågår. Forlat lokalet rolig gjennom nærmeste utgang.')
   },
   {
     id: 'closed',
-    label: 'Stengt',
+    label: tr('Stengt'),
     severity: 'info',
     display: 'banner',
-    title: 'Stengt',
+    title: tr('Stengt'),
     message: 'Vi har stengt i dag. Velkommen tilbake i morgen.'
   },
   {
     id: 'delay',
-    label: 'Forsinkelse',
+    label: tr('Forsinkelse'),
     severity: 'warning',
     display: 'banner',
-    title: 'Forsinkelse',
-    message: 'Det er forsinkelser. Vi oppdaterer når vi vet mer.'
+    title: tr('Forsinkelse'),
+    message: tr('Det er forsinkelser. Vi oppdaterer når vi vet mer.')
   },
   {
     id: 'meeting',
-    label: 'Fellesmøte',
+    label: tr('Fellesmøte'),
     severity: 'info',
     display: 'flash',
-    title: 'Fellesmøte',
+    title: tr('Fellesmøte'),
     message: 'Felles samling i kantina om 10 minutter.'
   }
 ];
@@ -120,7 +121,7 @@ export function cleanAlert(b, now = Date.now()) {
   if (!endsAt && Number.isFinite(minutes) && minutes > 0) {
     endsAt = new Date((startsAt ? Date.parse(startsAt) : now) + Math.min(minutes, 60 * 24 * 31) * 60_000).toISOString();
   }
-  if (endsAt && Date.parse(endsAt) <= (startsAt ? Date.parse(startsAt) : now)) return { error: 'Sluttiden må være etter starttiden' };
-  if (startsAt && Date.parse(startsAt) > now + 365 * 86_400_000) return { error: 'Starttiden kan være høyst ett år fram i tid' };
+  if (endsAt && Date.parse(endsAt) <= (startsAt ? Date.parse(startsAt) : now)) return { error: tr('Sluttiden må være etter starttiden') };
+  if (startsAt && Date.parse(startsAt) > now + 365 * 86_400_000) return { error: tr('Starttiden kan være høyst ett år fram i tid') };
   return { value: { message, title, severity, display, starts_at: startsAt, ends_at: endsAt } };
 }

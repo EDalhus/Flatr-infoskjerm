@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import CustomAppView from '../../../viewer/slides/CustomAppView.jsx';
 import { Icon, Field, Input, Button, Card, ErrorText } from '../ui.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Innstillingene til en aktivert egen app: skjemaet lages fra feltene i
 // manifestet. Hemmelige felt vises aldri igjen – bare om de er lagt inn.
@@ -42,7 +43,7 @@ export default function CustomSettings({ app, onSaved }) {
       const saved = await api.apps.update(app.id, { config: { settings: values }, secrets });
       setSecrets({});
       setSecretKeys(saved.config?.secret_keys || []);
-      setNotice('Lagret.');
+      setNotice(tr('Lagret.'));
       onSaved(saved);
     } catch (err) {
       setError(err.message);
@@ -53,9 +54,9 @@ export default function CustomSettings({ app, onSaved }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <Card title="Verdier for kontoen din">
+      <Card title={tr('Verdier for kontoen din')}>
         {fields.length === 0 ? (
-          <p className="m-0 text-sm text-muted">Appen trenger ingen innstillinger.</p>
+          <p className="m-0 text-sm text-muted">{tr('Appen trenger ingen innstillinger.')}</p>
         ) : (
           <form onSubmit={save} className="grid gap-4">
             {fields.map((f) =>
@@ -63,7 +64,7 @@ export default function CustomSettings({ app, onSaved }) {
                 <Field
                   key={f.key}
                   label={`${f.label}${f.required ? '' : ' (valgfritt)'}`}
-                  hint={f.hint || (secretKeys.includes(f.key) ? 'Lagret og kryptert. Skriv inn en ny for å bytte.' : 'Lagres kryptert og vises aldri igjen.')}
+                  hint={f.hint || (secretKeys.includes(f.key) ? tr('Lagret og kryptert. Skriv inn en ny for å bytte.') : tr('Lagres kryptert og vises aldri igjen.'))}
                 >
                   <Input
                     type="password"
@@ -87,7 +88,7 @@ export default function CustomSettings({ app, onSaved }) {
             <div className="flex items-center gap-3">
               <Button type="submit" disabled={busy}>
                 <Icon name="check" className="h-4 w-4" />
-                {busy ? 'Lagrer …' : 'Lagre innstillinger'}
+                {busy ? tr('Lagrer …') : tr('Lagre innstillinger')}
               </Button>
               {notice && <span className="text-sm font-medium text-brand">{notice}</span>}
             </div>
@@ -100,10 +101,10 @@ export default function CustomSettings({ app, onSaved }) {
           {live ? (
             <CustomAppView template={live.template} display={live.display} items={live.items || []} color={app.definition?.color} />
           ) : (
-            <div className="grid h-full place-items-center text-center text-sm opacity-80">{liveError || 'Henter data …'}</div>
+            <div className="grid h-full place-items-center text-center text-sm opacity-80">{liveError || tr('Henter data …')}</div>
           )}
         </div>
-        <p className="m-0 text-xs text-muted">Forhåndsvisning med innstillingene som er lagret. Legg appen på et lysbilde med elementet «Flatr App» i editoren.</p>
+        <p className="m-0 text-xs text-muted">{tr('Forhåndsvisning med innstillingene som er lagret. Legg appen på et lysbilde med elementet «Flatr App» i editoren.')}</p>
       </div>
     </div>
   );

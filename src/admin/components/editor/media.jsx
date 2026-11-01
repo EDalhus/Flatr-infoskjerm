@@ -1,5 +1,6 @@
 // Felles for medielysbilder og dokumentimport i editoren.
 import { Icon } from '../ui.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 export const hostOf = (url) => {
   try {
@@ -51,8 +52,8 @@ export function ImportBanner({ state, onClose }) {
         ) : (
           <span className="text-muted">
             {' '}
-            · {PHASE[state.phase] || 'Jobber'}
-            {state.phase !== 'upload' && state.total ? ` (${state.done}/${state.total} sider)` : ''} …
+            · {PHASE[state.phase] || tr('Jobber')}
+            {state.phase !== 'upload' && state.total ? tr(' ({0}/{1} sider)', [state.done, state.total]) : ''} …
           </span>
         )}
       </span>
@@ -63,7 +64,7 @@ export function ImportBanner({ state, onClose }) {
       )}
       {state.error && (
         <button type="button" onClick={onClose} className="font-semibold text-brand hover:underline">
-          Lukk
+          {tr('Lukk')}
         </button>
       )}
     </div>

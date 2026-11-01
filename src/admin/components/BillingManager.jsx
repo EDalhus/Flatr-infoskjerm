@@ -7,19 +7,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { PLANS, STORAGE_ADDONS, FREE, YEAR_MONTHS, quote, kr, validOrgNumber } from '../../lib/pricing.js';
 import { Button, Card, Field, Input, Select, Segmented, PageHeader, ErrorText, Icon } from './ui.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
-const gb = (bytes) => `${(bytes / 1024 ** 3).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} GB`;
-const date = (iso) => (iso ? new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+const gb = (bytes) => `${(bytes / 1024 ** 3).toLocaleString(locale(), { maximumFractionDigits: 1 })} GB`;
+const date = (iso) => (iso ? new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' }) : '');
 
 const STATUS = {
-  active: ['Aktiv', 'ok'],
-  trialing: ['Prøveperiode', 'ok'],
-  past_due: ['Betalingen feilet', 'warn'],
-  unpaid: ['Ubetalt', 'danger'],
-  canceled: ['Avsluttet', 'muted'],
-  incomplete: ['Venter på betaling', 'warn'],
-  incomplete_expired: ['Betalingen ble ikke fullført', 'muted'],
-  paused: ['Satt på pause', 'muted']
+  active: [tr('Aktiv'), 'ok'],
+  trialing: [tr('Prøveperiode'), 'ok'],
+  past_due: [tr('Betalingen feilet'), 'warn'],
+  unpaid: [tr('Ubetalt'), 'danger'],
+  canceled: [tr('Avsluttet'), 'muted'],
+  incomplete: [tr('Venter på betaling'), tr('warn')],
+  incomplete_expired: [tr('Betalingen ble ikke fullført'), 'muted'],
+  paused: [tr('Satt på pause'), 'muted']
 };
 const TONE = {
   ok: 'bg-ok-tint text-ok',
@@ -43,44 +44,44 @@ function Current({ b, onPortal, busy }) {
   const [label, tone] = STATUS[b.status] || [];
   const ending = b.cancel_at_period_end && b.period_end;
   return (
-    <Card title="Planen nå">
+    <Card title={tr('Planen nå')}>
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-2xl font-bold tracking-tight text-ink">{plan ? plan.name : 'Gratis'}</span>
-        {plan && label && <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${TONE[tone]}`}>{ending ? `Avsluttes ${date(b.period_end)}` : label}</span>}
+        <span className="text-2xl font-bold tracking-tight text-ink">{plan ? plan.name : tr('Gratis')}</span>
+        {plan && label && <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${TONE[tone]}`}>{ending ? tr('Avsluttes {0}', [date(b.period_end)]) : label}</span>}
       </div>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <Fact label="Skjermer">
-          {b.screens.used} av {b.screens.limit} i bruk
+        <Fact label={tr('Skjermer')}>
+          {b.screens.used} {tr('av')} {b.screens.limit} {tr('i bruk')}
         </Fact>
-        <Fact label="Lagring">
-          {gb(b.storage.used)} av {gb(b.storage.limit)}
+        <Fact label={tr('Lagring')}>
+          {gb(b.storage.used)} {tr('av')} {gb(b.storage.limit)}
         </Fact>
         {plan ? (
-          <Fact label={ending ? 'Gjelder til' : b.collection === 'invoice' ? 'Neste faktura' : 'Neste betaling'}>
+          <Fact label={ending ? tr('Gjelder til') : b.collection === 'invoice' ? tr('Neste faktura') : tr('Neste betaling')}>
             {date(b.period_end) || '–'}
             <span className="block text-xs font-normal text-muted">
-              {b.interval === 'year' ? 'Årlig' : 'Månedlig'} · {b.collection === 'invoice' ? 'faktura' : 'kort'}
+              {b.interval === 'year' ? tr('Årlig') : tr('Månedlig')} · {b.collection === 'invoice' ? 'faktura' : 'kort'}
             </span>
           </Fact>
         ) : (
-          <Fact label="Pris">0 kr</Fact>
+          <Fact label={tr('Pris')}>{tr('0 kr')}</Fact>
         )}
       </div>
       {b.status === 'past_due' && (
         <p className="m-0 mt-4 rounded-xl bg-warn-tint px-4 py-3 text-sm text-ink">
-          Vi fikk ikke trukket den siste betalingen. Oppdater kortet, så prøver vi igjen. Skjermene virker som før i noen dager til.
+          {tr('Vi fikk ikke trukket den siste betalingen. Oppdater kortet, så prøver vi igjen. Skjermene virker som før i noen dager til.')}
         </p>
       )}
       {!plan && b.last_plan && (
         <p className="m-0 mt-4 rounded-xl bg-hair px-4 py-3 text-sm text-ink">
-          Abonnementet er avsluttet. Skjermer over grensen i gratisplanen viser en beskjed i stedet for innholdet til dere fornyer.
+          {tr('Abonnementet er avsluttet. Skjermer over grensen i gratisplanen viser en beskjed i stedet for innholdet til dere fornyer.')}
         </p>
       )}
       {b.can_manage && b.enabled && (plan || b.last_plan) && (
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="outline" onClick={onPortal} disabled={busy}>
             <Icon name="external" className="h-4 w-4" />
-            Kort, kvitteringer og oppsigelse
+            {tr('Kort, kvitteringer og oppsigelse')}
           </Button>
         </div>
       )}
@@ -108,23 +109,23 @@ function Summary({ choice, vat }) {
         {lines.map(([label, amount]) => (
           <div key={label} className="contents">
             <dt className="text-muted">{label}</dt>
-            <dd className="m-0 text-right">{kr(amount)} / mnd</dd>
+            <dd className="m-0 text-right">{kr(amount)} {tr('/ mnd')}</dd>
           </div>
         ))}
         {choice.interval === 'year' && (
           <div className="contents">
-            <dt className="text-muted">Årlig: {YEAR_MONTHS} måneder (to gratis)</dt>
+            <dt className="text-muted">{tr('Årlig:')} {YEAR_MONTHS} {tr('måneder (to gratis)')}</dt>
             <dd className="m-0 text-right">{kr(q.net)}</dd>
           </div>
         )}
         {vat && (
           <div className="contents">
-            <dt className="text-muted">Mva. 25 %</dt>
+            <dt className="text-muted">{tr('Mva. 25 %')}</dt>
             <dd className="m-0 text-right">{kr(q.vat)}</dd>
           </div>
         )}
         <div className="contents font-semibold text-ink">
-          <dt className="border-t border-line pt-2">{choice.interval === 'year' ? 'Per år' : 'Per måned'}</dt>
+          <dt className="border-t border-line pt-2">{choice.interval === 'year' ? tr('Per år') : tr('Per måned')}</dt>
           <dd className="m-0 border-t border-line pt-2 text-right">{kr(q.total)}</dd>
         </div>
       </dl>
@@ -139,7 +140,7 @@ function OrgLookup({ value, onChange, org, onOrg }) {
   const look = async () => {
     setError('');
     onOrg(null);
-    if (!validOrgNumber(value)) return setError('Organisasjonsnummeret er ikke gyldig. Sjekk at alle de 9 sifrene er riktige.');
+    if (!validOrgNumber(value)) return setError(tr('Organisasjonsnummeret er ikke gyldig. Sjekk at alle de 9 sifrene er riktige.'));
     setBusy(true);
     try {
       onOrg(await api.billing.org(value.replace(/\s/g, '')));
@@ -160,12 +161,12 @@ function OrgLookup({ value, onChange, org, onOrg }) {
           }}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), look())}
           inputMode="numeric"
-          placeholder="9 siffer, f.eks. 982 129 265"
+          placeholder={tr('9 siffer, f.eks. 982 129 265')}
           maxLength={11}
           className="max-w-[220px]"
         />
         <Button type="button" variant="outline" onClick={look} disabled={busy || !value.trim()}>
-          {busy ? 'Henter …' : 'Hent'}
+          {busy ? tr('Henter …') : tr('Hent')}
         </Button>
       </div>
       <ErrorText>{error}</ErrorText>
@@ -178,9 +179,9 @@ function OrgLookup({ value, onChange, org, onOrg }) {
           </div>
           <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-semibold ${org.volunteer ? 'text-ok' : 'text-muted'}`}>
             <Icon name={org.volunteer ? 'check' : 'x'} className="h-3.5 w-3.5" />
-            {org.volunteer ? 'Står i Frivillighetsregisteret – Lag og frivillige gjelder' : 'Står ikke i Frivillighetsregisteret'}
+            {org.volunteer ? tr('Står i Frivillighetsregisteret – Lag og frivillige gjelder') : tr('Står ikke i Frivillighetsregisteret')}
           </div>
-          {!org.active && <div className="mt-1 text-xs font-semibold text-danger">Organisasjonen er under avvikling eller konkurs.</div>}
+          {!org.active && <div className="mt-1 text-xs font-semibold text-danger">{tr('Organisasjonen er under avvikling eller konkurs.')}</div>}
         </div>
       )}
     </div>
@@ -200,7 +201,7 @@ function PlanCard({ plan, selected, disabled, note, onSelect }) {
         {selected && <Icon name="check" className="h-4 w-4 text-brand" />}
       </span>
       <span className="mt-1 text-sm text-muted">
-        <span className="text-lg font-bold text-ink">{kr(plan.tiers[0][1])}</span> / skjerm / mnd
+        <span className="text-lg font-bold text-ink">{kr(plan.tiers[0][1])}</span> {tr('/ skjerm / mnd')}
       </span>
       <span className="mt-1 text-xs text-muted">{note}</span>
     </button>
@@ -252,7 +253,7 @@ function Order({ b, me, onDone }) {
       const res = await api.billing.checkout({ ...choice, storage_gb: choice.storageGb, org_number: org?.number || null, email, invoice: invoice && period === 'year' });
       if (res.url) window.location.href = res.url;
       else {
-        onDone(res.billing, 'Takk! Abonnementet er i gang. Fakturaen kommer på e-post.');
+        onDone(res.billing, tr('Takk! Abonnementet er i gang. Fakturaen kommer på e-post.'));
         setBusy(false);
       }
     } catch (err) {
@@ -262,46 +263,46 @@ function Order({ b, me, onDone }) {
   };
 
   return (
-    <Card title={paid ? 'Endre abonnementet' : 'Oppgrader'}>
+    <Card title={paid ? tr('Endre abonnementet') : tr('Oppgrader')}>
       <form onSubmit={submit} className="grid gap-5">
         <div className="grid gap-3 sm:grid-cols-2">
-          <PlanCard plan={PLANS.pro} selected={plan === 'pro'} onSelect={() => setPlan('pro')} note="24 kr fra skjerm nr. 20 · video · 20 GB lagring" />
+          <PlanCard plan={PLANS.pro} selected={plan === 'pro'} onSelect={() => setPlan('pro')} note={tr('24 kr fra skjerm nr. 20 · video · 20 GB lagring')} />
           <PlanCard
             plan={PLANS.club}
             selected={plan === 'club'}
             disabled={!clubOk}
             onSelect={() => setPlan('club')}
-            note={clubOk ? 'Halv pris · video · 15 GB lagring' : 'Halv pris for lag og foreninger i Frivillighetsregisteret – hent organisasjonsnummeret under'}
+            note={clubOk ? tr('Halv pris · video · 15 GB lagring') : tr('Halv pris for lag og foreninger i Frivillighetsregisteret – hent organisasjonsnummeret under')}
           />
         </div>
 
         {!paid && (
-          <Field label="Organisasjonsnummer" hint="Navn og adresse hentes fra Enhetsregisteret og kommer på kvitteringene. Lag og foreninger i Frivillighetsregisteret får halv pris.">
+          <Field label={tr('Organisasjonsnummer')} hint={tr('Navn og adresse hentes fra Enhetsregisteret og kommer på kvitteringene. Lag og foreninger i Frivillighetsregisteret får halv pris.')}>
             <OrgLookup value={orgNumber} onChange={setOrgNumber} org={org} onOrg={setOrg} />
           </Field>
         )}
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Skjermer" hint={tooFew ? `Dere har ${b.screens.used} skjermer i bruk.` : `${b.screens.used} i bruk nå`}>
+          <Field label={tr('Skjermer')} hint={tooFew ? tr('Dere har {0} skjermer i bruk.', [b.screens.used]) : tr('{0} i bruk nå', [b.screens.used])}>
             <Input type="number" min={1} max={500} value={screens} onChange={(e) => setScreens(e.target.value)} />
           </Field>
-          <Field label="Ekstra lagring" hint={`${PLANS[plan].storageGb} GB er med i ${PLANS[plan].name}`}>
+          <Field label={tr('Ekstra lagring')} hint={tr('{0} GB er med i {1}', [PLANS[plan].storageGb, PLANS[plan].name])}>
             <Select value={storageGb} onChange={(e) => setStorageGb(Number(e.target.value))}>
-              <option value={0}>Ingen</option>
+              <option value={0}>{tr('Ingen')}</option>
               {STORAGE_ADDONS.map(([g, price]) => (
                 <option key={g} value={g}>
-                  +{g} GB ({price} kr / mnd)
+                  +{g} {tr('GB (')}{price} {tr('kr / mnd)')}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Betaling">
+          <Field label={tr('Betaling')}>
             <Segmented
               value={period}
               onChange={setPeriod}
               options={[
-                { value: 'month', label: 'Månedlig' },
-                { value: 'year', label: 'Årlig' }
+                { value: 'month', label: tr('Månedlig') },
+                { value: 'year', label: tr('Årlig') }
               ]}
             />
           </Field>
@@ -311,14 +312,14 @@ function Order({ b, me, onDone }) {
           <label className="flex items-start gap-3 text-sm text-ink">
             <input type="checkbox" checked={invoice} onChange={(e) => setInvoice(e.target.checked)} className="mt-1 h-4 w-4 accent-[rgb(var(--c-brand))]" />
             <span>
-              Betal med faktura i stedet for kort
-              <span className="block text-xs text-muted">Fakturaen sendes til e-postadressen under, med 14 dagers forfall.</span>
+              {tr('Betal med faktura i stedet for kort')}
+              <span className="block text-xs text-muted">{tr('Fakturaen sendes til e-postadressen under, med 14 dagers forfall.')}</span>
             </span>
           </label>
         )}
 
         {!paid && (
-          <Field label="E-post for kvitteringer og fakturaer">
+          <Field label={tr('E-post for kvitteringer og fakturaer')}>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="max-w-sm" />
           </Field>
         )}
@@ -327,12 +328,12 @@ function Order({ b, me, onDone }) {
         <ErrorText>{error}</ErrorText>
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={busy || tooFew || unchanged || (!paid && !email)}>
-            {busy ? 'Et øyeblikk …' : paid ? 'Lagre endringene' : invoice && period === 'year' && org ? 'Bestill med faktura' : 'Gå til betaling'}
+            {busy ? tr('Et øyeblikk …') : paid ? tr('Lagre endringene') : invoice && period === 'year' && org ? tr('Bestill med faktura') : tr('Gå til betaling')}
           </Button>
           <span className="text-xs text-muted">
             {paid
-              ? 'Mer faktureres med en gang for resten av perioden. Mindre trekkes fra neste betaling.'
-              : 'Kortbetalingen skjer hos Stripe. Du kan endre antall skjermer eller si opp når som helst.'}
+              ? tr('Mer faktureres med en gang for resten av perioden. Mindre trekkes fra neste betaling.')
+              : tr('Kortbetalingen skjer hos Stripe. Du kan endre antall skjermer eller si opp når som helst.')}
           </span>
         </div>
       </form>
@@ -357,7 +358,7 @@ export default function BillingManager({ me, tenant }) {
         .sync(session)
         .then((res) => {
           setB(res);
-          if (PLANS[res.plan]) setNotice(`Takk! ${PLANS[res.plan].name} er aktivert.`);
+          if (PLANS[res.plan]) setNotice(tr('Takk! {0} er aktivert.', [PLANS[res.plan].name]));
         })
         .catch((err) => setError(err.message));
     } else {
@@ -382,7 +383,7 @@ export default function BillingManager({ me, tenant }) {
 
   return (
     <>
-      <PageHeader title="Abonnement" subtitle={`Plan, skjermer og betaling for ${tenant?.name || 'organisasjonen'}.`} />
+      <PageHeader title={tr('Abonnement')} subtitle={tr('Plan, skjermer og betaling for {0}.', [tenant?.name || 'organisasjonen'])} />
       <div className="mx-auto w-full max-w-3xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <ErrorText>{error}</ErrorText>
         {notice && (
@@ -390,11 +391,11 @@ export default function BillingManager({ me, tenant }) {
             {notice}
           </p>
         )}
-        {!b && !error && <p className="text-sm text-muted">Henter abonnementet …</p>}
+        {!b && !error && <p className="text-sm text-muted">{tr('Henter abonnementet …')}</p>}
         {b && (
           <>
             <Current b={b} onPortal={portal} busy={busy} />
-            {!b.can_manage && <p className="m-0 text-sm text-muted">Bare eiere kan endre abonnementet. Eierne finner du under Team.</p>}
+            {!b.can_manage && <p className="m-0 text-sm text-muted">{tr('Bare eiere kan endre abonnementet. Eierne finner du under Team.')}</p>}
             {b.can_manage && b.enabled && (!paidNow || !b.cancel_at_period_end) && (
               <Order
                 key={`${b.plan}-${b.paid_screens}-${b.extra_storage_gb}-${b.interval}`}
@@ -407,10 +408,10 @@ export default function BillingManager({ me, tenant }) {
               />
             )}
             {b.can_manage && !b.enabled && (
-              <Card title="Betaling kommer snart">
+              <Card title={tr('Betaling kommer snart')}>
                 <p className="m-0 text-sm leading-relaxed text-muted">
-                  Pro koster {kr(PLANS.pro.tiers[0][1])} per skjerm i måneden, og Lag og frivillige {kr(PLANS.club.tiers[0][1])}. Gratisplanen har {FREE.screens}{' '}
-                  skjerm. Trenger dere flere skjermer nå, kan dere be om det under Skjermer – i betaperioden er det gratis.
+                  {tr('Pro koster')} {kr(PLANS.pro.tiers[0][1])} {tr('per skjerm i måneden, og Lag og frivillige')} {kr(PLANS.club.tiers[0][1])}{tr('. Gratisplanen har')} {FREE.screens}{' '}
+                  {tr('skjerm. Trenger dere flere skjermer nå, kan dere be om det under Skjermer – i betaperioden er det gratis.')}
                 </p>
               </Card>
             )}

@@ -9,19 +9,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import { applyBrandToElements, brandBackground } from '../lib/brand.js';
 import { Icon } from './components/ui.jsx';
+import { tr } from '../lib/i18n.js';
 
 const DURATIONS = [
-  { id: 'hour', label: '1 time' },
-  { id: 'day', label: 'I dag' },
-  { id: '3days', label: '3 dager' },
-  { id: 'week', label: '1 uke' },
-  { id: 'forever', label: 'Til jeg fjerner det' }
+  { id: 'hour', label: tr('1 time') },
+  { id: 'day', label: tr('I dag') },
+  { id: '3days', label: tr('3 dager') },
+  { id: 'week', label: tr('1 uke') },
+  { id: 'forever', label: tr('Til jeg fjerner det') }
 ];
 const STYLES = [
-  { id: 'brand', label: 'Merkevare', bg: null },
-  { id: 'dark', label: 'Mørk', bg: { type: 'color', color: '#0f172a' } },
-  { id: 'warm', label: 'Varm', bg: { type: 'gradient', from: '#c2410c', to: '#7c2d12', angle: 135 } },
-  { id: 'green', label: 'Grønn', bg: { type: 'gradient', from: '#027353', to: '#0b2a22', angle: 135 } }
+  { id: 'brand', label: tr('Merkevare'), bg: null },
+  { id: 'dark', label: tr('Mørk'), bg: { type: 'color', color: '#0f172a' } },
+  { id: 'warm', label: tr('Varm'), bg: { type: 'gradient', from: '#c2410c', to: '#7c2d12', angle: 135 } },
+  { id: 'green', label: tr('Grønn'), bg: { type: 'gradient', from: '#027353', to: '#0b2a22', angle: 135 } }
 ];
 const MARK = '📱 ';
 
@@ -84,7 +85,7 @@ function textSlide(message, style, brand) {
 /** Lenker så siden kan legges på hjemskjermen som en app. */
 function useInstallable() {
   useEffect(() => {
-    document.title = 'Legg ut – Flatr';
+    document.title = tr('Legg ut – Flatr');
     const add = (tag, attrs) => {
       const el = document.createElement(tag);
       Object.assign(el, attrs);
@@ -185,14 +186,14 @@ export default function MobilePost() {
       setMessage('');
       loadPosts();
     } catch (e) {
-      setError(e.message || 'Noe gikk galt');
+      setError(e.message || tr('Noe gikk galt'));
     } finally {
       setBusy(false);
     }
   };
 
   const remove = async (s) => {
-    if (!confirm(`Fjerne «${s.name.replace(MARK, '')}» fra skjermen?`)) return;
+    if (!confirm(tr('Fjerne «{0}» fra skjermen?', [s.name.replace(MARK, '')]))) return;
     await api.deck.slide.remove(s.id).catch((e) => setError(e.message));
     loadPosts();
   };
@@ -202,9 +203,9 @@ export default function MobilePost() {
     return (
       <div className="grid min-h-screen place-items-center bg-paper p-6 text-center text-ink">
         <div>
-          <p className="m-0 text-lg font-bold">Logg inn for å legge ut</p>
+          <p className="m-0 text-lg font-bold">{tr('Logg inn for å legge ut')}</p>
           <a href="/admin" className="mt-4 inline-block rounded-xl bg-brand px-5 py-3 font-semibold text-onbrand">
-            Logg inn
+            {tr('Logg inn')}
           </a>
         </div>
       </div>
@@ -219,21 +220,21 @@ export default function MobilePost() {
         <header className="flex items-center justify-between">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-muted">Flatr</div>
-            <h1 className="m-0 text-2xl font-extrabold">Legg ut på skjermene</h1>
+            <h1 className="m-0 text-2xl font-extrabold">{tr('Legg ut på skjermene')}</h1>
           </div>
           <a href="/admin" className="text-sm font-semibold text-muted">
-            Admin
+            {tr('Admin')}
           </a>
         </header>
 
         {done && (
           <div className="rounded-2xl bg-ok-tint p-4 text-sm font-semibold text-ok">
-            {done.waiting ? 'Sendt til godkjenning ✓ Det vises når en eier har godkjent det.' : `Lagt ut på ${done.screens === 1 ? 'én skjerm' : `${done.screens} skjermer`} ✓`}
+            {done.waiting ? tr('Sendt til godkjenning ✓ Det vises når en eier har godkjent det.') : tr('Lagt ut på {0} ✓', [done.screens === 1 ? tr('én skjerm') : tr('{0} skjermer', [done.screens])])}
           </div>
         )}
 
         {!screens.length ? (
-          <p className="m-0 rounded-2xl bg-card p-4 text-sm text-muted">Ingen skjermer viser en presentasjon ennå. Sett opp en skjerm i admin først.</p>
+          <p className="m-0 rounded-2xl bg-card p-4 text-sm text-muted">{tr('Ingen skjermer viser en presentasjon ennå. Sett opp en skjerm i admin først.')}</p>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3">
@@ -247,7 +248,7 @@ export default function MobilePost() {
                 className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-card p-5 text-base font-bold ${mode === 'photo' ? 'border-brand' : 'border-line'}`}
               >
                 <Icon name="image" className="h-7 w-7 text-brand" />
-                Bilde
+                {tr('Bilde')}
               </button>
               <button
                 type="button"
@@ -258,7 +259,7 @@ export default function MobilePost() {
                 className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-card p-5 text-base font-bold ${mode === 'text' ? 'border-brand' : 'border-line'}`}
               >
                 <Icon name="megaphone" className="h-7 w-7 text-brand" />
-                Beskjed
+                {tr('Beskjed')}
               </button>
             </div>
             <input
@@ -281,14 +282,14 @@ export default function MobilePost() {
                   </button>
                 ) : (
                   <button type="button" onClick={() => fileRef.current?.click()} className="w-full rounded-2xl border-2 border-dashed border-line p-8 text-sm font-semibold text-muted">
-                    Ta et bilde eller velg fra telefonen
+                    {tr('Ta et bilde eller velg fra telefonen')}
                   </button>
                 )}
                 <input
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   maxLength={120}
-                  placeholder="Tekst under bildet (valgfritt)"
+                  placeholder={tr('Tekst under bildet (valgfritt)')}
                   className="w-full rounded-xl border border-line bg-card px-4 py-3 text-base text-ink outline-none focus:border-brand"
                 />
               </div>
@@ -302,7 +303,7 @@ export default function MobilePost() {
                   maxLength={240}
                   rows={4}
                   autoFocus
-                  placeholder="F.eks. «Kaffemaskinen er i stykker – bruk den i 2. etasje»"
+                  placeholder={tr('F.eks. «Kaffemaskinen er i stykker – bruk den i 2. etasje»')}
                   className="w-full resize-none rounded-2xl border border-line bg-card p-4 text-lg text-ink outline-none focus:border-brand"
                 />
                 <div className="flex flex-wrap gap-2">
@@ -318,7 +319,7 @@ export default function MobilePost() {
             {mode && (
               <>
                 <section className="space-y-2">
-                  <h2 className="m-0 text-sm font-bold">Hvilke skjermer</h2>
+                  <h2 className="m-0 text-sm font-bold">{tr('Hvilke skjermer')}</h2>
                   <div className="flex flex-wrap gap-2">
                     {screens.map((s) => (
                       <button
@@ -340,7 +341,7 @@ export default function MobilePost() {
                   </div>
                 </section>
                 <section className="space-y-2">
-                  <h2 className="m-0 text-sm font-bold">Hvor lenge</h2>
+                  <h2 className="m-0 text-sm font-bold">{tr('Hvor lenge')}</h2>
                   <div className="flex flex-wrap gap-2">
                     {DURATIONS.map((d) => (
                       <button key={d.id} type="button" onClick={() => setDuration(d.id)} className={chip(duration === d.id)}>
@@ -356,20 +357,20 @@ export default function MobilePost() {
                   disabled={!ready || !chosen.length || busy}
                   className="w-full rounded-2xl bg-brand px-5 py-4 text-lg font-bold text-onbrand disabled:opacity-40"
                 >
-                  {busy ? 'Legger ut …' : 'Publiser'}
+                  {busy ? tr('Legger ut …') : tr('Publiser')}
                 </button>
               </>
             )}
 
             {posts.length > 0 && (
               <section className="space-y-2 pt-4">
-                <h2 className="m-0 text-sm font-bold">Lagt ut fra mobilen</h2>
+                <h2 className="m-0 text-sm font-bold">{tr('Lagt ut fra mobilen')}</h2>
                 {posts.map((s) => (
                   <div key={s.id} className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 text-sm">
                     <span className="min-w-0 flex-1 truncate">{s.name.replace(MARK, '')}</span>
-                    <span className="shrink-0 text-xs text-muted">{s.active_to_date ? `til ${s.active_to_date.slice(8, 10)}.${s.active_to_date.slice(5, 7)}.` : 'til du fjerner det'}</span>
+                    <span className="shrink-0 text-xs text-muted">{s.active_to_date ? tr('til {0}.{1}.', [s.active_to_date.slice(8, 10), s.active_to_date.slice(5, 7)]) : tr('til du fjerner det')}</span>
                     <button type="button" onClick={() => remove(s)} className="shrink-0 text-xs font-semibold text-danger">
-                      Fjern
+                      {tr('Fjern')}
                     </button>
                   </div>
                 ))}

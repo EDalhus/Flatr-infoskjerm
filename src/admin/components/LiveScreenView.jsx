@@ -1,5 +1,6 @@
 import { BASE_SIZE } from '../../lib/deck.js';
 import { useFitScale } from '../../hooks/useFitScale.js';
+import { tr } from '../../lib/i18n.js';
 
 // Live-visning av hva som faktisk spilles på skjermen – embedder Viewer-en
 // (/display/:id?preview=1, eller /preview/:playlistId for en presentasjon)
@@ -15,7 +16,7 @@ export default function LiveScreenView({ screenId, playlistId, orientation = 'la
       style={{ aspectRatio: `${base.w} / ${base.h}` }}
     >
       <iframe
-        title="Live-visning"
+        title={tr('Live-visning')}
         loading="lazy"
         src={playlistId ? `/preview/${playlistId}` : `/display/${screenId}?preview=1`}
         tabIndex={-1}

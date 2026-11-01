@@ -4,6 +4,7 @@ import { authClient } from '../../lib/authClient.js';
 import { api } from '../../lib/api.js';
 import { Icon, Field, Input, Button, Card, PageHeader, ErrorText } from './ui.jsx';
 import { ConfirmDelete } from './DataManager.jsx';
+import { tr } from '../../lib/i18n.js';
 
 // Konto og sikkerhet: navn, passord, tofaktor (TOTP) og innloggede enheter.
 // Alt går via Better Auth (/api/auth/*); kontoen gjelder alle organisasjonene.
@@ -38,7 +39,7 @@ function Profile({ user, onChange }) {
   const [name, setName] = useState(user.name || '');
   const a = useAction();
   return (
-    <Card title="Profil">
+    <Card title={tr('Profil')}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -49,14 +50,14 @@ function Profile({ user, onChange }) {
         }}
         className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
       >
-        <Field label="Navn">
+        <Field label={tr('Navn')}>
           <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
         </Field>
-        <Field label="E-post">
+        <Field label={tr('E-post')}>
           <Input value={user.email} readOnly disabled />
         </Field>
         <Button type="submit" disabled={a.busy || name.trim() === (user.name || '')}>
-          Lagre
+          {tr('Lagre')}
         </Button>
       </form>
       <ErrorText>{a.error}</ErrorText>
@@ -71,11 +72,11 @@ function PasswordCard() {
   const [again, setAgain] = useState('');
   const a = useAction();
   return (
-    <Card title="Passord">
+    <Card title={tr('Passord')}>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          if (next !== again) return a.setError('De nye passordene er ikke like.');
+          if (next !== again) return a.setError(tr('De nye passordene er ikke like.'));
           const ok = await a.run(() => authClient.changePassword(current, next), 'Passordet er byttet. Andre enheter er logget ut.');
           if (ok) {
             setCurrent('');
@@ -85,29 +86,29 @@ function PasswordCard() {
         }}
         className="grid gap-4"
       >
-        <Field label="Nåværende passord">
+        <Field label={tr('Nåværende passord')}>
           <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nytt passord" hint="Minst 10 tegn.">
+          <Field label={tr('Nytt passord')} hint={tr('Minst 10 tegn.')}>
             <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" minLength={10} required />
           </Field>
-          <Field label="Gjenta nytt passord">
+          <Field label={tr('Gjenta nytt passord')}>
             <Input type="password" value={again} onChange={(e) => setAgain(e.target.value)} autoComplete="new-password" required />
           </Field>
         </div>
         <div>
           <Button type="submit" disabled={a.busy}>
-            {a.busy ? 'Lagrer …' : 'Bytt passord'}
+            {a.busy ? tr('Lagrer …') : tr('Bytt passord')}
           </Button>
         </div>
       </form>
       <ErrorText>{a.error}</ErrorText>
       <Notice>{a.notice}</Notice>
       <p className="m-0 mt-3 text-xs text-muted">
-        Har du ikke satt passord ennå (konto fra før passordinnlogging)? Bruk{' '}
+        {tr('Har du ikke satt passord ennå (konto fra før passordinnlogging)? Bruk')}{' '}
         <a href="/forgot-password" className="font-semibold text-brand hover:underline">
-          Sett passord
+          {tr('Sett passord')}
         </a>
         .
       </p>
@@ -119,9 +120,9 @@ function BackupCodes({ codes }) {
   const text = codes.join('\n');
   return (
     <div className="rounded-xl border border-line bg-zone p-4">
-      <div className="mb-2 text-sm font-semibold text-ink">Reservekoder</div>
+      <div className="mb-2 text-sm font-semibold text-ink">{tr('Reservekoder')}</div>
       <p className="m-0 mb-3 text-xs text-muted">
-        Ta vare på disse et trygt sted (f.eks. i passordbehandleren). Hver kode kan brukes én gang hvis du mister telefonen.
+        {tr('Ta vare på disse et trygt sted (f.eks. i passordbehandleren). Hver kode kan brukes én gang hvis du mister telefonen.')}
       </p>
       <pre className="m-0 grid grid-cols-2 gap-1 font-mono text-sm text-ink">
         {codes.map((c) => (
@@ -131,7 +132,7 @@ function BackupCodes({ codes }) {
       <div className="mt-3 flex gap-2">
         <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(text)}>
           <Icon name="copy" className="h-4 w-4" />
-          Kopier
+          {tr('Kopier')}
         </Button>
         <Button
           size="sm"
@@ -142,7 +143,7 @@ function BackupCodes({ codes }) {
             URL.revokeObjectURL(url);
           }}
         >
-          Last ned
+          {tr('Last ned')}
         </Button>
       </div>
     </div>
@@ -167,13 +168,13 @@ export function TwoFactorCard({ enabled, onChange }) {
 
   if (codes) {
     return (
-      <Card title="Tofaktor-innlogging">
+      <Card title={tr('Tofaktor-innlogging')}>
         <p className="m-0 mb-4 flex items-center gap-2 text-sm font-semibold text-brand">
-          <Icon name="check" className="h-4 w-4" /> Tofaktor er slått på.
+          <Icon name="check" className="h-4 w-4" /> {tr('Tofaktor er slått på.')}
         </p>
         <BackupCodes codes={codes} />
         <Button className="mt-4" onClick={() => (setCodes(null), onChange())}>
-          Ferdig
+          {tr('Ferdig')}
         </Button>
       </Card>
     );
@@ -181,20 +182,20 @@ export function TwoFactorCard({ enabled, onChange }) {
 
   if (setup) {
     return (
-      <Card title="Slå på tofaktor">
+      <Card title={tr('Slå på tofaktor')}>
         <ol className="m-0 grid gap-4 pl-5 text-sm text-ink">
           <li>
-            Skann koden med en autentiseringsapp (Google Authenticator, Microsoft Authenticator, 1Password …).
+            {tr('Skann koden med en autentiseringsapp (Google Authenticator, Microsoft Authenticator, 1Password …).')}
             <div className="mt-3 flex flex-wrap items-center gap-4">
-              {qr && <img src={qr} alt="QR-kode for tofaktor" className="h-40 w-40 rounded-lg border border-line bg-white p-1" />}
+              {qr && <img src={qr} alt={tr('QR-kode for tofaktor')} className="h-40 w-40 rounded-lg border border-line bg-white p-1" />}
               <div className="text-xs text-muted">
-                Kan du ikke skanne? Skriv inn nøkkelen:
+                {tr('Kan du ikke skanne? Skriv inn nøkkelen:')}
                 <div className="mt-1 break-all font-mono text-sm text-ink">{secret}</div>
               </div>
             </div>
           </li>
           <li>
-            Skriv inn den 6-sifrede koden appen viser:
+            {tr('Skriv inn den 6-sifrede koden appen viser:')}
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -205,10 +206,10 @@ export function TwoFactorCard({ enabled, onChange }) {
             >
               <Input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="123 456" className="!w-40" required autoFocus />
               <Button type="submit" disabled={a.busy}>
-                Bekreft
+                {tr('Bekreft')}
               </Button>
               <Button type="button" variant="ghost" onClick={() => setSetup(null)}>
-                Avbryt
+                {tr('Avbryt')}
               </Button>
             </form>
           </li>
@@ -219,17 +220,17 @@ export function TwoFactorCard({ enabled, onChange }) {
   }
 
   return (
-    <Card title="Tofaktor-innlogging">
+    <Card title={tr('Tofaktor-innlogging')}>
       <p className="m-0 mb-4 text-sm text-muted">
         {enabled
-          ? 'Slått på. Når du logger inn, trenger du både passordet og en kode fra autentiseringsappen.'
-          : 'Ekstra beskyttelse: i tillegg til passordet trengs en kode fra en app på telefonen. Selv om noen får tak i passordet, kommer de ikke inn.'}
+          ? tr('Slått på. Når du logger inn, trenger du både passordet og en kode fra autentiseringsappen.')
+          : tr('Ekstra beskyttelse: i tillegg til passordet trengs en kode fra en app på telefonen. Selv om noen får tak i passordet, kommer de ikke inn.')}
       </p>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
           if (enabled) {
-            const ok = await a.run(() => authClient.disableTwoFactor(password), 'Tofaktor er slått av.');
+            const ok = await a.run(() => authClient.disableTwoFactor(password), tr('Tofaktor er slått av.'));
             if (ok) {
               setPassword('');
               onChange();
@@ -242,13 +243,13 @@ export function TwoFactorCard({ enabled, onChange }) {
         className="flex flex-wrap items-end gap-3"
       >
         <div className="min-w-[220px] flex-1">
-          <Field label="Bekreft med passordet ditt">
+          <Field label={tr('Bekreft med passordet ditt')}>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
           </Field>
         </div>
         <Button type="submit" variant={enabled ? 'danger' : 'primary'} disabled={a.busy}>
           <Icon name="lock" className="h-4 w-4" />
-          {enabled ? 'Slå av tofaktor' : 'Slå på tofaktor'}
+          {enabled ? tr('Slå av tofaktor') : tr('Slå på tofaktor')}
         </Button>
         {enabled && (
           <Button
@@ -260,7 +261,7 @@ export function TwoFactorCard({ enabled, onChange }) {
               setPassword('');
             }}
           >
-            Nye reservekoder
+            {tr('Nye reservekoder')}
           </Button>
         )}
       </form>
@@ -273,11 +274,11 @@ export function TwoFactorCard({ enabled, onChange }) {
 function SessionsCard() {
   const a = useAction();
   return (
-    <Card title="Innloggede enheter">
-      <p className="m-0 mb-4 text-sm text-muted">Logget inn på en maskin du ikke bruker lenger? Logg ut alle andre enheter enn denne.</p>
+    <Card title={tr('Innloggede enheter')}>
+      <p className="m-0 mb-4 text-sm text-muted">{tr('Logget inn på en maskin du ikke bruker lenger? Logg ut alle andre enheter enn denne.')}</p>
       <Button variant="outline" disabled={a.busy} onClick={() => a.run(() => authClient.revokeOtherSessions(), 'Alle andre enheter er logget ut.')}>
         <Icon name="logout" className="h-4 w-4" />
-        Logg ut andre enheter
+        {tr('Logg ut andre enheter')}
       </Button>
       <ErrorText>{a.error}</ErrorText>
       <Notice>{a.notice}</Notice>
@@ -287,13 +288,11 @@ function SessionsCard() {
 
 function DeleteAccountCard({ email }) {
   return (
-    <Card title="Slett kontoen">
+    <Card title={tr('Slett kontoen')}>
       <p className="m-0 mb-4 text-sm leading-relaxed text-muted">
-        Sletter Flatr-kontoen din for godt: innloggingen, tofaktor og medlemskapet i alle organisasjonene du er med i. Det du har laget, blir værende hos
-        organisasjonene. Er du eneste eier av en organisasjon, må du først gi eierrollen til en annen under Team eller slette organisasjonen under Eksport og
-        sletting.
+        {tr('Sletter Flatr-kontoen din for godt: innloggingen, tofaktor og medlemskapet i alle organisasjonene du er med i. Det du har laget, blir værende hos organisasjonene. Er du eneste eier av en organisasjon, må du først gi eierrollen til en annen under Team eller slette organisasjonen under Eksport og sletting.')}
       </p>
-      <ConfirmDelete expected={email} label="Skriv e-postadressen din for å bekrefte" button="Slett kontoen min" onDelete={api.account.remove} />
+      <ConfirmDelete expected={email} label={tr('Skriv e-postadressen din for å bekrefte')} button={tr('Slett kontoen min')} onDelete={api.account.remove} />
     </Card>
   );
 }
@@ -313,16 +312,16 @@ export default function AccountManager() {
   const user = session?.user;
   return (
     <>
-      <PageHeader title="Konto og sikkerhet" subtitle="Gjelder deg i alle organisasjonene du er med i." />
+      <PageHeader title={tr('Konto og sikkerhet')} subtitle={tr('Gjelder deg i alle organisasjonene du er med i.')} />
       <div className="mx-auto w-full max-w-3xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
-        {session === undefined && <p className="text-sm text-muted">Henter kontoen …</p>}
+        {session === undefined && <p className="text-sm text-muted">{tr('Henter kontoen …')}</p>}
         {session === null && (
-          <Card title="Logg inn på nytt">
+          <Card title={tr('Logg inn på nytt')}>
             <p className="m-0 text-sm text-muted">
-              Du er logget inn med en eldre økt. Sett et passord og logg inn på nytt for å endre kontoinnstillingene.
+              {tr('Du er logget inn med en eldre økt. Sett et passord og logg inn på nytt for å endre kontoinnstillingene.')}
             </p>
             <a href="/forgot-password" className="mt-3 inline-block font-semibold text-brand hover:underline">
-              Sett passord →
+              {tr('Sett passord →')}
             </a>
           </Card>
         )}

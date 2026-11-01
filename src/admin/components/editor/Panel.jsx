@@ -9,6 +9,7 @@ import ElementConfigFields from '../deck/ElementConfigFields.jsx';
 import AiPanel from './AiPanel.jsx';
 import CommentsPanel from './CommentsPanel.jsx';
 import { SlideInspector } from '../deck/Inspector.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 function Section({ title, children, action }) {
   return (
@@ -29,11 +30,10 @@ function OverlayInspector({ slide, onChange, onDelete }) {
       <div>
         <h3 className="m-0 flex items-center gap-1.5 text-sm font-bold text-ink">
           <Icon name="layers" className="h-4 w-4 text-brand" />
-          Fast felt
+          {tr('Fast felt')}
         </h3>
         <p className="m-0 mt-1.5 text-sm leading-relaxed text-muted">
-          Det du legger her, ligger over alle lysbildene i presentasjonen og står stille mens de byttes. Bruk det til logo, klokke, vær eller en
-          nyhetslinje. Lysbildet under vises bare som hjelp.
+          {tr('Det du legger her, ligger over alle lysbildene i presentasjonen og står stille mens de byttes. Bruk det til logo, klokke, vær eller en nyhetslinje. Lysbildet under vises bare som hjelp.')}
         </p>
       </div>
       <label className="flex items-center gap-2 text-sm text-ink">
@@ -43,11 +43,11 @@ function OverlayInspector({ slide, onChange, onDelete }) {
           onChange={(e) => onChange(slide.id, { enabled: e.target.checked ? 1 : 0 }, true)}
           className="h-4 w-4 rounded border-line text-brand"
         />
-        Vis på skjermene
+        {tr('Vis på skjermene')}
       </label>
-      <p className="m-0 text-xs text-muted">Legg til elementer med knappene øverst, som på et vanlig lysbilde.</p>
+      <p className="m-0 text-xs text-muted">{tr('Legg til elementer med knappene øverst, som på et vanlig lysbilde.')}</p>
       <Button variant="danger" size="sm" onClick={() => onDelete(slide.id)}>
-        Fjern det faste feltet
+        {tr('Fjern det faste feltet')}
       </Button>
     </div>
   );
@@ -85,12 +85,12 @@ function IconBtn({ icon, label, onClick, disabled }) {
 
 // Enkle justeringsikoner (strek + boks).
 const ALIGN = [
-  { id: 'left', label: 'Venstrejuster', d: 'M4 3v18M8 7h10v4H8zM8 13h6v4H8z' },
-  { id: 'hcenter', label: 'Midtstill vannrett', d: 'M12 3v18M6 7h12v4H6zM8 13h8v4H8z' },
-  { id: 'right', label: 'Høyrejuster', d: 'M20 3v18M6 7h10v4H6zM10 13h6v4h-6z' },
-  { id: 'top', label: 'Juster til topp', d: 'M3 4h18M7 8h4v10H7zM13 8h4v6h-4z' },
-  { id: 'vcenter', label: 'Midtstill loddrett', d: 'M3 12h18M7 6h4v12H7zM13 8h4v8h-4z' },
-  { id: 'bottom', label: 'Juster til bunn', d: 'M3 20h18M7 6h4v10H7zM13 10h4v6h-4z' }
+  { id: 'left', label: tr('Venstrejuster'), d: 'M4 3v18M8 7h10v4H8zM8 13h6v4H8z' },
+  { id: 'hcenter', label: tr('Midtstill vannrett'), d: 'M12 3v18M6 7h12v4H6zM8 13h8v4H8z' },
+  { id: 'right', label: tr('Høyrejuster'), d: 'M20 3v18M6 7h10v4H6zM10 13h6v4h-6z' },
+  { id: 'top', label: tr('Juster til topp'), d: 'M3 4h18M7 8h4v10H7zM13 8h4v6h-4z' },
+  { id: 'vcenter', label: tr('Midtstill loddrett'), d: 'M3 12h18M7 6h4v12H7zM13 8h4v8h-4z' },
+  { id: 'bottom', label: tr('Juster til bunn'), d: 'M3 20h18M7 6h4v10H7zM13 10h4v6h-4z' }
 ];
 
 function AlignRow({ onAlign, hint }) {
@@ -129,41 +129,41 @@ function ElementDesign({ el, orientation, categories, slides, onPatch, onConfig,
         action={
           <span className="flex gap-1">
             <button type="button" onClick={onDuplicate} className="text-xs font-semibold text-brand hover:underline">
-              Dupliser
+              {tr('Dupliser')}
             </button>
             <span className="text-muted">·</span>
             <button type="button" onClick={onDelete} className="text-xs font-semibold text-danger hover:underline">
-              Slett
+              {tr('Slett')}
             </button>
           </span>
         }
       >
         <div className="grid grid-cols-2 gap-2">
-          <NumField label="X" value={toPx(el.x, 'x')} onChange={(v) => onPatch({ x: toPct(v, 'x') })} />
-          <NumField label="Y" value={toPx(el.y, 'y')} onChange={(v) => onPatch({ y: toPct(v, 'y') })} />
-          <NumField label="B" value={toPx(el.w, 'x')} onChange={(v) => onPatch({ w: Math.max(0.5, toPct(v, 'x')) })} />
-          <NumField label="H" value={toPx(el.h, 'y')} onChange={(v) => onPatch({ h: Math.max(0.5, toPct(v, 'y')) })} />
+          <NumField label={tr('X')} value={toPx(el.x, 'x')} onChange={(v) => onPatch({ x: toPct(v, 'x') })} />
+          <NumField label={tr('Y')} value={toPx(el.y, 'y')} onChange={(v) => onPatch({ y: toPct(v, 'y') })} />
+          <NumField label={tr('B')} value={toPx(el.w, 'x')} onChange={(v) => onPatch({ w: Math.max(0.5, toPct(v, 'x')) })} />
+          <NumField label={tr('H')} value={toPx(el.h, 'y')} onChange={(v) => onPatch({ h: Math.max(0.5, toPct(v, 'y')) })} />
           <NumField label="↻" value={el.rotation || 0} suffix="°" onChange={(v) => onPatch({ rotation: ((v % 360) + 360) % 360 })} />
         </div>
       </Section>
 
-      <Section title="Lag og justering">
+      <Section title={tr('Lag og justering')}>
         <div className="mb-2 flex gap-1">
-          <IconBtn icon="up" label="Helt fremst" onClick={() => onLayer('front')} />
-          <IconBtn icon="chevron" label="Ett lag fram" onClick={() => onLayer('forward')} />
-          <IconBtn icon="back" label="Ett lag bak" onClick={() => onLayer('backward')} />
-          <IconBtn icon="down" label="Helt bakerst" onClick={() => onLayer('back')} />
+          <IconBtn icon="up" label={tr('Helt fremst')} onClick={() => onLayer('front')} />
+          <IconBtn icon="chevron" label={tr('Ett lag fram')} onClick={() => onLayer('forward')} />
+          <IconBtn icon="back" label={tr('Ett lag bak')} onClick={() => onLayer('backward')} />
+          <IconBtn icon="down" label={tr('Helt bakerst')} onClick={() => onLayer('back')} />
         </div>
-        <AlignRow onAlign={onAlign} hint="Justerer mot lerretet." />
+        <AlignRow onAlign={onAlign} hint={tr('Justerer mot lerretet.')} />
       </Section>
 
-      <Section title="Animasjon">
+      <Section title={tr('Animasjon')}>
         <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2">
           <select
             value={el.config?.anim || 'none'}
             onChange={(e) => onConfig({ anim: e.target.value })}
             className="h-8 rounded-lg border border-line bg-paper px-2 text-sm text-ink"
-            aria-label="Animasjon inn"
+            aria-label={tr('Animasjon inn')}
           >
             {ANIMS.map(([v, l]) => (
               <option key={v} value={v}>
@@ -176,17 +176,17 @@ function ElementDesign({ el, orientation, categories, slides, onPatch, onConfig,
             onChange={(e) => onConfig({ animDelay: Number(e.target.value) })}
             disabled={!el.config?.anim || el.config.anim === 'none'}
             className="h-8 rounded-lg border border-line bg-paper px-2 text-sm text-ink disabled:opacity-50"
-            aria-label="Forsinkelse"
-            title="Forsinkelse"
+            aria-label={tr('Forsinkelse')}
+            title={tr('Forsinkelse')}
           >
             {[0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3].map((d) => (
               <option key={d} value={String(d)}>
-                {d === 0 ? 'Straks' : `+${String(d).replace('.', ',')} s`}
+                {d === 0 ? tr('Straks') : tr('+{0} s', [String(d).replace('.', ',')])}
               </option>
             ))}
           </select>
         </div>
-        <p className="m-0 mt-1.5 text-[11px] text-muted">Spilles når lysbildet vises på skjermen. Gi elementene litt ulik forsinkelse for en fin rekkefølge.</p>
+        <p className="m-0 mt-1.5 text-[11px] text-muted">{tr('Spilles når lysbildet vises på skjermen. Gi elementene litt ulik forsinkelse for en fin rekkefølge.')}</p>
       </Section>
 
       <section className="px-4 py-4">
@@ -196,27 +196,27 @@ function ElementDesign({ el, orientation, categories, slides, onPatch, onConfig,
   );
 }
 
-const APP_VIEW = { map: ['Kart', 'pin'], cards: ['Båtkort', 'square'], arrivals: ['Ankomsttavle', 'clock'] };
+const APP_VIEW = { map: [tr('Kart'), 'pin'], cards: [tr('Båtkort'), 'square'], arrivals: [tr('Ankomsttavle'), 'clock'] };
 
 /** Navn og undertekst i laglisten: hva slags widget, og fra hvilken app. */
 function describe(el, apps) {
   const c = el.config || {};
-  if (el.kind === 'text') return { title: (c.text || 'Tekst').split('\n')[0].slice(0, 40) || 'Tekst', sub: 'Tekst', icon: 'text' };
+  if (el.kind === 'text') return { title: (c.text || 'Tekst').split('\n')[0].slice(0, 40) || tr('Tekst'), sub: 'Tekst', icon: 'text' };
   if (el.kind === 'app') {
     const app = apps?.find((a) => a.id === c.appId);
-    const from = app ? `fra ${app.name}` : c.appId ? 'App som ikke er aktivert' : 'Ingen app valgt';
-    if (app?.kind === 'birthdays') return { title: c.effect === 'rain' ? 'Kakeregn' : 'Bursdager', sub: from, icon: c.effect === 'rain' ? 'sparkle' : 'calendar' };
-    if (app?.kind === 'custom') return { title: 'Egen visning', sub: from, icon: 'sparkle' };
-    if (app?.kind === 'stock') return { title: 'Lagerbeholdning', sub: from, icon: 'layers' };
-    if (app?.kind === 'menu') return { title: c.menuView === 'week' ? 'Ukens meny' : 'Dagens meny', sub: from, icon: 'calendar' };
-    if (app?.kind === 'tides') return { title: { tide: 'Tidevann', sea: 'Sjø' }[c.tideView] || 'Tidevann og sjø', sub: from, icon: 'sun' };
-    if (app?.kind === 'fixtures') return { title: c.fixturesView === 'next' ? (c.homeOnly ? 'Neste hjemmekamp' : 'Neste kamp') : 'Kampprogram', sub: from, icon: 'calendar' };
-    if (app?.kind === 'entur') return { title: 'Avganger', sub: from, icon: 'bus' };
-    if (app?.kind === 'poll') return { title: c.pollView === 'qr' ? 'Avstemning (QR-kode)' : 'Avstemning', sub: from, icon: 'chart' };
-    if (app?.kind === 'sheet') return { title: { value: 'Nøkkeltall', list: 'Liste' }[c.sheetView] || 'Tabell', sub: from, icon: 'table' };
-    if (app?.kind === 'football') return { title: { last: 'Resultater', table: 'Tabell' }[c.footballView] || 'Neste kamper', sub: from, icon: 'chart' };
-    const [title, icon] = APP_VIEW[c.view || 'map'] || ['Widget', 'sparkle'];
-    return { title: app ? title : 'Flatr App', sub: from, icon: app ? icon : 'sparkle' };
+    const from = app ? tr('fra {0}', [app.name]) : c.appId ? tr('App som ikke er aktivert') : tr('Ingen app valgt');
+    if (app?.kind === 'birthdays') return { title: c.effect === 'rain' ? tr('Kakeregn') : tr('Bursdager'), sub: from, icon: c.effect === 'rain' ? 'sparkle' : 'calendar' };
+    if (app?.kind === 'custom') return { title: tr('Egen visning'), sub: from, icon: 'sparkle' };
+    if (app?.kind === 'stock') return { title: tr('Lagerbeholdning'), sub: from, icon: 'layers' };
+    if (app?.kind === 'menu') return { title: c.menuView === 'week' ? tr('Ukens meny') : tr('Dagens meny'), sub: from, icon: 'calendar' };
+    if (app?.kind === 'tides') return { title: { tide: tr('Tidevann'), sea: tr('Sjø') }[c.tideView] || tr('Tidevann og sjø'), sub: from, icon: 'sun' };
+    if (app?.kind === 'fixtures') return { title: c.fixturesView === 'next' ? (c.homeOnly ? tr('Neste hjemmekamp') : tr('Neste kamp')) : tr('Kampprogram'), sub: from, icon: 'calendar' };
+    if (app?.kind === 'entur') return { title: tr('Avganger'), sub: from, icon: 'bus' };
+    if (app?.kind === 'poll') return { title: c.pollView === 'qr' ? tr('Avstemning (QR-kode)') : tr('Avstemning'), sub: from, icon: 'chart' };
+    if (app?.kind === 'sheet') return { title: { value: tr('Nøkkeltall'), list: tr('Liste') }[c.sheetView] || tr('Tabell'), sub: from, icon: 'table' };
+    if (app?.kind === 'football') return { title: { last: 'Resultater', table: 'Tabell' }[c.footballView] || tr('Neste kamper'), sub: from, icon: 'chart' };
+    const [title, icon] = APP_VIEW[c.view || 'map'] || [tr('Widget'), 'sparkle'];
+    return { title: app ? title : tr('Flatr App'), sub: from, icon: app ? icon : 'sparkle' };
   }
   return { title: ELEMENT_LABEL[el.kind] || el.kind, sub: null, icon: ELEMENT_ICON[el.kind] || 'square' };
 }
@@ -230,8 +230,8 @@ function EyeBtn({ hidden, onClick, label }) {
         onClick();
       }}
       className={`grid h-7 w-7 shrink-0 place-items-center rounded-md hover:bg-zone hover:text-ink ${hidden ? 'text-muted' : 'text-muted opacity-0 group-hover:opacity-100 focus:opacity-100'}`}
-      aria-label={hidden ? `Vis ${label}` : `Skjul ${label}`}
-      title={hidden ? 'Vis' : 'Skjul'}
+      aria-label={hidden ? tr('Vis {0}', [label]) : tr('Skjul {0}', [label])}
+      title={hidden ? tr('Vis') : tr('Skjul')}
     >
       {hidden ? (
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -265,7 +265,7 @@ function LayerRow({ el, apps, selection, locks, onSelect, onHide, indent }) {
           <span className="block truncate">{d.title}</span>
           {d.sub && <span className={`block truncate text-[11px] ${active ? 'opacity-80' : 'text-muted'}`}>{d.sub}</span>}
         </span>
-        {lock && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: lock.color }} title={`${lock.name} jobber her`} />}
+        {lock && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: lock.color }} title={tr('{0} jobber her', [lock.name])} />}
         <EyeBtn hidden={hidden} label={d.title} onClick={() => onHide([el], !hidden)} />
       </div>
     </li>
@@ -297,7 +297,7 @@ function GroupRow({ group, members, apps, selection, locks, onSelect, onHide, on
             setOpen((o) => !o);
           }}
           className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted hover:text-ink"
-          aria-label={open ? 'Lukk gruppen' : 'Åpne gruppen'}
+          aria-label={open ? tr('Lukk gruppen') : tr('Åpne gruppen')}
           aria-expanded={open}
         >
           <Icon name="chevron" className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-90' : ''}`} />
@@ -318,10 +318,10 @@ function GroupRow({ group, members, apps, selection, locks, onSelect, onHide, on
               if (e.key === 'Escape') setEditing(false);
             }}
             className="h-7 min-w-0 flex-1 rounded-md border border-focus bg-paper px-1.5 text-sm text-ink outline-none"
-            aria-label="Navn på gruppen"
+            aria-label={tr('Navn på gruppen')}
           />
         ) : (
-          <span className={`min-w-0 flex-1 truncate font-semibold ${allHidden ? 'opacity-50' : ''}`} title="Dobbeltklikk for å gi nytt navn">
+          <span className={`min-w-0 flex-1 truncate font-semibold ${allHidden ? 'opacity-50' : ''}`} title={tr('Dobbeltklikk for å gi nytt navn')}>
             {name} <span className="font-normal text-muted">({members.length})</span>
           </span>
         )}
@@ -332,9 +332,9 @@ function GroupRow({ group, members, apps, selection, locks, onSelect, onHide, on
             onUngroup(group);
           }}
           className="h-7 shrink-0 rounded-md px-1.5 text-[11px] font-semibold text-muted opacity-0 hover:bg-zone hover:text-ink focus:opacity-100 group-hover:opacity-100"
-          title="Løs opp gruppen"
+          title={tr('Løs opp gruppen')}
         >
-          Løs opp
+          {tr('Løs opp')}
         </button>
         <EyeBtn hidden={allHidden} label={name} onClick={() => onHide(members, !allHidden)} />
       </div>
@@ -365,7 +365,7 @@ function LayerList({ elements, selection, locks, onSelect, onPatch, onGroup }) {
   }, [elements.some((e) => e.kind === 'app')]);
 
   const list = [...elements].sort((a, b) => b.z - a.z || b.id - a.id);
-  if (!list.length) return <p className="m-0 p-4 text-sm text-muted">Lysbildet er tomt. Sett inn noe fra verktøylinjen.</p>;
+  if (!list.length) return <p className="m-0 p-4 text-sm text-muted">{tr('Lysbildet er tomt. Sett inn noe fra verktøylinjen.')}</p>;
 
   const onHide = (els, hidden) => onPatch(els.map((el) => ({ id: el.id, patch: { config: { ...el.config, hidden } } })));
   const membersOf = (g) => list.filter((e) => e.config?.group === g);
@@ -414,15 +414,15 @@ function LayerList({ elements, selection, locks, onSelect, onPatch, onGroup }) {
         )}
       </ul>
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-line px-2 pt-3 text-[11px] text-muted">
-        <span>{canGroup ? `${selection.length} valgt` : 'Shift-klikk for å velge flere'}</span>
+        <span>{canGroup ? tr('{0} valgt', [selection.length]) : tr('Shift-klikk for å velge flere')}</span>
         <button
           type="button"
           disabled={!canGroup}
           onClick={onGroup}
           className="rounded-md px-2 py-1 font-semibold text-brand hover:bg-zone disabled:cursor-not-allowed disabled:text-muted disabled:hover:bg-transparent"
-          title={`Grupper (${navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl+'}G)`}
+          title={tr('Grupper ({0}G)', [navigator.platform?.includes('Mac') ? '⌘' : tr('Ctrl+')])}
         >
-          Grupper
+          {tr('Grupper')}
         </button>
       </div>
     </div>
@@ -495,18 +495,18 @@ export default function Panel(props) {
           />
         ) : selected.length > 1 ? (
           <>
-            <Section title={`${selected.length} elementer valgt`}>
-              <AlignRow onAlign={(a) => props.onAlign(a, 'selection')} hint="Justerer elementene mot hverandre." />
+            <Section title={tr('{0} elementer valgt', [selected.length])}>
+              <AlignRow onAlign={(a) => props.onAlign(a, 'selection')} hint={tr('Justerer elementene mot hverandre.')} />
               <div className="mt-3 flex gap-2">
                 <Button variant="outline" size="sm" onClick={props.onDuplicate} className="flex-1">
-                  Dupliser
+                  {tr('Dupliser')}
                 </Button>
                 <Button variant="danger" size="sm" onClick={props.onDelete} className="flex-1">
-                  Slett
+                  {tr('Slett')}
                 </Button>
               </div>
             </Section>
-            <p className="m-0 px-4 py-3 text-xs text-muted">Shift-klikk for å legge til eller fjerne fra utvalget.</p>
+            <p className="m-0 px-4 py-3 text-xs text-muted">{tr('Shift-klikk for å legge til eller fjerne fra utvalget.')}</p>
           </>
         ) : slide?.layer === 'overlay' ? (
           <OverlayInspector slide={slide} onChange={props.onSlidePatch} onDelete={props.onDeleteSlide} />
@@ -521,7 +521,7 @@ export default function Panel(props) {
             />
           </div>
         ) : (
-          <p className="m-0 p-4 text-sm text-muted">Velg et lysbilde.</p>
+          <p className="m-0 p-4 text-sm text-muted">{tr('Velg et lysbilde.')}</p>
         )}
       </div>
     </aside>

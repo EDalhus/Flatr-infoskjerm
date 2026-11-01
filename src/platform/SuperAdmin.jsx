@@ -6,6 +6,7 @@ import { authClient } from '../lib/authClient.js';
 import { Button, ErrorText, Field, Icon, Input } from '../admin/components/ui.jsx';
 import { LogoLockup } from '../admin/components/Logo.jsx';
 
+import { locale } from '../lib/i18n.js';
 const call = async (path, opts = {}) => {
   const res = await fetch(`/api/superadmin${path}`, {
     method: opts.method || 'GET',
@@ -30,7 +31,7 @@ const ago = (iso) => {
   if (s < 86400) return `${Math.floor(s / 3600)} t siden`;
   return `${Math.floor(s / 86400)} d siden`;
 };
-const date = (iso) => (iso ? new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }) : '–');
+const date = (iso) => (iso ? new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) : '–');
 
 // Vanlig Flatr-innlogging (passord + ev. tofaktor); e-posten må stå i SUPERADMIN_EMAILS.
 function Login() {

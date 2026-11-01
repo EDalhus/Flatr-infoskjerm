@@ -4,10 +4,11 @@ import { api } from '../lib/api.js';
 import { formatTime, partitionSchedule } from '../lib/time.js';
 import { downloadIcs } from '../lib/ics.js';
 import { useNow } from '../hooks/useNow.js';
+import { tr, locale } from '../lib/i18n.js';
 
-const STATUS_LABEL = { live: 'Pågår nå', scheduled: '', done: 'Ferdig', cancelled: 'Avlyst' };
+const STATUS_LABEL = { live: tr('Pågår nå'), scheduled: '', done: tr('Ferdig'), cancelled: tr('Avlyst') };
 const STATUS_COLOR = { live: 'text-ok', done: 'text-muted', cancelled: 'text-danger' };
-const dayKey = (iso) => new Date(iso).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' });
+const dayKey = (iso) => new Date(iso).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
 
 const CACHE_KEY = 'flatr.publicSchedule';
 
@@ -52,7 +53,7 @@ export default function Schedule() {
   }, [screenId]);
 
   useEffect(() => {
-    document.title = data?.screen?.name ? `Program · ${data.screen.name}` : 'Program';
+    document.title = data?.screen?.name ? tr('Program · {0}', [data.screen.name]) : tr('Program');
   }, [data]);
 
   const schedule = data?.schedule || [];
@@ -78,13 +79,13 @@ export default function Schedule() {
       <header className="sticky top-0 z-10 border-b border-line bg-paper/90 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate text-lg font-black">{data?.screen?.name || 'Program'}</div>
+            <div className="truncate text-lg font-black">{data?.screen?.name || tr('Program')}</div>
             {data?.screen?.location && (
               <div className="truncate text-xs text-muted">{data.screen.location}</div>
             )}
           </div>
           <div className="font-mono text-lg font-bold tabular-nums">
-            {now.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}
+            {now.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
       </header>
@@ -94,7 +95,7 @@ export default function Schedule() {
           <div className="mb-4 grid gap-2 sm:grid-cols-2">
             {nowItem && (
               <div className="rounded-xl border border-ok/40 bg-ok-tint p-3">
-                <div className="text-xs font-bold uppercase tracking-widest text-ok">Nå</div>
+                <div className="text-xs font-bold uppercase tracking-widest text-ok">{tr('Nå')}</div>
                 <div className="mt-0.5 font-bold">{nowItem.title}</div>
                 <div className="text-sm text-muted">
                   {formatTime(nowItem.start_time)}
@@ -104,7 +105,7 @@ export default function Schedule() {
             )}
             {nextItem && (
               <div className="rounded-xl border border-hair bg-card p-3">
-                <div className="text-xs font-bold uppercase tracking-widest text-muted">Neste</div>
+                <div className="text-xs font-bold uppercase tracking-widest text-muted">{tr('Neste')}</div>
                 <div className="mt-0.5 font-bold">{nextItem.title}</div>
                 <div className="text-sm text-muted">
                   {formatTime(nextItem.start_time)}
@@ -120,11 +121,11 @@ export default function Schedule() {
             onClick={() => downloadIcs(schedule, 'program.ics', data?.screen?.name || 'Program')}
             className="mb-4 w-full rounded-lg border border-line bg-card py-2 text-sm font-semibold text-brand"
           >
-            Legg hele programmet i kalender (.ics)
+            {tr('Legg hele programmet i kalender (.ics)')}
           </button>
         )}
 
-        {days.length === 0 && <p className="py-16 text-center text-muted">Programmet er ikke klart ennå.</p>}
+        {days.length === 0 && <p className="py-16 text-center text-muted">{tr('Programmet er ikke klart ennå.')}</p>}
 
         {days.map(([day, items]) => (
           <section key={day} className="mb-6">
@@ -178,7 +179,7 @@ export default function Schedule() {
                           onClick={() => downloadIcs([it], `${it.title}.ics`, it.title)}
                           className="text-xs font-semibold text-brand"
                         >
-                          + Legg i kalender
+                          {tr('+ Legg i kalender')}
                         </button>
                       </div>
                     )}
@@ -189,7 +190,7 @@ export default function Schedule() {
           </section>
         ))}
 
-        <p className="py-6 text-center text-xs text-muted">Oppdateres automatisk</p>
+        <p className="py-6 text-center text-xs text-muted">{tr('Oppdateres automatisk')}</p>
       </main>
     </div>
   );

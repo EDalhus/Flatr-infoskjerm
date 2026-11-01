@@ -12,6 +12,7 @@ import { FocusPicker } from './ImageTools.jsx';
 import DaypartFields from '../DaypartFields.jsx';
 import ElementConfigFields from './ElementConfigFields.jsx';
 import DynamicBackground from '../../../viewer/DynamicBackground.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 const numRow = (el, set) => (
   <div className="grid grid-cols-4 gap-2">
@@ -43,16 +44,16 @@ function ElementInspector({ element, categories, onChange, onDelete, onZ }) {
           onClick={() => onDelete(element.id)}
           className="text-xs font-semibold text-danger hover:underline"
         >
-          Slett
+          {tr('Slett')}
         </button>
       </div>
 
       <div>
-        <div className="mb-1 text-xs font-semibold text-muted">Plassering</div>
+        <div className="mb-1 text-xs font-semibold text-muted">{tr('Plassering')}</div>
         {numRow(element, set)}
         <div className="mt-2 grid grid-cols-2 gap-2">
           <label className="text-[11px] font-semibold text-muted">
-            Rotasjon °
+            {tr('Rotasjon °')}
             <Input
               type="number"
               className="mt-1"
@@ -63,8 +64,8 @@ function ElementInspector({ element, categories, onChange, onDelete, onZ }) {
           <div className="flex flex-col justify-end">
             <ButtonGroup
               items={[
-                { key: 'front', label: 'Forrest', onClick: () => onZ(element.id, 1) },
-                { key: 'back', label: 'Bakerst', onClick: () => onZ(element.id, -1) }
+                { key: 'front', label: tr('Forrest'), onClick: () => onZ(element.id, 1) },
+                { key: 'back', label: tr('Bakerst'), onClick: () => onZ(element.id, -1) }
               ]}
             />
           </div>
@@ -90,13 +91,13 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
 
   return (
     <div className="space-y-4">
-      <span className="text-sm font-bold text-ink">Lysbilde</span>
+      <span className="text-sm font-bold text-ink">{tr('Lysbilde')}</span>
 
-      <Field label="Navn (valgfritt)">
+      <Field label={tr('Navn (valgfritt)')}>
         <Input value={slide.name || ''} onChange={(e) => set({ name: e.target.value })} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Varighet (sek)">
+        <Field label={tr('Varighet (sek)')}>
           <Input
             type="number"
             min={2}
@@ -104,7 +105,7 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
             onChange={(e) => set({ duration_seconds: Number(e.target.value) || 15 })}
           />
         </Field>
-        <Field label="Overgang">
+        <Field label={tr('Overgang')}>
           <Select value={slide.transition} onChange={(e) => set({ transition: e.target.value })}>
             {TRANSITIONS.map((t) => (
               <option key={t.value} value={t.value}>
@@ -114,7 +115,7 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
           </Select>
         </Field>
         {slide.transition !== 'none' && (
-          <Field label="Overgang (ms)">
+          <Field label={tr('Overgang (ms)')}>
             <Input
               type="number"
               min={0}
@@ -127,7 +128,7 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
       </div>
 
       <div>
-        <div className="mb-1 text-xs font-semibold text-muted">Bakgrunn</div>
+        <div className="mb-1 text-xs font-semibold text-muted">{tr('Bakgrunn')}</div>
         <div className="mb-2 grid grid-cols-6 gap-1.5">
           {BACKGROUND_PRESETS.map((p, i) => (
             <button
@@ -149,10 +150,10 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
               : setBg({ type: e.target.value })
           }
         >
-          <option value="color">Ensfarget</option>
-          <option value="gradient">Gradient</option>
-          <option value="image">Bilde</option>
-          <option value="dynamic">Dynamisk</option>
+          <option value="color">{tr('Ensfarget')}</option>
+          <option value="gradient">{tr('Gradient')}</option>
+          <option value="image">{tr('Bilde')}</option>
+          <option value="dynamic">{tr('Dynamisk')}</option>
         </Select>
 
         {bg.type === 'color' && (
@@ -167,7 +168,7 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
             <ColorInput value={bg.from || '#1f5566'} onChange={(e) => setBg({ from: e.target.value })} />
             <ColorInput value={bg.to || '#0f2733'} onChange={(e) => setBg({ to: e.target.value })} />
             <label className="col-span-2 flex items-center gap-2 text-xs text-muted">
-              Vinkel °
+              {tr('Vinkel °')}
               <Input
                 type="number"
                 className="flex-1"
@@ -202,7 +203,7 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
             </div>
             {bg.preset !== 'gradient' && (
               <label className="flex items-center gap-2 text-xs text-muted">
-                Basefarge
+                {tr('Basefarge')}
                 <ColorInput
                   className="flex-1"
                   value={bg.base || '#0a1a2f'}
@@ -211,7 +212,7 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
               </label>
             )}
             <label className="flex items-center gap-2 text-xs text-muted">
-              Fart
+              {tr('Fart')}
               <input
                 type="range"
                 min="0.3"
@@ -233,8 +234,8 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
               value={bg.fit || 'cover'}
               onChange={(e) => setBg({ fit: e.target.value })}
             >
-              <option value="cover">Fyll flaten</option>
-              <option value="contain">Vis hele</option>
+              <option value="cover">{tr('Fyll flaten')}</option>
+              <option value="contain">{tr('Vis hele')}</option>
             </Select>
             {bg.url && (bg.fit || 'cover') === 'cover' && (
               <div className="mt-3">
@@ -262,14 +263,14 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
         <div className="grid grid-cols-2 gap-2">
           <Button size="sm" variant="outline" onClick={() => onDuplicate(slide.id)}>
             <Icon name="copy" className="h-3.5 w-3.5" />
-            Dupliser
+            {tr('Dupliser')}
           </Button>
           <Button size="sm" variant="outline" onClick={() => onSaveTemplate(slide)}>
-            Lagre som mal
+            {tr('Lagre som mal')}
           </Button>
         </div>
         <Button size="sm" variant="danger" className="w-full" onClick={() => onDelete(slide.id)}>
-          Slett lysbilde
+          {tr('Slett lysbilde')}
         </Button>
       </div>
     </div>
@@ -297,7 +298,7 @@ export default function Inspector(props) {
           onSaveTemplate={props.onSaveTemplate}
         />
       ) : (
-        <p className="text-sm text-muted">Velg et lysbilde eller et element.</p>
+        <p className="text-sm text-muted">{tr('Velg et lysbilde eller et element.')}</p>
       )}
     </div>
   );

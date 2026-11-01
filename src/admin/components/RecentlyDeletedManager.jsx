@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { formatTime } from '../../lib/time.js';
 import { Icon, Button, IconButton, GroupCard, Row, MediaTile, PageHeader, ErrorText } from './ui.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
 export default function RecentlyDeletedManager({ onChange }) {
   const [items, setItems] = useState([]);
@@ -33,7 +34,7 @@ export default function RecentlyDeletedManager({ onChange }) {
   };
 
   const purge = async (id) => {
-    if (!confirm('Slette permanent? Kan ikke angres.')) return;
+    if (!confirm(tr('Slette permanent? Kan ikke angres.'))) return;
     try {
       await api.trash.purge(id);
       await load();
@@ -43,7 +44,7 @@ export default function RecentlyDeletedManager({ onChange }) {
   };
 
   const empty = async () => {
-    if (!confirm('Tømme hele papirkurven permanent?')) return;
+    if (!confirm(tr('Tømme hele papirkurven permanent?'))) return;
     try {
       await api.trash.empty();
       await load();
@@ -54,33 +55,32 @@ export default function RecentlyDeletedManager({ onChange }) {
 
   const when = (iso) => {
     const d = new Date(iso);
-    return `${d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })} ${formatTime(iso)}`;
+    return `${d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })} ${formatTime(iso)}`;
   };
 
   return (
     <>
-      <PageHeader title="Nylig slettet" subtitle="Slettede ting kan gjenopprettes i 30 dager." />
+      <PageHeader title={tr('Nylig slettet')} subtitle={tr('Slettede ting kan gjenopprettes i 30 dager.')} />
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         <p className="text-sm text-muted">
-          Slettede elementer ligger her i 30 dager og kan gjenopprettes. Skjermer og lysbilder
-          gjenopprettes med innholdet sitt.
+          {tr('Slettede elementer ligger her i 30 dager og kan gjenopprettes. Skjermer og lysbilder gjenopprettes med innholdet sitt.')}
         </p>
         <ErrorText>{error}</ErrorText>
 
         {items.length === 0 ? (
           <p className="rounded-xl border border-dashed border-line px-5 py-10 text-center text-muted">
-            Papirkurven er tom.
+            {tr('Papirkurven er tom.')}
           </p>
         ) : (
           <GroupCard
-            label={`I papirkurven · ${items.length}`}
+            label={tr('I papirkurven · {0}', [items.length])}
             icon="x"
             right={
               <button
                 onClick={empty}
                 className="text-xs font-semibold text-zoneink/80 hover:text-zoneink"
               >
-                Tøm alt
+                {tr('Tøm alt')}
               </button>
             }
           >
@@ -96,14 +96,14 @@ export default function RecentlyDeletedManager({ onChange }) {
                 meta={
                   <>
                     <span>{t.kind_label}</span>
-                    <span>· slettet {when(t.deleted_at)}</span>
+                    <span>{tr('· slettet')} {when(t.deleted_at)}</span>
                   </>
                 }
                 actions={
                   <>
-                    <IconButton name="x" label="Slett permanent" tone="danger" onClick={() => purge(t.id)} />
+                    <IconButton name="x" label={tr('Slett permanent')} tone="danger" onClick={() => purge(t.id)} />
                     <Button size="sm" variant="outline" disabled={busy} onClick={() => restore(t.id)}>
-                      Gjenopprett
+                      {tr('Gjenopprett')}
                     </Button>
                   </>
                 }

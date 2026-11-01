@@ -4,6 +4,7 @@ import { CATEGORIES, APP_ICONS, TEMPLATES, extractItems, cleanManifest } from '.
 import CustomAppView from '../../../viewer/slides/CustomAppView.jsx';
 import AppIcon from './AppIcon.jsx';
 import { Icon, Field, Input, Textarea, Select, Button, IconButton, Card, ErrorText, ColorInput, Segmented } from '../ui.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Appbyggeren: lag en egen Flatr App uten kode. Utvikleren oppgir et JSON-API,
 // hvilke innstillinger kundene må fylle inn (f.eks. API-nøkkel), tester API-et,
@@ -30,7 +31,7 @@ const TEMPLATE_FIELDS = {
   table: [],
   map: ['title', 'lat', 'lon']
 };
-const FIELD_LABEL = { title: 'Tittel', subtitle: 'Undertekst', value: 'Verdi', unit: 'Enhet (tekst)', image: 'Bilde-URL', lat: 'Breddegrad', lon: 'Lengdegrad' };
+const FIELD_LABEL = { title: tr('Tittel'), subtitle: tr('Undertekst'), value: 'Verdi', unit: 'Enhet (tekst)', image: 'Bilde-URL', lat: 'Breddegrad', lon: 'Lengdegrad' };
 
 function Section({ n, title, hint, children }) {
   return (
@@ -133,20 +134,20 @@ export default function AppBuilder({ app, onDone }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
       <div className="min-w-0 space-y-6">
-        <Section n={1} title="Om appen" hint="Slik vises appen i markedsplassen.">
+        <Section n={1} title={tr('Om appen')} hint={tr('Slik vises appen i markedsplassen.')}>
           <div className="grid gap-4">
             <div className="flex items-center gap-4">
               <AppIcon icon={m.icon} color={m.color} size={64} />
               <div className="grid flex-1 gap-3 sm:grid-cols-[1fr_120px]">
-                <Field label="Navn">
-                  <Input value={m.name} onChange={(e) => set({ name: e.target.value })} placeholder="F.eks. Strømpris" maxLength={60} />
+                <Field label={tr('Navn')}>
+                  <Input value={m.name} onChange={(e) => set({ name: e.target.value })} placeholder={tr('F.eks. Strømpris')} maxLength={60} />
                 </Field>
-                <Field label="Farge">
+                <Field label={tr('Farge')}>
                   <ColorInput value={m.color} onChange={(e) => set({ color: e.target.value })} />
                 </Field>
               </div>
             </div>
-            <Field label="Ikon">
+            <Field label={tr('Ikon')}>
               <div className="flex flex-wrap gap-1.5">
                 {APP_ICONS.map((ic) => (
                   <button
@@ -161,13 +162,13 @@ export default function AppBuilder({ app, onDone }) {
                 ))}
               </div>
             </Field>
-            <Field label="Kort beskrivelse">
-              <Input value={m.tagline} onChange={(e) => set({ tagline: e.target.value })} maxLength={140} placeholder="Én setning om hva appen viser." />
+            <Field label={tr('Kort beskrivelse')}>
+              <Input value={m.tagline} onChange={(e) => set({ tagline: e.target.value })} maxLength={140} placeholder={tr('Én setning om hva appen viser.')} />
             </Field>
-            <Field label="Beskrivelse">
-              <Textarea rows={3} value={m.description} onChange={(e) => set({ description: e.target.value })} placeholder="Hva appen gjør, hvor dataene kommer fra og hva kunden trenger." />
+            <Field label={tr('Beskrivelse')}>
+              <Textarea rows={3} value={m.description} onChange={(e) => set({ description: e.target.value })} placeholder={tr('Hva appen gjør, hvor dataene kommer fra og hva kunden trenger.')} />
             </Field>
-            <Field label="Kategori">
+            <Field label={tr('Kategori')}>
               <Select value={m.category} onChange={(e) => set({ category: e.target.value })}>
                 {CATEGORIES.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -181,16 +182,16 @@ export default function AppBuilder({ app, onDone }) {
 
         <Section
           n={2}
-          title="Innstillinger kunden fyller inn"
-          hint="F.eks. en API-nøkkel eller et sted. Hver kunde som aktiverer appen fyller inn sine egne verdier. Hemmelige felt lagres kryptert."
+          title={tr('Innstillinger kunden fyller inn')}
+          hint={tr('F.eks. en API-nøkkel eller et sted. Hver kunde som aktiverer appen fyller inn sine egne verdier. Hemmelige felt lagres kryptert.')}
         >
           <div className="grid gap-2">
             {m.settings.map((s, i) => (
               <div key={i} className="grid items-end gap-2 sm:grid-cols-[1fr_1fr_120px_auto]">
-                <Field label="Navn i skjemaet">
-                  <Input value={s.label} onChange={(e) => set({ settings: m.settings.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} placeholder="API-nøkkel" />
+                <Field label={tr('Navn i skjemaet')}>
+                  <Input value={s.label} onChange={(e) => set({ settings: m.settings.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} placeholder={tr('API-nøkkel')} />
                 </Field>
-                <Field label="Nøkkel">
+                <Field label={tr('Nøkkel')}>
                   <Input
                     value={s.key}
                     onChange={(e) =>
@@ -199,58 +200,58 @@ export default function AppBuilder({ app, onDone }) {
                     placeholder="api_key"
                   />
                 </Field>
-                <Field label="Type">
+                <Field label={tr('Type')}>
                   <Select value={s.type} onChange={(e) => set({ settings: m.settings.map((x, j) => (j === i ? { ...x, type: e.target.value } : x)) })}>
-                    <option value="text">Tekst</option>
-                    <option value="secret">Hemmelig</option>
-                    <option value="number">Tall</option>
+                    <option value="text">{tr('Tekst')}</option>
+                    <option value="secret">{tr('Hemmelig')}</option>
+                    <option value="number">{tr('Tall')}</option>
                   </Select>
                 </Field>
-                <IconButton name="x" label="Fjern feltet" tone="danger" onClick={() => set({ settings: m.settings.filter((_, j) => j !== i) })} />
+                <IconButton name="x" label={tr('Fjern feltet')} tone="danger" onClick={() => set({ settings: m.settings.filter((_, j) => j !== i) })} />
               </div>
             ))}
             <div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => set({ settings: [...m.settings, { key: m.settings.length ? `felt${m.settings.length + 1}` : 'api_key', label: m.settings.length ? '' : 'API-nøkkel', type: m.settings.length ? 'text' : 'secret', required: true }] })}
+                onClick={() => set({ settings: [...m.settings, { key: m.settings.length ? `felt${m.settings.length + 1}` : 'api_key', label: m.settings.length ? '' : tr('API-nøkkel'), type: m.settings.length ? 'text' : 'secret', required: true }] })}
               >
                 <Icon name="plus" className="h-4 w-4" />
-                Legg til felt
+                {tr('Legg til felt')}
               </Button>
             </div>
           </div>
         </Section>
 
-        <Section n={3} title="Datakilde" hint={`Et API som svarer med JSON over https.${placeholders ? ` Bruk ${placeholders} der innstillingene skal inn.` : ''}`}>
+        <Section n={3} title={tr('Datakilde')} hint={tr('Et API som svarer med JSON over https.{0}', [placeholders ? tr(' Bruk {0} der innstillingene skal inn.', [placeholders]) : ''])}>
           <div className="grid gap-4">
-            <Field label="API-adresse">
+            <Field label={tr('API-adresse')}>
               <Input value={m.source.url} onChange={(e) => setSource({ url: e.target.value })} placeholder="https://api.eksempel.no/v1/data?sted={{sted}}" />
             </Field>
-            <Field label="Hoder (valgfritt)" hint="F.eks. Authorization: Bearer {{api_key}}">
+            <Field label={tr('Hoder (valgfritt)')} hint={tr('F.eks. Authorization: Bearer {{api_key}}')}>
               <div className="grid gap-2">
                 {m.source.headers.map((h, i) => (
                   <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2">
-                    <Input value={h.name} onChange={(e) => setSource({ headers: m.source.headers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} placeholder="Authorization" />
-                    <Input value={h.value} onChange={(e) => setSource({ headers: m.source.headers.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} placeholder="Bearer {{api_key}}" />
-                    <IconButton name="x" label="Fjern hodet" tone="danger" onClick={() => setSource({ headers: m.source.headers.filter((_, j) => j !== i) })} />
+                    <Input value={h.name} onChange={(e) => setSource({ headers: m.source.headers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} placeholder={tr('Authorization')} />
+                    <Input value={h.value} onChange={(e) => setSource({ headers: m.source.headers.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} placeholder={tr('Bearer {{api_key}}')} />
+                    <IconButton name="x" label={tr('Fjern hodet')} tone="danger" onClick={() => setSource({ headers: m.source.headers.filter((_, j) => j !== i) })} />
                   </div>
                 ))}
                 <div>
                   <Button variant="outline" size="sm" onClick={() => setSource({ headers: [...m.source.headers, { name: '', value: '' }] })}>
                     <Icon name="plus" className="h-4 w-4" />
-                    Legg til hode
+                    {tr('Legg til hode')}
                   </Button>
                 </div>
               </div>
             </Field>
-            <Field label="Hent nye data hvert (minutt)">
+            <Field label={tr('Hent nye data hvert (minutt)')}>
               <Input type="number" min={1} max={1440} value={m.source.refreshMinutes} onChange={(e) => setSource({ refreshMinutes: Number(e.target.value) || 5 })} />
             </Field>
 
             {m.settings.length > 0 && (
               <div className="rounded-xl bg-zone p-3">
-                <div className="mb-2 text-xs font-semibold text-muted">Testverdier (lagres ikke)</div>
+                <div className="mb-2 text-xs font-semibold text-muted">{tr('Testverdier (lagres ikke)')}</div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {m.settings.map((s) => (
                     <Input
@@ -269,11 +270,11 @@ export default function AppBuilder({ app, onDone }) {
             <div className="flex flex-wrap items-center gap-3">
               <Button onClick={runTest} disabled={testing || !m.source.url}>
                 <Icon name="refresh" className="h-4 w-4" />
-                {testing ? 'Tester …' : 'Test API-et'}
+                {testing ? tr('Tester …') : tr('Test API-et')}
               </Button>
               {test && (
                 <span className="text-sm text-muted">
-                  Svar mottatt · {test.count} {test.count === 1 ? 'element' : 'elementer'} i listen
+                  {tr('Svar mottatt ·')} {test.count} {test.count === 1 ? 'element' : 'elementer'} {tr('i listen')}
                 </span>
               )}
             </div>
@@ -281,11 +282,11 @@ export default function AppBuilder({ app, onDone }) {
 
             {test && (
               <>
-                <Field label="Hvor ligger listen i svaret?" hint="Tom = hele svaret er listen (eller ett enkelt objekt).">
-                  <PathSelect value={m.source.itemsPath} onChange={(v) => setSource({ itemsPath: v })} paths={test.list_paths.filter(Boolean)} placeholder="(hele svaret)" />
+                <Field label={tr('Hvor ligger listen i svaret?')} hint={tr('Tom = hele svaret er listen (eller ett enkelt objekt).')}>
+                  <PathSelect value={m.source.itemsPath} onChange={(v) => setSource({ itemsPath: v })} paths={test.list_paths.filter(Boolean)} placeholder={tr('(hele svaret)')} />
                 </Field>
                 <button type="button" onClick={() => setShowJson(!showJson)} className="justify-self-start text-sm font-semibold text-brand hover:underline">
-                  {showJson ? 'Skjul svaret' : 'Vis svaret fra API-et'}
+                  {showJson ? tr('Skjul svaret') : tr('Vis svaret fra API-et')}
                 </button>
                 {showJson && <pre className="m-0 max-h-72 overflow-auto rounded-xl bg-zone p-3 text-xs text-ink">{test.sample}</pre>}
               </>
@@ -293,23 +294,23 @@ export default function AppBuilder({ app, onDone }) {
           </div>
         </Section>
 
-        <Section n={4} title="Visning" hint={test ? 'Velg mal og hvilke felt som skal vises.' : 'Test API-et først, så kan du velge felt fra svaret.'}>
+        <Section n={4} title={tr('Visning')} hint={test ? tr('Velg mal og hvilke felt som skal vises.') : tr('Test API-et først, så kan du velge felt fra svaret.')}>
           <div className="grid gap-4">
             <Segmented value={m.display.template} onChange={(v) => setDisplay({ template: v })} options={TEMPLATES.map((t) => ({ value: t.id, label: t.label }))} />
             <p className="m-0 text-xs text-muted">{TEMPLATES.find((t) => t.id === m.display.template)?.hint}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {m.display.template !== 'map' && (
-                <Field label="Overskrift (valgfritt)">
+                <Field label={tr('Overskrift (valgfritt)')}>
                   <Input value={m.display.heading} onChange={(e) => setDisplay({ heading: e.target.value })} />
                 </Field>
               )}
-              <Field label="Maks antall elementer">
+              <Field label={tr('Maks antall elementer')}>
                 <Input type="number" min={1} max={50} value={m.display.max} onChange={(e) => setDisplay({ max: Number(e.target.value) || 10 })} />
               </Field>
               {used.map((k) =>
                 k === 'unit' ? (
                   <Field key={k} label={FIELD_LABEL[k]}>
-                    <Input value={m.display.fields.unit} onChange={(e) => setField('unit', e.target.value)} placeholder="°C, kr, stk …" maxLength={12} />
+                    <Input value={m.display.fields.unit} onChange={(e) => setField('unit', e.target.value)} placeholder={tr('°C, kr, stk …')} maxLength={12} />
                   </Field>
                 ) : (
                   <Field key={k} label={FIELD_LABEL[k]}>
@@ -322,20 +323,20 @@ export default function AppBuilder({ app, onDone }) {
               <div className="grid gap-2">
                 {m.display.columns.map((c, i) => (
                   <div key={i} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
-                    <Field label={`Kolonne ${i + 1}`}>
-                      <Input value={c.label} onChange={(e) => setDisplay({ columns: m.display.columns.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} placeholder="Overskrift" />
+                    <Field label={tr('Kolonne {0}', [i + 1])}>
+                      <Input value={c.label} onChange={(e) => setDisplay({ columns: m.display.columns.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} placeholder={tr('Overskrift')} />
                     </Field>
-                    <Field label="Felt">
+                    <Field label={tr('Felt')}>
                       <PathSelect value={c.path} onChange={(v) => setDisplay({ columns: m.display.columns.map((x, j) => (j === i ? { ...x, path: v } : x)) })} paths={fieldPaths} />
                     </Field>
-                    <IconButton name="x" label="Fjern kolonnen" tone="danger" onClick={() => setDisplay({ columns: m.display.columns.filter((_, j) => j !== i) })} />
+                    <IconButton name="x" label={tr('Fjern kolonnen')} tone="danger" onClick={() => setDisplay({ columns: m.display.columns.filter((_, j) => j !== i) })} />
                   </div>
                 ))}
                 {m.display.columns.length < 6 && (
                   <div>
                     <Button variant="outline" size="sm" onClick={() => setDisplay({ columns: [...m.display.columns, { label: '', path: '' }] })}>
                       <Icon name="plus" className="h-4 w-4" />
-                      Legg til kolonne
+                      {tr('Legg til kolonne')}
                     </Button>
                   </div>
                 )}
@@ -348,7 +349,7 @@ export default function AppBuilder({ app, onDone }) {
       <div className="min-w-0">
         <div className="sticky top-4 space-y-4">
           <div>
-            <div className="mb-2 text-xs font-semibold text-muted">Forhåndsvisning</div>
+            <div className="mb-2 text-xs font-semibold text-muted">{tr('Forhåndsvisning')}</div>
             <div
               className="aspect-video w-full overflow-hidden rounded-2xl border border-hair p-4 text-white"
               style={{ background: 'linear-gradient(135deg, #1f5566, #0f2733)', containerType: 'size' }}
@@ -361,28 +362,27 @@ export default function AppBuilder({ app, onDone }) {
                   color={m.color}
                 />
               ) : (
-                <div className="grid h-full place-items-center text-center text-sm opacity-70">Test API-et for å se en forhåndsvisning.</div>
+                <div className="grid h-full place-items-center text-center text-sm opacity-70">{tr('Test API-et for å se en forhåndsvisning.')}</div>
               )}
             </div>
           </div>
-          <Card title="Lagre">
+          <Card title={tr('Lagre')}>
             <div className="grid gap-3">
               <p className="m-0 text-sm text-muted">
-                Appen er privat for kontoen din til du sender den til godkjenning. Når Flatr har godkjent den, kan andre kunder aktivere den med sine egne
-                innstillinger. Endringer etter godkjenning må godkjennes på nytt.
+                {tr('Appen er privat for kontoen din til du sender den til godkjenning. Når Flatr har godkjent den, kan andre kunder aktivere den med sine egne innstillinger. Endringer etter godkjenning må godkjennes på nytt.')}
               </p>
               {app?.review_status === 'rejected' && app.review_note && (
-                <p className="m-0 rounded-lg bg-danger-tint px-3 py-2 text-sm text-danger">Avvist: {app.review_note}</p>
+                <p className="m-0 rounded-lg bg-danger-tint px-3 py-2 text-sm text-danger">{tr('Avvist:')} {app.review_note}</p>
               )}
               <ErrorText>{error || (manifestError && m.name && m.source.url ? manifestError : '')}</ErrorText>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => save(false)} disabled={busy}>
                   <Icon name="check" className="h-4 w-4" />
-                  {busy ? 'Lagrer …' : 'Lagre'}
+                  {busy ? tr('Lagrer …') : tr('Lagre')}
                 </Button>
                 <Button variant="outline" onClick={() => save(true)} disabled={busy}>
                   <Icon name="share" className="h-4 w-4" />
-                  Lagre og send til godkjenning
+                  {tr('Lagre og send til godkjenning')}
                 </Button>
               </div>
             </div>

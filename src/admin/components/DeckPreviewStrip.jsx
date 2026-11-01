@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import SlideThumb from './deck/SlideThumb.jsx';
+import { tr } from '../../lib/i18n.js';
 
 // Forhåndsvisning av alle lysbildene som spilles av på en gitt kanal.
 // Henter kanalens tilstand én gang pr. montering (kanal-id).
@@ -30,14 +31,14 @@ export default function DeckPreviewStrip({ screenId }) {
   return (
     <div className="px-4 pb-3 sm:px-5">
       <div className="mb-1.5 text-[11px] font-semibold text-muted">
-        Spilles av{state?.screen?.name ? ` på ${state.screen.name}` : ''}
-        {slides.length ? ` · ${slides.length} lysbilder` : ''}
+        {tr('Spilles av')}{state?.screen?.name ? tr(' på {0}', [state.screen.name]) : ''}
+        {slides.length ? tr(' · {0} lysbilder', [slides.length]) : ''}
       </div>
 
-      {!state && !failed && <div className="text-xs text-muted">Laster forhåndsvisning …</div>}
-      {failed && <div className="text-xs text-danger">Kunne ikke hente lysbildene.</div>}
+      {!state && !failed && <div className="text-xs text-muted">{tr('Laster forhåndsvisning …')}</div>}
+      {failed && <div className="text-xs text-danger">{tr('Kunne ikke hente lysbildene.')}</div>}
       {state && slides.length === 0 && (
-        <div className="text-xs text-muted">Ingen lysbilder på denne skjermen ennå.</div>
+        <div className="text-xs text-muted">{tr('Ingen lysbilder på denne skjermen ennå.')}</div>
       )}
 
       {slides.length > 0 && (
@@ -46,7 +47,7 @@ export default function DeckPreviewStrip({ screenId }) {
             <div
               key={s.id}
               className={`shrink-0 ${orientation === 'portrait' ? 'w-14' : 'w-24'}`}
-              title={s.name || `Lysbilde ${i + 1}`}
+              title={s.name || tr('Lysbilde {0}', [i + 1])}
             >
               <SlideThumb slide={s} orientation={orientation} />
               <div className="pt-0.5 text-center text-[10px] tabular-nums text-muted">{i + 1}</div>

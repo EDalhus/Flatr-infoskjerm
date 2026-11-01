@@ -1,4 +1,5 @@
-// Lagerbeholdning (Flatr App): varer med mengde og enhet som legges inn for
+
+import { tr } from './i18n.js';// Lagerbeholdning (Flatr App): varer med mengde og enhet som legges inn for
 // hånd, valgfrie detaljlinjer (f.eks. per silo) og en minstebeholdning som
 // gir varsel på skjermen. Felles for server, admin og visning.
 
@@ -6,13 +7,13 @@ const str = (v, max) => String(v ?? '').trim().slice(0, max);
 
 /** Faste grupper, vist hver for seg på skjermen. Paller har i tillegg palletype. */
 export const STOCK_GROUPS = [
-  { id: 'bulk', label: 'Bulk', unit: 'tonn' },
-  { id: 'bigbags', label: 'Big bags', unit: 'big bags' },
-  { id: 'pallets', label: 'Paller', unit: 'paller' }
+  { id: 'bulk', label: tr('Bulk'), unit: 'tonn' },
+  { id: 'bigbags', label: tr('Big bags'), unit: 'big bags' },
+  { id: 'pallets', label: tr('Paller'), unit: 'paller' }
 ];
 export const PALLET_TYPES = [
-  { id: 'EP', label: 'EP', name: 'Europalle' },
-  { id: 'SRS', label: 'SRS', name: 'SRS-palle' }
+  { id: 'EP', label: tr('EP'), name: 'Europalle' },
+  { id: 'SRS', label: tr('SRS'), name: 'SRS-palle' }
 ];
 const GROUP_IDS = STOCK_GROUPS.map((g) => g.id);
 

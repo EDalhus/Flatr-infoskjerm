@@ -1,4 +1,5 @@
-// Innlogging mot Better Auth (/api/auth/*). Samme endepunkter på flatr.no og
+
+import { tr } from './i18n.js';// Innlogging mot Better Auth (/api/auth/*). Samme endepunkter på flatr.no og
 // på kundens adresse; økt-cookien gjelder alle *.flatr.no.
 
 async function call(path, body, method = 'POST') {
@@ -15,20 +16,20 @@ async function call(path, body, method = 'POST') {
 
 /** Norske feilmeldinger for Better Auth-kodene vi viser til brukeren. */
 function message(status, data) {
-  if (status === 429) return 'For mange forsøk. Vent et minutt og prøv igjen.';
+  if (status === 429) return tr('For mange forsøk. Vent et minutt og prøv igjen.');
   const code = data?.code || '';
   const map = {
     INVALID_EMAIL_OR_PASSWORD: 'Feil e-post eller passord.',
-    EMAIL_NOT_VERIFIED: 'Du må bekrefte e-postadressen først. Vi har sendt deg en ny lenke.',
-    INVALID_CODE: 'Feil kode. Prøv igjen.',
-    INVALID_TWO_FACTOR_COOKIE: 'Innloggingen gikk ut på tid. Start på nytt.',
+    EMAIL_NOT_VERIFIED: tr('Du må bekrefte e-postadressen først. Vi har sendt deg en ny lenke.'),
+    INVALID_CODE: tr('Feil kode. Prøv igjen.'),
+    INVALID_TWO_FACTOR_COOKIE: tr('Innloggingen gikk ut på tid. Start på nytt.'),
     INVALID_PASSWORD: 'Feil passord.',
-    PASSWORD_TOO_SHORT: 'Passordet må ha minst 10 tegn.',
+    PASSWORD_TOO_SHORT: tr('Passordet må ha minst 10 tegn.'),
     PASSWORD_TOO_LONG: 'Passordet er for langt.',
-    INVALID_TOKEN: 'Lenken er utløpt eller allerede brukt. Be om en ny.',
+    INVALID_TOKEN: tr('Lenken er utløpt eller allerede brukt. Be om en ny.'),
     INVALID_BACKUP_CODE: 'Ugyldig reservekode.'
   };
-  return map[code] || data?.message || 'Noe gikk galt. Prøv igjen.';
+  return map[code] || data?.message || tr('Noe gikk galt. Prøv igjen.');
 }
 
 export const authClient = {

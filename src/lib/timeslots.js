@@ -1,4 +1,5 @@
-// Tidsplan for kanaler. Delt mellom server (buildState: hva vises nå) og
+
+import { tr } from './i18n.js';// Tidsplan for kanaler. Delt mellom server (buildState: hva vises nå) og
 // admin (kalenderen), så kalenderen viser nøyaktig det skjermene gjør.
 //
 // En tidsregel (timeslot):
@@ -13,7 +14,7 @@
 
 export const DEFAULT_TZ = 'Europe/Oslo';
 export const PRIORITY = { normal: 0, high: 10 };
-export const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+export const DAY_LABELS = [tr('Man'), tr('Tir'), tr('Ons'), tr('Tor'), tr('Fre'), tr('Lør'), tr('Søn')];
 
 export const toMin = (hhmm) => {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());

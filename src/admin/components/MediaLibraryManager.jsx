@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Input, Select, Button, IconButton, PageHeader, ErrorText } from './ui.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
 const ACCEPT = 'image/*,video/*';
 const ALL = '__all';
@@ -21,7 +22,7 @@ function fmtBytes(n) {
 }
 
 const fmtDate = (iso) =>
-  iso ? new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  iso ? new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
 function Thumb({ m, className = '' }) {
   const src = api.media.url(m.id);
@@ -43,13 +44,13 @@ function Tile({ m, selected, selecting, onOpen, onToggle }) {
         type="button"
         onClick={() => (selecting ? onToggle(m.id) : onOpen(m.id))}
         className="relative block aspect-[4/3] overflow-hidden bg-zone"
-        aria-label={`Åpne ${m.name}`}
+        aria-label={tr('Åpne {0}', [m.name])}
       >
         <Thumb m={m} />
         {isVideo(m) && (
           <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
             <Icon name="play" className="h-3 w-3" />
-            Video
+            {tr('Video')}
           </span>
         )}
       </button>
@@ -63,7 +64,7 @@ function Tile({ m, selected, selecting, onOpen, onToggle }) {
           checked={selected}
           onChange={() => onToggle(m.id)}
           className="h-4 w-4 accent-[rgb(var(--c-brand))]"
-          aria-label={`Velg ${m.name}`}
+          aria-label={tr('Velg {0}', [m.name])}
         />
       </label>
       <div className="flex flex-col px-3 py-2.5">
@@ -72,7 +73,7 @@ function Tile({ m, selected, selecting, onOpen, onToggle }) {
         </span>
         <span className="text-xs text-muted">
           {fmtBytes(m.size)}
-          {m.status ? <span className="font-semibold text-brand"> · Komprimeres …</span> : m.original_size > m.size ? ` · var ${fmtBytes(m.original_size)}` : ''}
+          {m.status ? <span className="font-semibold text-brand"> {tr('· Komprimeres …')}</span> : m.original_size > m.size ? tr(' · var {0}', [fmtBytes(m.original_size)]) : ''}
         </span>
       </div>
     </div>
@@ -159,7 +160,7 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.prompt('Kopier lenken:', link);
+      window.prompt(tr('Kopier lenken:'), link);
     }
   };
 
@@ -167,17 +168,17 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
       <aside
         role="dialog"
-        aria-label="Detaljer for fil"
+        aria-label={tr('Detaljer for fil')}
         onClick={(e) => e.stopPropagation()}
         className="flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-line bg-card shadow-pop"
         style={{ animation: 'drawerIn 0.2s ease-out' }}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
-          <span className="text-sm font-semibold text-muted">Detaljer</span>
-          <IconButton name="x" label="Lukk" onClick={onClose} />
+          <span className="text-sm font-semibold text-muted">{tr('Detaljer')}</span>
+          <IconButton name="x" label={tr('Lukk')} onClick={onClose} />
         </div>
         {!m ? (
-          <div className="p-5 text-sm text-muted">{error || 'Laster …'}</div>
+          <div className="p-5 text-sm text-muted">{error || tr('Laster …')}</div>
         ) : (
           <div className="flex flex-col gap-5 p-5">
             <div className="overflow-hidden rounded-2xl bg-zone">
@@ -199,7 +200,7 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
             </div>
 
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-muted">Navn</span>
+              <span className="text-xs font-semibold text-muted">{tr('Navn')}</span>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -209,32 +210,32 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
             </label>
 
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-muted">Mappe</span>
+              <span className="text-xs font-semibold text-muted">{tr('Mappe')}</span>
               <FolderSelect value={m.folder || ''} folders={folders} onChange={(folder) => save({ folder })} />
             </label>
 
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-muted">Type</dt>
+              <dt className="text-muted">{tr('Type')}</dt>
               <dd className="m-0 text-ink">{m.content_type || '–'}</dd>
-              <dt className="text-muted">Størrelse</dt>
+              <dt className="text-muted">{tr('Størrelse')}</dt>
               <dd className="m-0 text-ink">
                 {fmtBytes(m.size)}
                 {m.status
-                  ? ' · komprimeres nå'
+                  ? tr(' · komprimeres nå')
                   : m.original_size > m.size
-                    ? ` · komprimert fra ${fmtBytes(m.original_size)}`
+                    ? tr(' · komprimert fra {0}', [fmtBytes(m.original_size)])
                     : ''}
               </dd>
-              <dt className="text-muted">Dimensjoner</dt>
+              <dt className="text-muted">{tr('Dimensjoner')}</dt>
               <dd className="m-0 text-ink">{dims ? `${dims[0]} × ${dims[1]}` : '–'}</dd>
-              <dt className="text-muted">Lastet opp</dt>
+              <dt className="text-muted">{tr('Lastet opp')}</dt>
               <dd className="m-0 text-ink">{fmtDate(m.created_at)}</dd>
             </dl>
 
             <section className="flex flex-col gap-2">
-              <h3 className="m-0 text-sm font-bold text-ink">Brukes i</h3>
+              <h3 className="m-0 text-sm font-bold text-ink">{tr('Brukes i')}</h3>
               {usageCount === 0 ? (
-                <p className="m-0 text-sm text-muted">Ikke i bruk ennå.</p>
+                <p className="m-0 text-sm text-muted">{tr('Ikke i bruk ennå.')}</p>
               ) : (
                 <ul className="m-0 flex list-none flex-col gap-1 p-0">
                   {m.usage.slides.map((u) => (
@@ -247,7 +248,7 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
                         <Icon name="layers" className="h-4 w-4 shrink-0 text-muted" />
                         <span className="truncate text-ink">
                           {u.playlist_name}
-                          <span className="text-muted"> · {u.slide_name || 'Lysbilde'}</span>
+                          <span className="text-muted"> · {u.slide_name || tr('Lysbilde')}</span>
                         </span>
                       </button>
                     </li>
@@ -256,7 +257,7 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
                     <li key={`p${u.id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm">
                       <Icon name="image" className="h-4 w-4 shrink-0 text-muted" />
                       <span className="truncate text-ink">
-                        Sponsor <span className="text-muted">· {u.name}</span>
+                        {tr('Sponsor')} <span className="text-muted">· {u.name}</span>
                       </span>
                     </li>
                   ))}
@@ -269,7 +270,7 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
             <div className="flex flex-wrap gap-2 border-t border-line pt-4">
               <Button variant="outline" onClick={copy}>
                 <Icon name={copied ? 'check' : 'link'} className="h-4 w-4" />
-                {copied ? 'Kopiert' : 'Kopier lenke'}
+                {copied ? tr('Kopiert') : tr('Kopier lenke')}
               </Button>
               <a
                 href={api.media.url(m.id)}
@@ -277,11 +278,11 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
                 className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-card px-4 text-sm font-semibold text-ink hover:bg-hair"
               >
                 <Icon name="down" className="h-4 w-4" />
-                Last ned
+                {tr('Last ned')}
               </a>
               <Button variant="danger" onClick={remove} className="ml-auto">
                 <Icon name="trash" className="h-4 w-4" />
-                Slett
+                {tr('Slett')}
               </Button>
             </div>
           </div>
@@ -299,7 +300,7 @@ function FolderSelect({ value, folders, onChange, placeholder = 'Ingen mappe', c
       className={className}
       onChange={(e) => {
         if (e.target.value === '__new') {
-          const name = window.prompt('Navn på ny mappe:');
+          const name = window.prompt(tr('Navn på ny mappe:'));
           if (name?.trim()) onChange(name.trim());
           return;
         }
@@ -312,7 +313,7 @@ function FolderSelect({ value, folders, onChange, placeholder = 'Ingen mappe', c
           {f}
         </option>
       ))}
-      <option value="__new">+ Ny mappe …</option>
+      <option value="__new">{tr('+ Ny mappe …')}</option>
     </Select>
   );
 }
@@ -398,7 +399,7 @@ export default function MediaLibraryManager({ onNavigate }) {
     const files = [...(fileList || [])];
     const rejected = files.filter((f) => !isAccepted(f));
     const ok = files.filter(isAccepted);
-    if (rejected.length) setError(`Hoppet over ${rejected.length} fil(er): bare bilder og video støttes foreløpig.`);
+    if (rejected.length) setError(tr('Hoppet over {0} fil(er): bare bilder og video støttes foreløpig.', [rejected.length]));
     if (!ok.length) return;
 
     const entries = ok.map((f, i) => ({ key: `${Date.now()}-${i}`, name: f.name, progress: 0, file: f }));
@@ -435,7 +436,7 @@ export default function MediaLibraryManager({ onNavigate }) {
   };
 
   const deleteSelected = async () => {
-    if (!confirm(`Slette ${selected.size} fil(er)? De havner i papirkurven. Lysbilder som bruker dem mister bildet.`)) return;
+    if (!confirm(tr('Slette {0} fil(er)? De havner i papirkurven. Lysbilder som bruker dem mister bildet.', [selected.size]))) return;
     try {
       await Promise.all([...selected].map((id) => api.media.remove(id)));
       setSelected(new Set());
@@ -446,7 +447,7 @@ export default function MediaLibraryManager({ onNavigate }) {
   };
 
   const newFolder = () => {
-    const name = window.prompt('Navn på ny mappe:');
+    const name = window.prompt(tr('Navn på ny mappe:'));
     if (!name?.trim()) return;
     setExtraFolders((f) => [...new Set([...f, name.trim()])]);
     setFolder(name.trim());
@@ -493,19 +494,19 @@ export default function MediaLibraryManager({ onNavigate }) {
   return (
     <div className="relative flex min-h-full flex-col" {...dragHandlers}>
       <PageHeader
-        title="Mediebibliotek"
+        title={tr('Mediebibliotek')}
         subtitle={
-          items ? `${items.length} filer · ${fmtBytes(totalBytes)}${quota ? ` av ${fmtBytes(quota)}` : ''} brukt` : ' '
+          items ? tr('{0} filer · {1}{2} brukt', [items.length, fmtBytes(totalBytes), quota ? tr(' av {0}', [fmtBytes(quota)]) : '']) : ' '
         }
         action={
           <>
             <Button variant="outline" onClick={newFolder}>
               <Icon name="plus" className="h-4 w-4" />
-              Ny mappe
+              {tr('Ny mappe')}
             </Button>
             <Button onClick={() => fileRef.current?.click()}>
               <Icon name="plus" className="h-4 w-4" />
-              Last opp
+              {tr('Last opp')}
             </Button>
           </>
         }
@@ -524,7 +525,7 @@ export default function MediaLibraryManager({ onNavigate }) {
 
       <div className="mx-auto flex w-full max-w-6xl flex-wrap gap-6 px-6 pb-12 pt-4 sm:px-8">
         <nav
-          aria-label="Mapper"
+          aria-label={tr('Mapper')}
           className="flex w-full flex-row gap-1 overflow-x-auto md:w-56 md:flex-col md:overflow-visible"
         >
           {folderBtn(ALL, 'Alle filer', counts[ALL])}
@@ -536,47 +537,47 @@ export default function MediaLibraryManager({ onNavigate }) {
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex min-w-[200px] flex-1 items-center gap-2">
               <Icon name="search" className="h-4 w-4 shrink-0 text-muted" />
-              <span className="sr-only">Søk</span>
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Søk etter filnavn …" />
+              <span className="sr-only">{tr('Søk')}</span>
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr('Søk etter filnavn …')} />
             </label>
             <label>
-              <span className="sr-only">Type</span>
+              <span className="sr-only">{tr('Type')}</span>
               <Select value={type} onChange={(e) => setType(e.target.value)} className="!w-32">
-                <option value="all">Alle typer</option>
-                <option value="image">Bilder</option>
-                <option value="video">Video</option>
+                <option value="all">{tr('Alle typer')}</option>
+                <option value="image">{tr('Bilder')}</option>
+                <option value="video">{tr('Video')}</option>
               </Select>
             </label>
             <label>
-              <span className="sr-only">Sortering</span>
+              <span className="sr-only">{tr('Sortering')}</span>
               <Select value={sort} onChange={(e) => setSort(e.target.value)} className="!w-36">
-                <option value="new">Nyeste først</option>
-                <option value="name">Navn A–Å</option>
-                <option value="size">Størst først</option>
+                <option value="new">{tr('Nyeste først')}</option>
+                <option value="name">{tr('Navn A–Å')}</option>
+                <option value="size">{tr('Størst først')}</option>
               </Select>
             </label>
           </div>
 
           {selected.size > 0 && (
             <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-ink px-4 py-2.5 text-sm text-paper">
-              <span className="font-semibold">{selected.size} valgt</span>
+              <span className="font-semibold">{selected.size} {tr('valgt')}</span>
               <span className="ml-auto" />
               <FolderSelect
                 value=""
                 folders={folders}
-                placeholder="Flytt til mappe …"
+                placeholder={tr('Flytt til mappe …')}
                 onChange={(to) => moveSelected(to)}
                 className="!w-48 !text-ink"
               />
               <Button variant="danger" onClick={deleteSelected}>
-                Slett
+                {tr('Slett')}
               </Button>
               <button
                 type="button"
                 onClick={() => setSelected(new Set())}
                 className="rounded-lg px-2 py-1 font-semibold opacity-80 hover:opacity-100"
               >
-                Avbryt
+                {tr('Avbryt')}
               </button>
             </div>
           )}
@@ -594,11 +595,11 @@ export default function MediaLibraryManager({ onNavigate }) {
                 <Icon name="image" className="h-7 w-7" />
               </span>
               <span className="text-lg font-bold text-ink">
-                {items.length === 0 ? 'Last opp dine første bilder og videoer' : 'Ingen filer her'}
+                {items.length === 0 ? tr('Last opp dine første bilder og videoer') : tr('Ingen filer her')}
               </span>
               <span className="max-w-sm text-sm text-muted">
-                Dra og slipp filer hvor som helst på siden, eller klikk her.
-                {currentFolder ? ` De havner i mappen «${currentFolder}».` : ''}
+                {tr('Dra og slipp filer hvor som helst på siden, eller klikk her.')}
+                {currentFolder ? tr(' De havner i mappen «{0}».', [currentFolder]) : ''}
               </span>
             </button>
           ) : (
@@ -621,8 +622,8 @@ export default function MediaLibraryManager({ onNavigate }) {
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-brand/15 p-6">
           <div className="rounded-3xl border-2 border-dashed border-brand bg-card px-10 py-8 text-center shadow-pop">
-            <div className="text-lg font-bold text-ink">Slipp for å laste opp</div>
-            <div className="text-sm text-muted">{currentFolder ? `Til mappen «${currentFolder}»` : 'Til biblioteket'}</div>
+            <div className="text-lg font-bold text-ink">{tr('Slipp for å laste opp')}</div>
+            <div className="text-sm text-muted">{currentFolder ? tr('Til mappen «{0}»', [currentFolder]) : tr('Til biblioteket')}</div>
           </div>
         </div>
       )}

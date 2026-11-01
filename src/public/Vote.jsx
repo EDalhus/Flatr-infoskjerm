@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { tr } from '../lib/i18n.js';
 
 const VOTER_KEY = 'flatr.voter';
 
@@ -33,7 +34,7 @@ function Bars({ options, counts, total, mine }) {
             <div className="mb-1 flex justify-between text-sm">
               <span className={i === mine ? 'font-bold' : ''}>
                 {o}
-                {i === mine ? ' · ditt svar' : ''}
+                {i === mine ? tr(' · ditt svar') : ''}
               </span>
               <span className="tabular-nums text-[#5b6170]">{pct} %</span>
             </div>
@@ -43,7 +44,7 @@ function Bars({ options, counts, total, mine }) {
           </div>
         );
       })}
-      <p className="m-0 pt-1 text-xs text-[#5b6170]">{total === 1 ? '1 stemme' : `${total} stemmer`}</p>
+      <p className="m-0 pt-1 text-xs text-[#5b6170]">{total === 1 ? tr('1 stemme') : tr('{0} stemmer', [total])}</p>
     </div>
   );
 }
@@ -61,13 +62,13 @@ export default function Vote() {
     fetch(`/api/vote?t=${encodeURIComponent(token)}&voter=${voter}`, { cache: 'no-store' })
       .then(async (r) => {
         const b = await r.json();
-        if (!r.ok) throw new Error(b.error || 'Fant ikke avstemningen');
+        if (!r.ok) throw new Error(b.error || tr('Fant ikke avstemningen'));
         setData(b);
       })
       .catch((e) => setError(e.message));
 
   useEffect(() => {
-    document.title = 'Stem – Flatr';
+    document.title = tr('Stem – Flatr');
     load();
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
@@ -84,7 +85,7 @@ export default function Vote() {
         body: JSON.stringify({ voter, ...body })
       });
       const b = await r.json();
-      if (!r.ok) throw new Error(b.error || 'Noe gikk galt');
+      if (!r.ok) throw new Error(b.error || tr('Noe gikk galt'));
       setData(b);
       return true;
     } catch (e) {
@@ -101,11 +102,11 @@ export default function Vote() {
     <div className="min-h-screen bg-[#f4f6f5] px-5 py-8 text-[#16181d]">
       <main className="mx-auto max-w-md">
         {!data ? (
-          <p className="mt-20 text-center text-[#5b6170]">{error || 'Henter …'}</p>
+          <p className="mt-20 text-center text-[#5b6170]">{error || tr('Henter …')}</p>
         ) : (
           <>
             <h1 className="m-0 text-2xl font-extrabold leading-tight">{data.question}</h1>
-            {!open && <p className="m-0 mt-2 text-sm font-semibold text-[#b45309]">Avstemningen er avsluttet.</p>}
+            {!open && <p className="m-0 mt-2 text-sm font-semibold text-[#b45309]">{tr('Avstemningen er avsluttet.')}</p>}
 
             {data.kind === 'choice' ? (
               <>
@@ -127,11 +128,11 @@ export default function Vote() {
                     ))}
                   </div>
                 )}
-                {data.mine != null && open && <p className="m-0 mt-3 text-sm text-[#5b6170]">Takk! Du kan endre svaret så lenge avstemningen er åpen.</p>}
+                {data.mine != null && open && <p className="m-0 mt-3 text-sm text-[#5b6170]">{tr('Takk! Du kan endre svaret så lenge avstemningen er åpen.')}</p>}
                 {data.counts ? (
                   <Bars options={data.options} counts={data.counts} total={data.total} mine={data.mine} />
                 ) : (
-                  data.mine != null && <p className="m-0 mt-4 text-sm text-[#5b6170]">Resultatene vises når avstemningen er ferdig.</p>
+                  data.mine != null && <p className="m-0 mt-4 text-sm text-[#5b6170]">{tr('Resultatene vises når avstemningen er ferdig.')}</p>
                 )}
               </>
             ) : (
@@ -143,7 +144,7 @@ export default function Vote() {
                       e.preventDefault();
                       if (await post({ question: text })) {
                         setText('');
-                        setThanks(data.moderate ? 'Takk! Spørsmålet vises når det er godkjent.' : 'Takk! Spørsmålet ditt er sendt.');
+                        setThanks(data.moderate ? tr('Takk! Spørsmålet vises når det er godkjent.') : tr('Takk! Spørsmålet ditt er sendt.'));
                       }
                     }}
                   >
@@ -152,7 +153,7 @@ export default function Vote() {
                       onChange={(e) => setText(e.target.value)}
                       maxLength={200}
                       rows={3}
-                      placeholder="Skriv spørsmålet ditt …"
+                      placeholder={tr('Skriv spørsmålet ditt …')}
                       className="block w-full resize-none rounded-2xl border-2 border-[#d6ddd9] bg-white p-4 text-base outline-none focus:border-[#027353]"
                     />
                     <button
@@ -160,7 +161,7 @@ export default function Vote() {
                       disabled={busy || text.trim().length < 3}
                       className="mt-3 w-full rounded-2xl bg-[#027353] px-5 py-3.5 text-lg font-bold text-white disabled:opacity-40"
                     >
-                      Send spørsmål
+                      {tr('Send spørsmål')}
                     </button>
                     {thanks && <p className="m-0 mt-2 text-sm font-semibold text-[#027353]">{thanks}</p>}
                   </form>
@@ -176,21 +177,21 @@ export default function Vote() {
                           disabled={!open || liked || busy}
                           onClick={() => post({ like: q.id })}
                           className={`shrink-0 rounded-full px-3 py-1 text-sm font-bold ${liked ? 'bg-[#fde2e7] text-[#be123c]' : 'bg-[#f1f3f2] text-[#5b6170]'}`}
-                          aria-label="Gi hjerte"
+                          aria-label={tr('Gi hjerte')}
                         >
                           ♥ {q.likes}
                         </button>
                       </div>
                     );
                   })}
-                  {!(data.questions || []).length && <p className="m-0 text-sm text-[#5b6170]">Ingen spørsmål ennå. Bli den første!</p>}
+                  {!(data.questions || []).length && <p className="m-0 text-sm text-[#5b6170]">{tr('Ingen spørsmål ennå. Bli den første!')}</p>}
                 </div>
               </>
             )}
             {error && <p className="m-0 mt-4 text-sm font-semibold text-[#b91c1c]">{error}</p>}
           </>
         )}
-        <p className="m-0 mt-10 text-center text-xs text-[#9aa19d]">Laget med Flatr</p>
+        <p className="m-0 mt-10 text-center text-xs text-[#9aa19d]">{tr('Laget med Flatr')}</p>
       </main>
     </div>
   );

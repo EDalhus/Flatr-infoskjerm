@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { ELEMENT_LABEL } from '../../../lib/deck.js';
 import { Button } from '../ui.jsx';
+import { tr, locale } from '../../../lib/i18n.js';
 
 const initials = (s) =>
   String(s || '?')
@@ -16,10 +17,10 @@ const initials = (s) =>
 
 function ago(iso) {
   const min = Math.round((Date.now() - Date.parse(iso)) / 60_000);
-  if (min < 1) return 'nå';
+  if (min < 1) return tr('nå');
   if (min < 60) return `${min} min`;
   if (min < 24 * 60) return `${Math.round(min / 60)} t`;
-  return new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
 }
 
 /** Tekst med @-omtaler uthevet. */
@@ -176,13 +177,13 @@ export default function CommentsPanel({ playlistId, slide, slides, selected, onS
           </button>
         ))}
         <label className="ml-auto flex items-center gap-1 text-muted">
-          <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} /> Løste
+          <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} /> {tr('Løste')}
         </label>
       </div>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
         {error && <p className="m-0 rounded-lg bg-danger-tint px-3 py-2 text-xs text-danger">{error}</p>}
-        {data && !threads.length && <p className="m-0 text-sm text-muted">{scope === 'slide' ? 'Ingen kommentarer på dette lysbildet.' : 'Ingen kommentarer ennå.'}</p>}
+        {data && !threads.length && <p className="m-0 text-sm text-muted">{scope === 'slide' ? tr('Ingen kommentarer på dette lysbildet.') : tr('Ingen kommentarer ennå.')}</p>}
         {threads.map((c) => (
           <div key={c.id} className={`rounded-xl border border-hair p-2.5 ${c.resolved ? 'opacity-60' : 'bg-paper'}`}>
             {(scope === 'all' || c.element_id) && (
@@ -211,14 +212,14 @@ export default function CommentsPanel({ playlistId, slide, slides, selected, onS
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-tint text-[10px] font-bold text-brand">{initials(r.author_name || r.author_email)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs">
-                    <strong className="text-ink">{r.author_name || r.author_email || 'Noen'}</strong> <span className="text-muted">{ago(r.created_at)}</span>
+                    <strong className="text-ink">{r.author_name || r.author_email || tr('Noen')}</strong> <span className="text-muted">{ago(r.created_at)}</span>
                   </div>
                   <div className="whitespace-pre-wrap break-words text-sm text-ink">
                     <Body text={r.body} members={members} />
                   </div>
                 </div>
                 {r.author_email === data?.me && (
-                  <button type="button" onClick={() => act(() => api.comments.remove(r.id))} className="self-start text-[11px] text-muted hover:text-danger" title="Slett">
+                  <button type="button" onClick={() => act(() => api.comments.remove(r.id))} className="self-start text-[11px] text-muted hover:text-danger" title={tr('Slett')}>
                     ✕
                   </button>
                 )}
@@ -227,16 +228,16 @@ export default function CommentsPanel({ playlistId, slide, slides, selected, onS
             <div className="mt-2 flex gap-3 text-xs font-semibold">
               {!c.resolved && (
                 <button type="button" onClick={() => setReplyTo(replyTo === c.id ? null : c.id)} className="text-brand hover:underline">
-                  Svar
+                  {tr('Svar')}
                 </button>
               )}
               <button type="button" onClick={() => act(() => api.comments.update(c.id, { resolved: !c.resolved }))} className="text-muted hover:text-ink">
-                {c.resolved ? 'Åpne igjen' : '✓ Løst'}
+                {c.resolved ? tr('Åpne igjen') : tr('✓ Løst')}
               </button>
             </div>
             {replyTo === c.id && (
               <div className="mt-2">
-                <Composer autoFocus members={members} placeholder="Svar … (@ for å nevne)" onSend={(body, mentions) => add(body, mentions, { parent_id: c.id })} />
+                <Composer autoFocus members={members} placeholder={tr('Svar … (@ for å nevne)')} onSend={(body, mentions) => add(body, mentions, { parent_id: c.id })} />
               </div>
             )}
           </div>
@@ -246,9 +247,9 @@ export default function CommentsPanel({ playlistId, slide, slides, selected, onS
       {slide && (
         <div className="border-t border-line p-2">
           <div className="mb-1 px-0.5 text-[11px] text-muted">
-            Kommentar på {target ? <strong className="text-ink">{elementName(target.id) || 'valgt element'}</strong> : slideName(slide.id).toLowerCase()}
+            {tr('Kommentar på')} {target ? <strong className="text-ink">{elementName(target.id) || tr('valgt element')}</strong> : slideName(slide.id).toLowerCase()}
           </div>
-          <Composer members={members} placeholder="Skriv en kommentar … (@ for å nevne noen)" onSend={(body, mentions) => add(body, mentions, { element_id: target?.id })} />
+          <Composer members={members} placeholder={tr('Skriv en kommentar … (@ for å nevne noen)')} onSend={(body, mentions) => add(body, mentions, { element_id: target?.id })} />
         </div>
       )}
     </div>

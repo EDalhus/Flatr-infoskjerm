@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { Icon, Button } from '../ui.jsx';
 import { chosenAgent, chooseAgent } from '../aiAgent.js';
+import { tr, locale } from '../../../lib/i18n.js';
 
 const MOD = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
 
@@ -20,13 +21,13 @@ const TOOL_LABEL = {
   update_elements: 'Endrer elementer',
   delete_elements: 'Sletter elementer',
   list_media: 'Ser i biblioteket',
-  list_data: 'Ser på apper og program'
+  list_data: tr('Ser på apper og program')
 };
 
 const SUGGESTIONS = [
-  'Lag en velkomstpresentasjon for besøkende med klokke og vær',
-  'Gjør alle titlene større og mer lesbare på avstand',
-  'Lag et lysbilde med dagens program og en QR-kode til påmelding'
+  tr('Lag en velkomstpresentasjon for besøkende med klokke og vær'),
+  tr('Gjør alle titlene større og mer lesbare på avstand'),
+  tr('Lag et lysbilde med dagens program og en QR-kode til påmelding')
 ];
 
 /**
@@ -96,7 +97,7 @@ function Thinking({ text, live }) {
     <div className="rounded-lg border border-line/70 bg-zone/40">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-xs font-semibold text-muted hover:text-ink">
         <Icon name="chevron" className={`h-3 w-3 transition-transform ${show ? 'rotate-90' : ''}`} />
-        {live ? <span className="animate-pulse">Tenker …</span> : 'Tankegang'}
+        {live ? <span className="animate-pulse">{tr('Tenker …')}</span> : tr('Tankegang')}
       </button>
       {show && text && <div className="max-h-56 overflow-y-auto whitespace-pre-wrap px-3 pb-2.5 text-xs leading-relaxed text-muted">{text}</div>}
     </div>
@@ -136,7 +137,7 @@ function AssistantTurn({ blocks, live }) {
   );
 }
 
-const fillDate = (iso) => new Date(iso).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' });
+const fillDate = (iso) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'long' });
 
 function KeySetup({ app, onSaved }) {
   const cursor = app.kind === 'cursor';
@@ -158,9 +159,9 @@ function KeySetup({ app, onSaved }) {
   };
   return (
     <form onSubmit={save} className="m-3 grid gap-3 rounded-xl border border-line bg-zone/40 p-4 text-sm">
-      <div className="font-semibold text-ink">Koble til {cursor ? 'Cursor' : 'Claude'}</div>
+      <div className="font-semibold text-ink">{tr('Koble til')} {cursor ? 'Cursor' : 'Claude'}</div>
       <p className="m-0 text-xs leading-relaxed text-muted">
-        {app.name} bruker kontoens egen API-nøkkel fra {cursor ? 'Cursor' : 'Anthropic'}. Lag en på{' '}
+        {tr(app.name)} {tr('bruker kontoens egen API-nøkkel fra')} {cursor ? 'Cursor' : tr('Anthropic')}{tr('. Lag en på')}{' '}
         <a
           href={cursor ? 'https://cursor.com/dashboard' : 'https://console.anthropic.com/settings/keys'}
           target="_blank"
@@ -169,7 +170,7 @@ function KeySetup({ app, onSaved }) {
         >
           {cursor ? 'cursor.com/dashboard' : 'console.anthropic.com'}
         </a>{' '}
-        og lim den inn her. Nøkkelen lagres kryptert og vises aldri igjen. Bruken faktureres på {cursor ? 'Cursor' : 'Anthropic'}-kontoen.
+        {tr('og lim den inn her. Nøkkelen lagres kryptert og vises aldri igjen. Bruken faktureres på')} {cursor ? 'Cursor' : tr('Anthropic')}{tr('-kontoen.')}
       </p>
       <input
         type="password"
@@ -181,7 +182,7 @@ function KeySetup({ app, onSaved }) {
       />
       {err && <p className="m-0 text-xs text-danger">{err}</p>}
       <Button type="submit" size="sm" disabled={busy || !key.trim()}>
-        {busy ? 'Sjekker nøkkelen …' : 'Lagre nøkkel'}
+        {busy ? tr('Sjekker nøkkelen …') : tr('Lagre nøkkel')}
       </Button>
     </form>
   );
@@ -291,14 +292,14 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
       setError(e.message);
     }
   };
-  if (!data) return <p className="m-0 p-4 text-sm text-muted">{error || 'Laster …'}</p>;
+  if (!data) return <p className="m-0 p-4 text-sm text-muted">{error || tr('Laster …')}</p>;
   if (!data.app)
     return (
       <div className="m-3 grid gap-3 rounded-xl border border-line bg-zone/40 p-4 text-sm">
-        <div className="font-semibold text-ink">Aktiver Claude AI</div>
-        <p className="m-0 text-xs leading-relaxed text-muted">AI-assistenten er en Flatr App. Aktiver Claude AI og legg inn en API-nøkkel fra Anthropic, så kan du lage og endre presentasjoner ved å skrive hva du vil ha.</p>
+        <div className="font-semibold text-ink">{tr('Aktiver Claude AI')}</div>
+        <p className="m-0 text-xs leading-relaxed text-muted">{tr('AI-assistenten er en Flatr App. Aktiver Claude AI og legg inn en API-nøkkel fra Anthropic, så kan du lage og endre presentasjoner ved å skrive hva du vil ha.')}</p>
         <a href="/admin?view=apps&app=claude" className="inline-flex h-9 items-center justify-center rounded-lg bg-brand px-3 text-xs font-semibold text-onbrand hover:bg-brand-dark">
-          Gå til Claude AI
+          {tr('Gå til Claude AI')}
         </a>
       </div>
     );
@@ -307,11 +308,11 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
       <>
         {data.app.included?.exhausted && (
           <p className="m-3 mb-0 rounded-xl bg-warn-tint px-4 py-3 text-xs leading-relaxed text-ink">
-            Månedens Flatr AI er brukt opp. Den fylles på igjen {fillDate(data.app.included.resets_at)}. Vil du fortsette nå, kan du legge inn en egen nøkkel:
+            {tr('Månedens Flatr AI er brukt opp. Den fylles på igjen')} {fillDate(data.app.included.resets_at)}{tr('. Vil du fortsette nå, kan du legge inn en egen nøkkel:')}
           </p>
         )}
         <KeySetup app={data.app} onSaved={load} />
-        {pending && <p className="m-0 px-4 text-xs text-muted">Meldingen din sendes når nøkkelen er lagret.</p>}
+        {pending && <p className="m-0 px-4 text-xs text-muted">{tr('Meldingen din sendes når nøkkelen er lagret.')}</p>}
       </>
     );
 
@@ -324,42 +325,42 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
         <span className="flex items-center gap-1.5">
           <Icon name="sparkle" className="h-3.5 w-3.5 text-brand" />
           {data.apps?.length > 1 ? (
-            <select value={data.app.kind} onChange={(e) => chooseAgent(e.target.value)} disabled={busy} className="cursor-pointer bg-transparent text-muted outline-none hover:text-ink" aria-label="Assistent">
+            <select value={data.app.kind} onChange={(e) => chooseAgent(e.target.value)} disabled={busy} className="cursor-pointer bg-transparent text-muted outline-none hover:text-ink" aria-label={tr('Assistent')}>
               {data.apps.map((a) => (
                 <option key={a.kind} value={a.kind}>
-                  {a.kind === 'claude' ? `${a.name} · ${a.model}` : a.model === 'Cursor' ? a.name : `Cursor · ${a.model}`}
+                  {a.kind === 'claude' ? `${tr(a.name)} · ${a.model}` : a.model === 'Cursor' ? tr(a.name) : tr('Cursor · {0}', [a.model])}
                 </option>
               ))}
             </select>
           ) : (
             <>
               {data.app.name} · {data.app.model}
-              {data.app.included && !data.app.own_key && <span title="Flatr AI er inkludert i planen, med en kvote per måned">· {data.app.included.used_pct} % av månedens KI brukt</span>}
+              {data.app.included && !data.app.own_key && <span title={tr('Flatr AI er inkludert i planen, med en kvote per måned')}>· {data.app.included.used_pct} {tr('% av månedens KI brukt')}</span>}
             </>
           )}
         </span>
         <div className="relative">
-          <button type="button" onClick={() => setMenu((m) => !m)} className="rounded-md px-1.5 py-0.5 font-bold hover:bg-zone hover:text-ink" aria-label="Mer">
+          <button type="button" onClick={() => setMenu((m) => !m)} className="rounded-md px-1.5 py-0.5 font-bold hover:bg-zone hover:text-ink" aria-label={tr('Mer')}>
             ⋯
           </button>
           {menu && (
             <div className="absolute right-0 top-7 z-20 grid w-56 gap-0.5 rounded-xl border border-line bg-card p-1 text-sm shadow-pop">
               <button type="button" onClick={clear} disabled={busy} className="rounded-lg px-3 py-2 text-left text-ink hover:bg-zone disabled:opacity-50">
-                Tøm samtalen
+                {tr('Tøm samtalen')}
               </button>
               <a href={`/admin?view=apps&app=${data.app.kind}`} className="rounded-lg px-3 py-2 text-left text-ink hover:bg-zone">
-                Innstillinger for {data.app.name} {data.app.key_hint ? `(${data.app.key_hint})` : ''}
+                {tr('Innstillinger for')} {data.app.name} {data.app.key_hint ? `(${data.app.key_hint})` : ''}
               </a>
               {data.app.included && !data.app.own_key && (
                 <div className="border-t border-line px-3 py-2 text-[11px] leading-relaxed text-muted">
-                  Flatr AI er inkludert i planen: {data.app.included.used_pct} % brukt denne måneden ({data.app.included.requests}{' '}
-                  {data.app.included.requests === 1 ? 'forespørsel' : 'forespørsler'}). Fylles på igjen {fillDate(data.app.included.resets_at)}.
+                  {tr('Flatr AI er inkludert i planen:')} {data.app.included.used_pct} {tr('% brukt denne måneden (')}{data.app.included.requests}{' '}
+                  {data.app.included.requests === 1 ? tr('forespørsel') : tr('forespørsler')}{tr('). Fylles på igjen')} {fillDate(data.app.included.resets_at)}.
                 </div>
               )}
               {usage && data.app.own_key && (
                 <div className="border-t border-line px-3 py-2 text-[11px] leading-relaxed text-muted">
-                  Brukt siden {new Date(usage.since).toLocaleDateString('nb-NO')}: {Math.round((usage.input + usage.cache_read + usage.cache_write) / 1000)}k inn ·{' '}
-                  {Math.round(usage.output / 1000)}k ut (tokens)
+                  {tr('Brukt siden')} {new Date(usage.since).toLocaleDateString(locale())}: {Math.round((usage.input + usage.cache_read + usage.cache_write) / 1000)}{tr('k inn ·')}{' '}
+                  {Math.round(usage.output / 1000)}{tr('k ut (tokens)')}
                 </div>
               )}
             </div>
@@ -370,7 +371,7 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-3">
         {!turns.length && !live && (
           <div className="grid gap-2 pt-2">
-            <p className="m-0 text-sm text-muted">Be om en ny presentasjon, eller endringer i denne. Assistenten kan bare endre denne presentasjonen, og alt kan angres.</p>
+            <p className="m-0 text-sm text-muted">{tr('Be om en ny presentasjon, eller endringer i denne. Assistenten kan bare endre denne presentasjonen, og alt kan angres.')}</p>
             {SUGGESTIONS.map((s) => (
               <button key={s} type="button" onClick={() => send(s)} className="rounded-xl border border-line px-3 py-2 text-left text-xs text-ink hover:bg-zone">
                 {s}
@@ -383,7 +384,7 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
             <div key={i} className="ml-6 grid justify-items-end gap-1">
               {t.context != null && (
                 <span className="rounded-full bg-zone px-2 py-0.5 text-[11px] text-muted">
-                  {t.context ? `📎 Fast kontekst (${t.context}) lagt ved` : 'Fast kontekst fjernet'}
+                  {t.context ? tr('📎 Fast kontekst ({0}) lagt ved', [t.context]) : tr('Fast kontekst fjernet')}
                 </span>
               )}
               <div className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand-tint px-3 py-2 text-sm text-ink">{t.text}</div>
@@ -415,18 +416,18 @@ export default function AiPanel({ playlistId, onChanged, pending, onPendingUsed 
               }
             }}
             rows={3}
-            placeholder={busy ? 'Assistenten jobber …' : 'Hva vil du endre?'}
+            placeholder={busy ? tr('Assistenten jobber …') : tr('Hva vil du endre?')}
             className="block w-full resize-none bg-transparent px-3 py-2 text-sm text-ink outline-none"
           />
           <div className="flex items-center justify-between px-2 pb-2">
-            <span className="text-[11px] text-muted">{MOD}K fra hvor som helst</span>
+            <span className="text-[11px] text-muted">{MOD}{tr('K fra hvor som helst')}</span>
             {busy ? (
               <Button type="button" size="sm" variant="outline" onClick={stop}>
-                Stopp
+                {tr('Stopp')}
               </Button>
             ) : (
               <Button type="submit" size="sm" disabled={!draft.trim()}>
-                Send
+                {tr('Send')}
               </Button>
             )}
           </div>

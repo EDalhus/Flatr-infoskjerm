@@ -10,14 +10,15 @@ import { MODES as ENTUR_MODES } from '../../../lib/entur.js';
 import { CropModal, FocusPicker, saveCropped } from './ImageTools.jsx';
 import { activeRich } from '../../../lib/richText.js';
 import { columnNames } from '../../../viewer/slides/SheetView.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 const RSS_PRESETS = [
-  { label: 'NRK – Toppsaker', url: 'https://www.nrk.no/toppsaker.rss' },
-  { label: 'NRK Møre og Romsdal', url: 'https://www.nrk.no/mr/toppsaker.rss' },
-  { label: 'NRK Sport', url: 'https://www.nrk.no/sport/toppsaker.rss' },
-  { label: 'VG', url: 'https://www.vg.no/rss/feed' },
-  { label: 'E24', url: 'https://e24.no/rss2/' },
-  { label: 'Teknisk Ukeblad', url: 'https://www.tu.no/rss' }
+  { label: tr('NRK – Toppsaker'), url: 'https://www.nrk.no/toppsaker.rss' },
+  { label: tr('NRK Møre og Romsdal'), url: 'https://www.nrk.no/mr/toppsaker.rss' },
+  { label: tr('NRK Sport'), url: 'https://www.nrk.no/sport/toppsaker.rss' },
+  { label: tr('VG'), url: 'https://www.vg.no/rss/feed' },
+  { label: tr('E24'), url: 'https://e24.no/rss2/' },
+  { label: tr('Teknisk Ukeblad'), url: 'https://www.tu.no/rss' }
 ];
 
 /** Innstillinger for Flatr App: hvilken app, visning, båter og kai. */
@@ -71,9 +72,9 @@ function AppFields({ c, set }) {
 
   return (
     <div className="grid gap-3">
-      <Field label="App">
+      <Field label={tr('App')}>
         <Select value={c.appId ?? ''} onChange={(e) => set({ appId: Number(e.target.value) || null, mmsi: [], quayId: '' })}>
-          <option value="">Velg app …</option>
+          <option value="">{tr('Velg app …')}</option>
           {(apps || []).map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -83,7 +84,7 @@ function AppFields({ c, set }) {
       </Field>
       {apps && apps.length === 0 && (
         <p className="m-0 text-xs text-muted">
-          Du har ingen aktiverte apper med data ennå. Finn dem i{' '}
+          {tr('Du har ingen aktiverte apper med data ennå. Finn dem i')}{' '}
           <a href="/admin?view=apps" className="font-semibold text-brand hover:underline">
             Flatr Apps
           </a>
@@ -92,27 +93,27 @@ function AppFields({ c, set }) {
       )}
       {isCustom && (
         <>
-          <p className="m-0 text-xs text-muted">Visningen bestemmes av appen. Innstillingene finner du under Flatr Apps.</p>
-          <Field label="Tekstfarge">
+          <p className="m-0 text-xs text-muted">{tr('Visningen bestemmes av appen. Innstillingene finner du under Flatr Apps.')}</p>
+          <Field label={tr('Tekstfarge')}>
             <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
           </Field>
-          <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
+          <Check label={tr('Vis ramme')} checked={c.frame === true} onChange={(v) => set({ frame: v })} />
         </>
       )}
       {isBirthdays && c.effect === 'rain' && (
         <>
-          <Field label="Mengde">
+          <Field label={tr('Mengde')}>
             <Segmented
               value={c.amount || 'normal'}
               onChange={(v) => set({ amount: v })}
               options={[
-                { value: 'few', label: 'Litt' },
-                { value: 'normal', label: 'Normalt' },
-                { value: 'many', label: 'Mye' }
+                { value: 'few', label: tr('Litt') },
+                { value: 'normal', label: tr('Normalt') },
+                { value: 'many', label: tr('Mye') }
               ]}
             />
           </Field>
-          <Field label="Synlighet">
+          <Field label={tr('Synlighet')}>
             <span className="flex items-center gap-2">
               <input
                 type="range"
@@ -122,72 +123,72 @@ function AppFields({ c, set }) {
                 value={c.opacity ?? 1}
                 onChange={(e) => set({ opacity: Number(e.target.value) })}
                 className="flex-1 accent-brand"
-                aria-label="Synlighet"
+                aria-label={tr('Synlighet')}
               />
               <span className="w-10 text-right text-xs tabular-nums text-muted">{Math.round((c.opacity ?? 1) * 100)} %</span>
             </span>
           </Field>
           <p className="m-0 text-xs text-muted">
-            Kaker og konfetti regner over dette laget på dager der noen har bursdag – ellers er det usynlig. Legg det fremst og gjør det så stort du vil.
+            {tr('Kaker og konfetti regner over dette laget på dager der noen har bursdag – ellers er det usynlig. Legg det fremst og gjør det så stort du vil.')}
           </p>
         </>
       )}
       {isBirthdays && c.effect !== 'rain' && (
         <>
-          <Field label="Overskrift">
+          <Field label={tr('Overskrift')}>
             <Input value={c.title ?? 'Bursdager'} onChange={(e) => set({ title: e.target.value })} />
           </Field>
-          <Field label="Vis bursdager" hint="Alle som har bursdag i dag og så mange dager fram i tid.">
+          <Field label={tr('Vis bursdager')} hint={tr('Alle som har bursdag i dag og så mange dager fram i tid.')}>
             <Select value={c.days ?? ''} onChange={(e) => set({ days: Number(e.target.value) })}>
-              {c.days == null && <option value="">De {c.count ?? 3} neste (gammel innstilling)</option>}
-              <option value={1}>I dag og i morgen</option>
+              {c.days == null && <option value="">{tr('De')} {c.count ?? 3} {tr('neste (gammel innstilling)')}</option>}
+              <option value={1}>{tr('I dag og i morgen')}</option>
               {[2, 3, 4, 5, 6].map((n) => (
                 <option key={n} value={n}>
-                  {n} dager fram i tid
+                  {n} {tr('dager fram i tid')}
                 </option>
               ))}
-              <option value={7}>7 dager fram i tid (en uke)</option>
+              <option value={7}>{tr('7 dager fram i tid (en uke)')}</option>
             </Select>
           </Field>
           {c.days != null && (
-            <Check label="Skjul boksen når ingen har bursdag i perioden" checked={c.autoHide !== false} onChange={(v) => set({ autoHide: v })} />
+            <Check label={tr('Skjul boksen når ingen har bursdag i perioden')} checked={c.autoHide !== false} onChange={(v) => set({ autoHide: v })} />
           )}
-          <Field label="Plassering i boksen" hint="Gjelder når det er få bursdager og det blir ledig plass.">
+          <Field label={tr('Plassering i boksen')} hint={tr('Gjelder når det er få bursdager og det blir ledig plass.')}>
             <Segmented
               value={c.valign || 'top'}
               onChange={(v) => set({ valign: v })}
               options={[
-                { value: 'top', label: 'Topp' },
-                { value: 'middle', label: 'Midt' },
-                { value: 'bottom', label: 'Bunn' }
+                { value: 'top', label: tr('Topp') },
+                { value: 'middle', label: tr('Midt') },
+                { value: 'bottom', label: tr('Bunn') }
               ]}
             />
           </Field>
-          <Field label="Tekstfarge">
+          <Field label={tr('Tekstfarge')}>
             <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
           </Field>
-          <Check label="Vis ramme" checked={c.frame !== false} onChange={(v) => set({ frame: v })} />
-          <p className="m-0 text-xs text-muted">Personer og fødselsdatoer legger du inn under Flatr Apps → Bursdager.</p>
+          <Check label={tr('Vis ramme')} checked={c.frame !== false} onChange={(v) => set({ frame: v })} />
+          <p className="m-0 text-xs text-muted">{tr('Personer og fødselsdatoer legger du inn under Flatr Apps → Bursdager.')}</p>
         </>
       )}
       {app?.kind === 'menu' && (
         <>
-          <Field label="Visning">
-            <Segmented value={c.menuView || 'today'} onChange={(v) => set({ menuView: v })} options={[{ value: 'today', label: 'Dagens meny' }, { value: 'week', label: 'Hele uka' }]} />
+          <Field label={tr('Visning')}>
+            <Segmented value={c.menuView || 'today'} onChange={(v) => set({ menuView: v })} options={[{ value: 'today', label: tr('Dagens meny') }, { value: 'week', label: tr('Hele uka') }]} />
           </Field>
-          <Field label="Overskrift">
-            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} placeholder={c.menuView === 'week' ? 'Ukens meny' : 'Dagens meny'} />
+          <Field label={tr('Overskrift')}>
+            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} placeholder={c.menuView === 'week' ? tr('Ukens meny') : tr('Dagens meny')} />
           </Field>
-          <Check label="Vis priser" checked={c.showPrice !== false} onChange={(v) => set({ showPrice: v })} />
-          <Check label="Vis merking (allergener, vegetar …)" checked={c.showTags !== false} onChange={(v) => set({ showTags: v })} />
+          <Check label={tr('Vis priser')} checked={c.showPrice !== false} onChange={(v) => set({ showPrice: v })} />
+          <Check label={tr('Vis merking (allergener, vegetar …)')} checked={c.showTags !== false} onChange={(v) => set({ showTags: v })} />
         </>
       )}
       {app?.kind === 'stock' && (
         <>
-          <Field label="Overskrift">
-            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} placeholder={app.config?.title || 'Lagerbeholdning'} />
+          <Field label={tr('Overskrift')}>
+            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} placeholder={app.config?.title || tr('Lagerbeholdning')} />
           </Field>
-          <Field label="Vis gruppene" hint="Ingen valgt = alle. Nyttig når hver gruppe skal på sin egen skjerm.">
+          <Field label={tr('Vis gruppene')} hint={tr('Ingen valgt = alle. Nyttig når hver gruppe skal på sin egen skjerm.')}>
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {STOCK_GROUPS.map((g) => (
                 <Check
@@ -199,14 +200,14 @@ function AppFields({ c, set }) {
               ))}
             </div>
           </Field>
-          <Check label="Vis detaljer (silo, lagerplass …)" checked={c.showDetails !== false} onChange={(v) => set({ showDetails: v })} />
-          <Check label="Vis når den sist ble oppdatert" checked={c.showUpdated !== false} onChange={(v) => set({ showUpdated: v })} />
-          <p className="m-0 text-xs text-muted">Varer og mengder skriver du inn under Flatr Apps → Lagerbeholdning.</p>
+          <Check label={tr('Vis detaljer (silo, lagerplass …)')} checked={c.showDetails !== false} onChange={(v) => set({ showDetails: v })} />
+          <Check label={tr('Vis når den sist ble oppdatert')} checked={c.showUpdated !== false} onChange={(v) => set({ showUpdated: v })} />
+          <p className="m-0 text-xs text-muted">{tr('Varer og mengder skriver du inn under Flatr Apps → Lagerbeholdning.')}</p>
         </>
       )}
       {app?.kind === 'tides' && (
         <>
-          <Field label="Sted" hint={(app.config?.places || []).length ? null : 'Legg inn steder under Flatr Apps → Tidevann og sjø.'}>
+          <Field label={tr('Sted')} hint={(app.config?.places || []).length ? null : tr('Legg inn steder under Flatr Apps → Tidevann og sjø.')}>
             <Select value={c.placeId || ''} onChange={(e) => set({ placeId: e.target.value })}>
               {(app.config?.places || []).map((p) => (
                 <option key={p.id} value={p.id}>
@@ -215,17 +216,17 @@ function AppFields({ c, set }) {
               ))}
             </Select>
           </Field>
-          <Field label="Vis">
-            <Segmented value={c.tideView || 'both'} onChange={(v) => set({ tideView: v })} options={[{ value: 'tide', label: 'Tidevann' }, { value: 'sea', label: 'Sjø' }, { value: 'both', label: 'Begge' }]} />
+          <Field label={tr('Vis')}>
+            <Segmented value={c.tideView || 'both'} onChange={(v) => set({ tideView: v })} options={[{ value: 'tide', label: tr('Tidevann') }, { value: 'sea', label: tr('Sjø') }, { value: 'both', label: tr('Begge') }]} />
           </Field>
         </>
       )}
       {app?.kind === 'fixtures' && (
         <>
-          <Field label="Visning">
-            <Segmented value={c.fixturesView || 'list'} onChange={(v) => set({ fixturesView: v })} options={[{ value: 'list', label: 'Neste kamper' }, { value: 'next', label: 'Neste kamp, stor' }]} />
+          <Field label={tr('Visning')}>
+            <Segmented value={c.fixturesView || 'list'} onChange={(v) => set({ fixturesView: v })} options={[{ value: 'list', label: tr('Neste kamper') }, { value: 'next', label: tr('Neste kamp, stor') }]} />
           </Field>
-          <Field label="Lag" hint={(app.config?.teams || []).length ? 'Ingen valgt = alle lagene.' : 'Legg til lag under Flatr Apps → Kampprogram.'}>
+          <Field label={tr('Lag')} hint={(app.config?.teams || []).length ? tr('Ingen valgt = alle lagene.') : tr('Legg til lag under Flatr Apps → Kampprogram.')}>
             <div className="flex flex-wrap gap-1.5">
               {(app.config?.teams || []).map((t) => {
                 const on = (c.teams || []).includes(t.id);
@@ -243,22 +244,22 @@ function AppFields({ c, set }) {
               })}
             </div>
           </Field>
-          <Check label="Bare hjemmekamper" checked={!!c.homeOnly} onChange={(v) => set({ homeOnly: v })} />
+          <Check label={tr('Bare hjemmekamper')} checked={!!c.homeOnly} onChange={(v) => set({ homeOnly: v })} />
           {(c.fixturesView || 'list') === 'list' && (
-            <Field label="Antall kamper">
+            <Field label={tr('Antall kamper')}>
               <Input type="number" min={1} max={12} value={c.max ?? 6} onChange={(e) => set({ max: Number(e.target.value) || undefined })} />
             </Field>
           )}
-          <Field label="Overskrift (valgfritt)">
+          <Field label={tr('Overskrift (valgfritt)')}>
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
           </Field>
         </>
       )}
       {app?.kind === 'poll' && (
         <>
-          <Field label="Avstemning" hint={polls && !polls.length ? 'Lag en avstemning under Flatr Apps → Avstemning.' : null}>
+          <Field label={tr('Avstemning')} hint={polls && !polls.length ? tr('Lag en avstemning under Flatr Apps → Avstemning.') : null}>
             <Select value={c.pollId ?? ''} onChange={(e) => set({ pollId: Number(e.target.value) || null })}>
-              <option value="">Den nyeste åpne</option>
+              <option value="">{tr('Den nyeste åpne')}</option>
               {(polls || []).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.question}
@@ -267,10 +268,10 @@ function AppFields({ c, set }) {
               ))}
             </Select>
           </Field>
-          <Field label="Visning">
-            <Segmented value={c.pollView || 'results'} onChange={(v) => set({ pollView: v })} options={[{ value: 'results', label: 'Med resultater' }, { value: 'qr', label: 'Bare QR-kode' }]} />
+          <Field label={tr('Visning')}>
+            <Segmented value={c.pollView || 'results'} onChange={(v) => set({ pollView: v })} options={[{ value: 'results', label: tr('Med resultater') }, { value: 'qr', label: tr('Bare QR-kode') }]} />
           </Field>
-          <Field label="Overskrift (valgfritt)" hint="Står det tomt, vises spørsmålet.">
+          <Field label={tr('Overskrift (valgfritt)')} hint={tr('Står det tomt, vises spørsmålet.')}>
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
           </Field>
         </>
@@ -283,7 +284,7 @@ function AppFields({ c, set }) {
         const view = c.sheetView || 'table';
         return (
           <>
-            <Field label="Regneark" hint={sheets.length ? null : 'Legg til regneark under Flatr Apps → Regneark.'}>
+            <Field label={tr('Regneark')} hint={sheets.length ? null : tr('Legg til regneark under Flatr Apps → Regneark.')}>
               <Select value={sheet?.id || ''} onChange={(e) => set({ sheetId: e.target.value, columns: [] })}>
                 {sheets.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -292,12 +293,12 @@ function AppFields({ c, set }) {
                 ))}
               </Select>
             </Field>
-            <Field label="Visning">
-              <Segmented value={view} onChange={(v) => set({ sheetView: v })} options={[{ value: 'table', label: 'Tabell' }, { value: 'value', label: 'Nøkkeltall' }, { value: 'list', label: 'Liste' }]} />
+            <Field label={tr('Visning')}>
+              <Segmented value={view} onChange={(v) => set({ sheetView: v })} options={[{ value: 'table', label: tr('Tabell') }, { value: 'value', label: tr('Nøkkeltall') }, { value: 'list', label: tr('Liste') }]} />
             </Field>
-            {view !== 'value' && <Check label="Første rad er overskrifter" checked={c.header !== false} onChange={(v) => set({ header: v })} />}
+            {view !== 'value' && <Check label={tr('Første rad er overskrifter')} checked={c.header !== false} onChange={(v) => set({ header: v })} />}
             {view === 'table' && names.length > 0 && (
-              <Field label="Kolonner" hint="Ingen valgt = de åtte første.">
+              <Field label={tr('Kolonner')} hint={tr('Ingen valgt = de åtte første.')}>
                 <div className="flex flex-wrap gap-1.5">
                   {names.map((n, i) => {
                     const on = (c.columns || []).includes(i);
@@ -317,7 +318,7 @@ function AppFields({ c, set }) {
               </Field>
             )}
             {view === 'list' && names.length > 0 && (
-              <Field label="Kolonne">
+              <Field label={tr('Kolonne')}>
                 <Select value={c.column ?? 0} onChange={(e) => set({ column: Number(e.target.value) })}>
                   {names.map((n, i) => (
                     <option key={i} value={i}>
@@ -329,19 +330,19 @@ function AppFields({ c, set }) {
             )}
             {view === 'value' ? (
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Celle" hint="F.eks. B2">
+                <Field label={tr('Celle')} hint={tr('F.eks. B2')}>
                   <Input value={c.cell ?? 'B2'} onChange={(e) => set({ cell: e.target.value.toUpperCase().slice(0, 6) })} />
                 </Field>
-                <Field label="Tekst over tallet">
+                <Field label={tr('Tekst over tallet')}>
                   <Input value={c.label ?? ''} onChange={(e) => set({ label: e.target.value })} />
                 </Field>
               </div>
             ) : (
-              <Field label="Antall rader">
+              <Field label={tr('Antall rader')}>
                 <Input type="number" min={1} max={30} value={c.max ?? 10} onChange={(e) => set({ max: Number(e.target.value) || undefined })} />
               </Field>
             )}
-            <Field label="Overskrift (valgfritt)">
+            <Field label={tr('Overskrift (valgfritt)')}>
               <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
             </Field>
           </>
@@ -349,7 +350,7 @@ function AppFields({ c, set }) {
       })()}
       {app?.kind === 'entur' && (
         <>
-          <Field label="Holdeplass" hint={(app.config?.stops || []).length ? null : 'Legg til holdeplasser under Flatr Apps → Avganger.'}>
+          <Field label={tr('Holdeplass')} hint={(app.config?.stops || []).length ? null : tr('Legg til holdeplasser under Flatr Apps → Avganger.')}>
             <Select value={c.stopId || ''} onChange={(e) => set({ stopId: e.target.value })}>
               {(app.config?.stops || []).map((s) => (
                 <option key={s.id} value={s.id}>
@@ -358,7 +359,7 @@ function AppFields({ c, set }) {
               ))}
             </Select>
           </Field>
-          <Field label="Transportmidler" hint="Ingen valgt = alle.">
+          <Field label={tr('Transportmidler')} hint={tr('Ingen valgt = alle.')}>
             <div className="flex flex-wrap gap-1.5">
               {ENTUR_MODES.map((m) => {
                 const on = (c.modes || []).includes(m.id);
@@ -377,26 +378,26 @@ function AppFields({ c, set }) {
             </div>
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Gangtid (min)" hint="Skjuler avganger folk ikke rekker.">
+            <Field label={tr('Gangtid (min)')} hint={tr('Skjuler avganger folk ikke rekker.')}>
               <Input type="number" min={0} max={30} value={c.walkMinutes ?? 0} onChange={(e) => set({ walkMinutes: Math.max(0, Number(e.target.value) || 0) })} />
             </Field>
-            <Field label="Antall avganger">
+            <Field label={tr('Antall avganger')}>
               <Input type="number" min={1} max={20} value={c.max ?? 8} onChange={(e) => set({ max: Number(e.target.value) || undefined })} />
             </Field>
           </div>
-          <Check label="Vis plattform og spor" checked={c.showPlatform !== false} onChange={(v) => set({ showPlatform: v })} />
-          <Field label="Overskrift (valgfritt)" hint="Står det tomt, brukes navnet på holdeplassen.">
+          <Check label={tr('Vis plattform og spor')} checked={c.showPlatform !== false} onChange={(v) => set({ showPlatform: v })} />
+          <Field label={tr('Overskrift (valgfritt)')} hint={tr('Står det tomt, brukes navnet på holdeplassen.')}>
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
           </Field>
         </>
       )}
       {app?.kind === 'football' && (
         <>
-          <Field label="Visning">
-            <Segmented value={c.footballView || 'next'} onChange={(v) => set({ footballView: v })} options={[{ value: 'next', label: 'Neste' }, { value: 'last', label: 'Resultater' }, { value: 'table', label: 'Tabell' }]} />
+          <Field label={tr('Visning')}>
+            <Segmented value={c.footballView || 'next'} onChange={(v) => set({ footballView: v })} options={[{ value: 'next', label: tr('Neste') }, { value: 'last', label: tr('Resultater') }, { value: 'table', label: tr('Tabell') }]} />
           </Field>
           {(c.footballView || 'next') === 'table' ? (
-            <Field label="Liga" hint={(app.config?.leagues || []).length ? null : 'Legg til ligaer under Flatr Apps → Fotball.'}>
+            <Field label={tr('Liga')} hint={(app.config?.leagues || []).length ? null : tr('Legg til ligaer under Flatr Apps → Fotball.')}>
               <Select value={c.leagueId || ''} onChange={(e) => set({ leagueId: Number(e.target.value) })}>
                 {(app.config?.leagues || []).map((l) => (
                   <option key={l.id} value={l.id}>
@@ -406,7 +407,7 @@ function AppFields({ c, set }) {
               </Select>
             </Field>
           ) : (
-            <Field label="Lag" hint={(app.config?.teams || []).length ? null : 'Legg til lag under Flatr Apps → Fotball.'}>
+            <Field label={tr('Lag')} hint={(app.config?.teams || []).length ? null : tr('Legg til lag under Flatr Apps → Fotball.')}>
               <Select value={c.teamId || ''} onChange={(e) => set({ teamId: Number(e.target.value) })}>
                 {(app.config?.teams || []).map((t) => (
                   <option key={t.id} value={t.id}>
@@ -416,42 +417,42 @@ function AppFields({ c, set }) {
               </Select>
             </Field>
           )}
-          <Field label="Antall">
+          <Field label={tr('Antall')}>
             <Input type="number" min={3} max={20} value={c.max ?? ((c.footballView || 'next') === 'table' ? 16 : 5)} onChange={(e) => set({ max: Number(e.target.value) || undefined })} />
           </Field>
-          <Field label="Overskrift (valgfritt)">
+          <Field label={tr('Overskrift (valgfritt)')}>
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
           </Field>
         </>
       )}
       {isOther && (
         <>
-          <Field label="Tekstfarge">
+          <Field label={tr('Tekstfarge')}>
             <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
           </Field>
-          <Check label="Vis ramme" checked={c.frame !== false} onChange={(v) => set({ frame: v })} />
+          <Check label={tr('Vis ramme')} checked={c.frame !== false} onChange={(v) => set({ frame: v })} />
         </>
       )}
       {app && !isCustom && !isBirthdays && !isOther && (
         <>
-          <Field label="Visning">
+          <Field label={tr('Visning')}>
             <Select value={view} onChange={(e) => set({ view: e.target.value })}>
-              <option value="map">Kart</option>
-              <option value="cards">Båtkort</option>
-              <option value="arrivals">Ankomsttavle</option>
-              <option value="calls">Anløpsplan (med varer)</option>
+              <option value="map">{tr('Kart')}</option>
+              <option value="cards">{tr('Båtkort')}</option>
+              <option value="arrivals">{tr('Ankomsttavle')}</option>
+              <option value="calls">{tr('Anløpsplan (med varer)')}</option>
             </Select>
           </Field>
           {view === 'calls' && (
             <>
-              <Field label="Overskrift">
-                <Input value={c.title ?? 'Anløp'} onChange={(e) => set({ title: e.target.value })} />
+              <Field label={tr('Overskrift')}>
+                <Input value={c.title ?? tr('Anløp')} onChange={(e) => set({ title: e.target.value })} />
               </Field>
-              <Field label="Vis anløp" hint="Anløpene legger du inn under Flatr Apps → NAIS → Anløp.">
+              <Field label={tr('Vis anløp')} hint={tr('Anløpene legger du inn under Flatr Apps → NAIS → Anløp.')}>
                 <Select value={c.callDays ?? 7} onChange={(e) => set({ callDays: Number(e.target.value) })}>
                   {[1, 2, 3, 7, 14, 30].map((n) => (
                     <option key={n} value={n}>
-                      {n === 1 ? 'I dag og i morgen' : `De neste ${n} dagene`}
+                      {n === 1 ? tr('I dag og i morgen') : tr('De neste {0} dagene', [n])}
                     </option>
                   ))}
                 </Select>
@@ -459,33 +460,33 @@ function AppFields({ c, set }) {
             </>
           )}
           {view === 'map' && (
-            <Field label="Kartstil">
+            <Field label={tr('Kartstil')}>
               <Select value={c.mapStyle || 'nautical'} onChange={(e) => set({ mapStyle: e.target.value })}>
-                <option value="nautical">Mørkt (som Kystverket)</option>
-                <option value="light">Lyst kart</option>
+                <option value="nautical">{tr('Mørkt (som Kystverket)')}</option>
+                <option value="light">{tr('Lyst kart')}</option>
               </Select>
             </Field>
           )}
-          <Field label="Farge på båtene">
+          <Field label={tr('Farge på båtene')}>
             <Select value={c.colorBy || 'type'} onChange={(e) => set({ colorBy: e.target.value })}>
-              <option value="type">Etter skipstype (standard på AIS-kart)</option>
-              <option value="own">Flåtens egne farger</option>
+              <option value="type">{tr('Etter skipstype (standard på AIS-kart)')}</option>
+              <option value="own">{tr('Flåtens egne farger')}</option>
             </Select>
           </Field>
           {view === 'map' && (
-            <Field label="Utsnitt">
+            <Field label={tr('Utsnitt')}>
               <Select value={c.area || 'fleet'} onChange={(e) => set({ area: e.target.value })}>
-                <option value="fleet">Zoom til båtene</option>
-                <option value="norway">Hele Norge</option>
+                <option value="fleet">{tr('Zoom til båtene')}</option>
+                <option value="norway">{tr('Hele Norge')}</option>
               </Select>
             </Field>
           )}
           <Field
-            label={view === 'map' ? 'Kai (valgfritt)' : view === 'arrivals' ? 'Kai' : view === 'calls' ? 'Kai (tom = alle kaier)' : 'Vis ETA til kai'}
-            hint={quays.length ? null : 'Legg inn kaier i appen for å få ETA.'}
+            label={view === 'map' ? tr('Kai (valgfritt)') : view === 'arrivals' ? tr('Kai') : view === 'calls' ? tr('Kai (tom = alle kaier)') : tr('Vis ETA til kai')}
+            hint={quays.length ? null : tr('Legg inn kaier i appen for å få ETA.')}
           >
             <Select value={c.quayId || ''} onChange={(e) => set({ quayId: e.target.value })}>
-              <option value="">{view === 'map' || view === 'calls' ? 'Alle kaier' : 'Ingen'}</option>
+              <option value="">{view === 'map' || view === 'calls' ? tr('Alle kaier') : tr('Ingen')}</option>
               {quays.map((q) => (
                 <option key={q.id} value={q.id}>
                   {q.name}
@@ -494,7 +495,7 @@ function AppFields({ c, set }) {
             </Select>
           </Field>
           {groupNames.length > 0 && (
-            <Field label="Grupper" hint={pickedGroups.size ? 'Bare båter i de valgte gruppene vises.' : 'Ingen valgt = alle grupper'}>
+            <Field label={tr('Grupper')} hint={pickedGroups.size ? tr('Bare båter i de valgte gruppene vises.') : tr('Ingen valgt = alle grupper')}>
               <div className="flex flex-wrap gap-1.5">
                 {groupNames.map((g) => {
                   const on = pickedGroups.has(g);
@@ -506,7 +507,7 @@ function AppFields({ c, set }) {
                       onClick={() => toggleGroup(g)}
                       className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${on ? 'bg-brand text-onbrand' : 'bg-zone text-muted hover:text-ink'}`}
                     >
-                      {g || 'Uten gruppe'}
+                      {g || tr('Uten gruppe')}
                     </button>
                   );
                 })}
@@ -514,28 +515,28 @@ function AppFields({ c, set }) {
             </Field>
           )}
           {view !== 'calls' && (
-          <Field label="Båter" hint={picked.size ? `${picked.size} valgt` : pickedGroups.size ? 'Ingen valgt = alle i gruppene' : 'Ingen valgt = hele flåten'}>
+          <Field label={tr('Båter')} hint={picked.size ? tr('{0} valgt', [picked.size]) : pickedGroups.size ? tr('Ingen valgt = alle i gruppene') : tr('Ingen valgt = hele flåten')}>
             <div className="grid max-h-48 gap-1 overflow-y-auto">
               {fleet.filter((b) => !pickedGroups.size || pickedGroups.has(b.group || '')).map((b) => (
                 <Check key={b.mmsi} label={b.name} checked={picked.has(String(b.mmsi))} onChange={() => toggle(String(b.mmsi))} />
               ))}
-              {!fleet.length && <span className="text-xs text-muted">Flåten er tom.</span>}
+              {!fleet.length && <span className="text-xs text-muted">{tr('Flåten er tom.')}</span>}
             </div>
           </Field>
           )}
           {view === 'map' ? (
             <>
-              <Check label="Vis navn på kartet" checked={c.labels !== false} onChange={(v) => set({ labels: v })} />
+              <Check label={tr('Vis navn på kartet')} checked={c.labels !== false} onChange={(v) => set({ labels: v })} />
               {(c.colorBy || 'type') === 'type' && (
-                <Check label="Vis fargeforklaring" checked={c.legend !== false} onChange={(v) => set({ legend: v })} />
+                <Check label={tr('Vis fargeforklaring')} checked={c.legend !== false} onChange={(v) => set({ legend: v })} />
               )}
             </>
           ) : (
             <>
-              <Field label="Tekstfarge">
+              <Field label={tr('Tekstfarge')}>
                 <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
               </Field>
-              <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
+              <Check label={tr('Vis ramme')} checked={c.frame === true} onChange={(v) => set({ frame: v })} />
             </>
           )}
         </>
@@ -559,42 +560,42 @@ function CarouselFields({ c, set }) {
   }, []);
   return (
     <div className="grid gap-3">
-      <Field label="Mappe" hint="Karusellen viser alle bildene i mappen. Legg til eller fjern bilder i mediebiblioteket.">
+      <Field label={tr('Mappe')} hint={tr('Karusellen viser alle bildene i mappen. Legg til eller fjern bilder i mediebiblioteket.')}>
         <Select value={c.folder || ''} onChange={(e) => set({ folder: e.target.value })}>
-          <option value="">Velg mappe …</option>
+          <option value="">{tr('Velg mappe …')}</option>
           {(folders || []).map(([name, n]) => (
             <option key={name} value={name}>
               {name} ({n} {n === 1 ? 'bilde' : 'bilder'})
             </option>
           ))}
-          {c.folder && folders && !folders.some(([n]) => n === c.folder) && <option value={c.folder}>{c.folder} (tom)</option>}
+          {c.folder && folders && !folders.some(([n]) => n === c.folder) && <option value={c.folder}>{c.folder} {tr('(tom)')}</option>}
         </Select>
       </Field>
       {folders && folders.length === 0 && (
         <p className="m-0 text-xs text-muted">
-          Du har ingen mapper med bilder ennå. Lag en i{' '}
+          {tr('Du har ingen mapper med bilder ennå. Lag en i')}{' '}
           <a href="/admin?view=media" className="font-semibold text-brand hover:underline">
-            mediebiblioteket
+            {tr('mediebiblioteket')}
           </a>
           .
         </p>
       )}
-      <Field label="Sekunder pr. bilde">
+      <Field label={tr('Sekunder pr. bilde')}>
         <Input type="number" min={2} max={600} value={c.seconds ?? 8} onChange={(e) => set({ seconds: Number(e.target.value) || 8 })} />
       </Field>
-      <Field label="Tilpasning">
+      <Field label={tr('Tilpasning')}>
         <Select value={c.fit || 'contain'} onChange={(e) => set({ fit: e.target.value })}>
-          <option value="contain">Vis hele bildet</option>
-          <option value="cover">Fyll flaten</option>
+          <option value="contain">{tr('Vis hele bildet')}</option>
+          <option value="cover">{tr('Fyll flaten')}</option>
         </Select>
       </Field>
-      <Field label="Overgang">
+      <Field label={tr('Overgang')}>
         <Select value={c.transition || 'fade'} onChange={(e) => set({ transition: e.target.value })}>
-          <option value="fade">Ton over</option>
-          <option value="none">Ingen</option>
+          <option value="fade">{tr('Ton over')}</option>
+          <option value="none">{tr('Ingen')}</option>
         </Select>
       </Field>
-      <Check label="Tilfeldig rekkefølge" checked={!!c.shuffle} onChange={(v) => set({ shuffle: v })} />
+      <Check label={tr('Tilfeldig rekkefølge')} checked={!!c.shuffle} onChange={(v) => set({ shuffle: v })} />
     </div>
   );
 }
@@ -615,7 +616,7 @@ export function PlaceSearch({ value, onPick, placeholder }) {
   }, [q]);
   return (
     <div className="grid gap-1.5">
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder || (value ? `Valgt: ${value} – søk for å bytte` : 'Søk sted, f.eks. Ålesund')} />
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder || (value ? tr('Valgt: {0} – søk for å bytte', [value]) : tr('Søk sted, f.eks. Ålesund'))} />
       {hits.length > 0 && (
         <ul className="m-0 max-h-48 list-none overflow-y-auto rounded-xl border border-line bg-card p-1">
           {hits.map((h, i) => (
@@ -666,23 +667,23 @@ function ImageFields({ c, set, boxRatio }) {
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setCropping(true)}>
             <Icon name="crop" className="h-3.5 w-3.5" />
-            Beskjær og roter
+            {tr('Beskjær og roter')}
           </Button>
           {c.original && (
             <button type="button" onClick={() => set({ url: c.original.url, original: null, focus: null })} className="text-xs font-semibold text-muted hover:text-ink">
-              Bruk originalen
+              {tr('Bruk originalen')}
             </button>
           )}
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Tilpasning">
+        <Field label={tr('Tilpasning')}>
           <Select value={c.fit || 'contain'} onChange={(e) => set({ fit: e.target.value })}>
-            <option value="contain">Vis hele bildet</option>
-            <option value="cover">Fyll flaten</option>
+            <option value="contain">{tr('Vis hele bildet')}</option>
+            <option value="cover">{tr('Fyll flaten')}</option>
           </Select>
         </Field>
-        <Field label="Hjørnerunding (px)">
+        <Field label={tr('Hjørnerunding (px)')}>
           <Input type="number" min={0} value={c.radius ?? 0} onChange={(e) => set({ radius: Number(e.target.value) || 0 })} />
         </Field>
       </div>
@@ -710,56 +711,56 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
   if (kind === 'button') {
     return (
       <div className="grid gap-3">
-        <Field label="Tekst på knappen">
+        <Field label={tr('Tekst på knappen')}>
           <Input value={c.label || ''} onChange={(e) => set({ label: e.target.value })} />
         </Field>
-        <Field label="Når noen trykker">
+        <Field label={tr('Når noen trykker')}>
           <Select value={c.action || 'next'} onChange={(e) => set({ action: e.target.value })}>
-            <option value="next">Gå til neste lysbilde</option>
-            <option value="prev">Gå til forrige lysbilde</option>
-            <option value="slide">Gå til et bestemt lysbilde</option>
-            <option value="url">Vis en nettside</option>
+            <option value="next">{tr('Gå til neste lysbilde')}</option>
+            <option value="prev">{tr('Gå til forrige lysbilde')}</option>
+            <option value="slide">{tr('Gå til et bestemt lysbilde')}</option>
+            <option value="url">{tr('Vis en nettside')}</option>
           </Select>
         </Field>
         {c.action === 'slide' && (
-          <Field label="Lysbilde">
+          <Field label={tr('Lysbilde')}>
             <Select value={c.slideId || ''} onChange={(e) => set({ slideId: Number(e.target.value) || null })}>
-              <option value="">Velg …</option>
+              <option value="">{tr('Velg …')}</option>
               {slides.map((s, i) => (
                 <option key={s.id} value={s.id}>
-                  {i + 1}. {s.name || 'Lysbilde'}
+                  {i + 1}. {s.name || tr('Lysbilde')}
                 </option>
               ))}
             </Select>
           </Field>
         )}
         {c.action === 'url' && (
-          <Field label="Nettside" hint="Vises over lysbildet med en Lukk-knapp. Noen nettsteder tillater ikke å bli vist slik.">
+          <Field label={tr('Nettside')} hint={tr('Vises over lysbildet med en Lukk-knapp. Noen nettsteder tillater ikke å bli vist slik.')}>
             <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://…" />
           </Field>
         )}
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Knappefarge">
+          <Field label={tr('Knappefarge')}>
             <ColorInput value={c.fill || '#ffffff'} onChange={(e) => set({ fill: e.target.value })} />
           </Field>
-          <Field label="Tekstfarge">
+          <Field label={tr('Tekstfarge')}>
             <ColorInput value={c.color || '#0f2733'} onChange={(e) => set({ color: e.target.value })} />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Skriftstørrelse (px)">
+          <Field label={tr('Skriftstørrelse (px)')}>
             <Input type="number" min={16} max={200} value={c.size ?? 44} onChange={(e) => set({ size: Number(e.target.value) || 44 })} />
           </Field>
-          <Field label="Hjørner">
+          <Field label={tr('Hjørner')}>
             <Select value={String(c.radius ?? 999)} onChange={(e) => set({ radius: Number(e.target.value) })}>
-              <option value="999">Runde</option>
-              <option value="24">Avrundet</option>
-              <option value="0">Firkantet</option>
+              <option value="999">{tr('Runde')}</option>
+              <option value="24">{tr('Avrundet')}</option>
+              <option value="0">{tr('Firkantet')}</option>
             </Select>
           </Field>
         </div>
         <p className="m-0 text-xs text-muted">
-          Knapper virker på berøringsskjermer i nettleser. Når noen trykker eller sveiper, stopper automatisk bytte; etter 45 sekunder uten berøring går skjermen tilbake til første lysbilde. På Apple TV vises knappen bare som et merke.
+          {tr('Knapper virker på berøringsskjermer i nettleser. Når noen trykker eller sveiper, stopper automatisk bytte; etter 45 sekunder uten berøring går skjermen tilbake til første lysbilde. På Apple TV vises knappen bare som et merke.')}
         </p>
       </div>
     );
@@ -770,17 +771,17 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
     return (
       <div className="grid gap-3">
         <Field
-          label="Tekst"
+          label={tr('Tekst')}
           hint={
             activeRich(c)
-              ? 'Teksten har lister eller formatering. Dobbeltklikk teksten på lerretet for å endre den – endrer du den her, forsvinner formateringen.'
-              : 'Dobbeltklikk teksten på lerretet for punktlister og fet, kursiv eller farget skrift.'
+              ? tr('Teksten har lister eller formatering. Dobbeltklikk teksten på lerretet for å endre den – endrer du den her, forsvinner formateringen.')
+              : tr('Dobbeltklikk teksten på lerretet for punktlister og fet, kursiv eller farget skrift.')
           }
         >
           <Textarea rows={3} value={c.text || ''} onChange={(e) => set({ text: e.target.value, rich: null })} />
         </Field>
-        <Check label="Krymp teksten så den får plass i boksen" checked={c.autoFit !== false} onChange={(v) => set({ autoFit: v })} />
-        <Field label="Navn for API (valgfritt)" hint="Gi teksten et navn, så kan egne systemer endre den med Flatr API (Konto → API).">
+        <Check label={tr('Krymp teksten så den får plass i boksen')} checked={c.autoFit !== false} onChange={(v) => set({ autoFit: v })} />
+        <Field label={tr('Navn for API (valgfritt)')} hint={tr('Gi teksten et navn, så kan egne systemer endre den med Flatr API (Konto → API).')}>
           <Input
             value={c.apiName ?? ''}
             placeholder="f.eks. dagens-tilbud"
@@ -797,7 +798,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
           />
         </Field>
 
-        <Field label="Font">
+        <Field label={tr('Font')}>
           <Select value={c.font || ''} onChange={(e) => set({ font: e.target.value })}>
             {FONTS.map((f) => (
               <option key={f.value} value={f.value}>
@@ -808,7 +809,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Vekt">
+          <Field label={tr('Vekt')}>
             <Select value={c.weight ?? 700} onChange={(e) => set({ weight: Number(e.target.value) })}>
               {FONT_WEIGHTS.map((w) => (
                 <option key={w.value} value={w.value}>
@@ -817,7 +818,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
               ))}
             </Select>
           </Field>
-          <Field label="Størrelse (px)">
+          <Field label={tr('Størrelse (px)')}>
             <Input
               type="number"
               min={8}
@@ -829,15 +830,15 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
 
         <ButtonGroup
           items={[
-            { key: 'b', label: 'B', title: 'Fet', active: (c.weight ?? 700) >= 700, onClick: () => set({ weight: (c.weight ?? 700) >= 700 ? 400 : 700 }) },
-            { key: 'i', label: <span className="italic">I</span>, title: 'Kursiv', active: !!c.italic, onClick: () => set({ italic: !c.italic }) },
-            { key: 'u', label: <span className="underline">U</span>, title: 'Understrek', active: !!c.underline, onClick: () => set({ underline: !c.underline }) },
-            { key: 's', label: <span className="line-through">S</span>, title: 'Gjennomstrek', active: !!c.strike, onClick: () => set({ strike: !c.strike }) },
-            { key: 'sh', icon: 'shadow', title: 'Skygge', active: !!c.shadow, onClick: () => set({ shadow: !c.shadow }) }
+            { key: 'b', label: tr('B'), title: tr('Fet'), active: (c.weight ?? 700) >= 700, onClick: () => set({ weight: (c.weight ?? 700) >= 700 ? 400 : 700 }) },
+            { key: 'i', label: <span className="italic">{tr('I')}</span>, title: tr('Kursiv'), active: !!c.italic, onClick: () => set({ italic: !c.italic }) },
+            { key: 'u', label: <span className="underline">{tr('U')}</span>, title: tr('Understrek'), active: !!c.underline, onClick: () => set({ underline: !c.underline }) },
+            { key: 's', label: <span className="line-through">{tr('S')}</span>, title: tr('Gjennomstrek'), active: !!c.strike, onClick: () => set({ strike: !c.strike }) },
+            { key: 'sh', icon: 'shadow', title: tr('Skygge'), active: !!c.shadow, onClick: () => set({ shadow: !c.shadow }) }
           ]}
         />
 
-        <Field label="Fyll">
+        <Field label={tr('Fyll')}>
           <Segmented
             value={fill ? 'gradient' : 'solid'}
             onChange={(v) =>
@@ -848,8 +849,8 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
               )
             }
             options={[
-              { value: 'solid', label: 'Ensfarget' },
-              { value: 'gradient', label: 'Forløpning' }
+              { value: 'solid', label: tr('Ensfarget') },
+              { value: 'gradient', label: tr('Forløpning') }
             ]}
           />
           {fill ? (
@@ -857,7 +858,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
               <ColorInput value={fill.from} onChange={(e) => set({ fill: { ...fill, from: e.target.value } })} />
               <ColorInput value={fill.to} onChange={(e) => set({ fill: { ...fill, to: e.target.value } })} />
               <label className="col-span-2 flex items-center gap-2 text-xs text-muted">
-                Vinkel °
+                {tr('Vinkel °')}
                 <Input
                   type="number"
                   className="flex-1"
@@ -875,7 +876,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
           )}
         </Field>
 
-        <Field label="Justering">
+        <Field label={tr('Justering')}>
           <Segmented
             value={c.align || 'left'}
             onChange={(v) => set({ align: v })}
@@ -891,15 +892,15 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
             value={c.valign || 'top'}
             onChange={(v) => set({ valign: v })}
             options={[
-              { value: 'top', label: 'Topp' },
-              { value: 'middle', label: 'Midt' },
-              { value: 'bottom', label: 'Bunn' }
+              { value: 'top', label: tr('Topp') },
+              { value: 'middle', label: tr('Midt') },
+              { value: 'bottom', label: tr('Bunn') }
             ]}
           />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Linjeavstand">
+          <Field label={tr('Linjeavstand')}>
             <Input
               type="number"
               step="0.05"
@@ -908,7 +909,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
               onChange={(e) => set({ lineHeight: Number(e.target.value) || 1.1 })}
             />
           </Field>
-          <Field label="Tegnavstand (px)">
+          <Field label={tr('Tegnavstand (px)')}>
             <Input
               type="number"
               step="0.5"
@@ -926,17 +927,17 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
   if (kind === 'shape') {
     return (
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Form">
+        <Field label={tr('Form')}>
           <Select value={c.shape || 'rect'} onChange={(e) => set({ shape: e.target.value })}>
-            <option value="rect">Rektangel</option>
-            <option value="ellipse">Ellipse</option>
-            <option value="triangle">Trekant</option>
+            <option value="rect">{tr('Rektangel')}</option>
+            <option value="ellipse">{tr('Ellipse')}</option>
+            <option value="triangle">{tr('Trekant')}</option>
           </Select>
         </Field>
-        <Field label="Farge">
+        <Field label={tr('Farge')}>
           <ColorInput value={c.fill || '#1f5566'} onChange={(e) => set({ fill: e.target.value })} />
         </Field>
-        <Field label="Hjørnerunding (px)">
+        <Field label={tr('Hjørnerunding (px)')}>
           <Input
             type="number"
             min={0}
@@ -944,7 +945,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
             onChange={(e) => set({ radius: Number(e.target.value) || 0 })}
           />
         </Field>
-        <Field label="Gjennomsiktighet (%)">
+        <Field label={tr('Gjennomsiktighet (%)')}>
           <Input
             type="number"
             min={0}
@@ -960,13 +961,13 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
   if (kind === 'clock') {
     return (
       <div className="flex flex-col gap-2">
-        <Check label="Vis dato" checked={c.showDate !== false} onChange={(v) => set({ showDate: v })} />
+        <Check label={tr('Vis dato')} checked={c.showDate !== false} onChange={(v) => set({ showDate: v })} />
         <Check
-          label="Vis sekunder"
+          label={tr('Vis sekunder')}
           checked={c.showSeconds !== false}
           onChange={(v) => set({ showSeconds: v })}
         />
-        <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
+        <Check label={tr('Vis ramme')} checked={c.frame === true} onChange={(v) => set({ frame: v })} />
       </div>
     );
   }
@@ -974,14 +975,14 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
   if (kind === 'countdown') {
     return (
       <div className="grid gap-3">
-        <Field label="Mål">
+        <Field label={tr('Mål')}>
           <Select value={c.mode || 'nextItem'} onChange={(e) => set({ mode: e.target.value })}>
-            <option value="fixed">Fast tidspunkt</option>
-            <option value="nextItem">Neste programpost</option>
+            <option value="fixed">{tr('Fast tidspunkt')}</option>
+            <option value="nextItem">{tr('Neste programpost')}</option>
           </Select>
         </Field>
         {c.mode !== 'nextItem' && (
-          <Field label="Tidspunkt">
+          <Field label={tr('Tidspunkt')}>
             <Input
               type="datetime-local"
               value={c.target ? isoToLocalInput(c.target) : ''}
@@ -989,13 +990,13 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
             />
           </Field>
         )}
-        <Field label="Overskrift">
+        <Field label={tr('Overskrift')}>
           <Input value={c.title || ''} onChange={(e) => set({ title: e.target.value })} />
         </Field>
-        <Field label="Tekst når ferdig">
+        <Field label={tr('Tekst når ferdig')}>
           <Input value={c.doneText || ''} onChange={(e) => set({ doneText: e.target.value })} />
         </Field>
-        <Field label="Bakgrunn">
+        <Field label={tr('Bakgrunn')}>
           <Select value={c.emphasis || 'info'} onChange={(e) => set({ emphasis: e.target.value })}>
             {MESSAGE_EMPHASIS.map((m) => (
               <option key={m.value} value={m.value}>
@@ -1014,7 +1015,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
       set({ categoryIds: catIds.includes(id) ? catIds.filter((x) => x !== id) : [...catIds, id] });
     return (
       <div className="grid gap-3">
-        <Field label="Visning">
+        <Field label={tr('Visning')}>
           <Select value={c.mode || 'agenda'} onChange={(e) => set({ mode: e.target.value })}>
             {PROGRAM_MODES.map((m) => (
               <option key={m.value} value={m.value}>
@@ -1024,7 +1025,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
           </Select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Maks poster">
+          <Field label={tr('Maks poster')}>
             <Input
               type="number"
               min={1}
@@ -1032,17 +1033,17 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
               onChange={(e) => set({ max: Number(e.target.value) || 8 })}
             />
           </Field>
-          <Field label="Kun scene">
+          <Field label={tr('Kun scene')}>
             <Input
               value={c.stage || ''}
               onChange={(e) => set({ stage: e.target.value })}
-              placeholder="Alle"
+              placeholder={tr('Alle')}
             />
           </Field>
         </div>
         <div>
           <div className="mb-1 text-xs font-semibold text-muted">
-            Kategorier (ingen = alle)
+            {tr('Kategorier (ingen = alle)')}
           </div>
           <div className="flex flex-wrap gap-2">
             {categories.map((cat) => {
@@ -1068,11 +1069,11 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
           </div>
         </div>
         <Check
-          label="Vis kategori-merke"
+          label={tr('Vis kategori-merke')}
           checked={c.showCategory !== false}
           onChange={(v) => set({ showCategory: v })}
         />
-        <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
+        <Check label={tr('Vis ramme')} checked={c.frame === true} onChange={(v) => set({ frame: v })} />
       </div>
     );
   }
@@ -1080,24 +1081,24 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
   if (kind === 'qr') {
     return (
       <div className="grid gap-3">
-        <Field label="Innhold">
+        <Field label={tr('Innhold')}>
           <Select value={c.mode || 'schedule'} onChange={(e) => set({ mode: e.target.value })}>
-            <option value="url">Egendefinert lenke</option>
-            <option value="schedule">Programside for denne skjermen</option>
+            <option value="url">{tr('Egendefinert lenke')}</option>
+            <option value="schedule">{tr('Programside for denne skjermen')}</option>
           </Select>
         </Field>
         {c.mode !== 'schedule' && (
-          <Field label="Lenke">
+          <Field label={tr('Lenke')}>
             <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://…" />
           </Field>
         )}
-        <Field label="Overskrift">
+        <Field label={tr('Overskrift')}>
           <Input value={c.label || ''} onChange={(e) => set({ label: e.target.value })} />
         </Field>
-        <Field label="Undertekst">
+        <Field label={tr('Undertekst')}>
           <Input value={c.caption || ''} onChange={(e) => set({ caption: e.target.value })} />
         </Field>
-        <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
+        <Check label={tr('Vis ramme')} checked={c.frame === true} onChange={(v) => set({ frame: v })} />
       </div>
     );
   }
@@ -1106,20 +1107,20 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
     return (
       <div className="grid gap-3">
         <MediaField
-          label="Video"
+          label={tr('Video')}
           kind="video"
           value={c.url}
           onChange={(url) => set({ url })}
-          placeholder="YouTube/Vimeo-lenke, eller velg fra bibliotek"
+          placeholder={tr('YouTube/Vimeo-lenke, eller velg fra bibliotek')}
         />
-        <Field label="Tilpasning">
+        <Field label={tr('Tilpasning')}>
           <Select value={c.fit || 'contain'} onChange={(e) => set({ fit: e.target.value })}>
-            <option value="contain">Vis hele</option>
-            <option value="cover">Fyll flaten</option>
+            <option value="contain">{tr('Vis hele')}</option>
+            <option value="cover">{tr('Fyll flaten')}</option>
           </Select>
         </Field>
-        <Check label="Løkke" checked={!!c.loop} onChange={(v) => set({ loop: v })} />
-        <Check label="Uten lyd" checked={c.mute !== false} onChange={(v) => set({ mute: v })} />
+        <Check label={tr('Løkke')} checked={!!c.loop} onChange={(v) => set({ loop: v })} />
+        <Check label={tr('Uten lyd')} checked={c.mute !== false} onChange={(v) => set({ mute: v })} />
       </div>
     );
   }
@@ -1130,20 +1131,20 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
   if (kind === 'weather') {
     return (
       <div className="grid gap-3">
-        <Field label="Sted" hint="Værdata fra MET Norway (yr.no).">
+        <Field label={tr('Sted')} hint={tr('Værdata fra MET Norway (yr.no).')}>
           <PlaceSearch value={c.place} onPick={(h) => set({ place: h.name, lat: h.lat, lon: h.lon })} />
         </Field>
-        <Field label="Visning">
+        <Field label={tr('Visning')}>
           <Select value={c.layout || 'now'} onChange={(e) => set({ layout: e.target.value })}>
-            <option value="now">Været nå</option>
-            <option value="hours">Neste timer</option>
-            <option value="days">Neste dager</option>
+            <option value="now">{tr('Været nå')}</option>
+            <option value="hours">{tr('Neste timer')}</option>
+            <option value="days">{tr('Neste dager')}</option>
           </Select>
         </Field>
-        <Field label="Tekstfarge">
+        <Field label={tr('Tekstfarge')}>
           <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
         </Field>
-        <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
+        <Check label={tr('Vis ramme')} checked={c.frame === true} onChange={(v) => set({ frame: v })} />
       </div>
     );
   }
@@ -1152,52 +1153,52 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
     const preset = RSS_PRESETS.find((p) => p.url === c.url);
     return (
       <div className="grid gap-3">
-        <Field label="Kilde">
+        <Field label={tr('Kilde')}>
           <Select value={preset ? c.url : '__custom'} onChange={(e) => e.target.value !== '__custom' && set({ url: e.target.value })}>
             {RSS_PRESETS.map((p) => (
               <option key={p.url} value={p.url}>
                 {p.label}
               </option>
             ))}
-            <option value="__custom">Egen RSS-adresse …</option>
+            <option value="__custom">{tr('Egen RSS-adresse …')}</option>
           </Select>
         </Field>
         {!preset && (
-          <Field label="RSS-adresse">
+          <Field label={tr('RSS-adresse')}>
             <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://…/rss" />
           </Field>
         )}
-        <Field label="Visning">
+        <Field label={tr('Visning')}>
           <Select value={c.mode || 'ticker'} onChange={(e) => set({ mode: e.target.value })}>
-            <option value="ticker">Rullende linje</option>
-            <option value="single">Én sak av gangen</option>
-            <option value="list">Liste med overskrifter</option>
+            <option value="ticker">{tr('Rullende linje')}</option>
+            <option value="single">{tr('Én sak av gangen')}</option>
+            <option value="list">{tr('Liste med overskrifter')}</option>
           </Select>
         </Field>
         {(c.mode || 'ticker') === 'ticker' && (
-          <Field label="Fart">
+          <Field label={tr('Fart')}>
             <Select value={c.speed || 60} onChange={(e) => set({ speed: Number(e.target.value) })}>
-              <option value={35}>Rolig</option>
-              <option value={60}>Normal</option>
-              <option value={100}>Rask</option>
+              <option value={35}>{tr('Rolig')}</option>
+              <option value={60}>{tr('Normal')}</option>
+              <option value={100}>{tr('Rask')}</option>
             </Select>
           </Field>
         )}
-        <Field label="Antall saker">
+        <Field label={tr('Antall saker')}>
           <Input type="number" min={1} max={30} value={c.max ?? 10} onChange={(e) => set({ max: Number(e.target.value) || 10 })} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Tekst">
+          <Field label={tr('Tekst')}>
             <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
           </Field>
-          <Field label="Bakgrunn">
+          <Field label={tr('Bakgrunn')}>
             <ColorInput
               value={/^#/.test(c.background || '') ? c.background : '#000000'}
               onChange={(e) => set({ background: e.target.value })}
             />
           </Field>
         </div>
-        <Check label="Vis kildenavn" checked={c.showSource !== false} onChange={(v) => set({ showSource: v })} />
+        <Check label={tr('Vis kildenavn')} checked={c.showSource !== false} onChange={(v) => set({ showSource: v })} />
       </div>
     );
   }
@@ -1206,24 +1207,24 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
     return (
       <div className="grid gap-3">
         <Field
-          label="Kalenderadresse (.ics)"
-          hint="Google: Innstillinger → kalenderen → «Hemmelig adresse i iCal-format». Outlook: Kalender → Del → Publiser → ICS-lenke."
+          label={tr('Kalenderadresse (.ics)')}
+          hint={tr('Google: Innstillinger → kalenderen → «Hemmelig adresse i iCal-format». Outlook: Kalender → Del → Publiser → ICS-lenke.')}
         >
           <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://calendar.google.com/…/basic.ics" />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Antall hendelser">
+          <Field label={tr('Antall hendelser')}>
             <Input type="number" min={1} max={20} value={c.max ?? 6} onChange={(e) => set({ max: Number(e.target.value) || 6 })} />
           </Field>
-          <Field label="Dager fram">
+          <Field label={tr('Dager fram')}>
             <Input type="number" min={1} max={90} value={c.days ?? 14} onChange={(e) => set({ days: Number(e.target.value) || 14 })} />
           </Field>
         </div>
-        <Field label="Tekstfarge">
+        <Field label={tr('Tekstfarge')}>
           <ColorInput value={c.color || '#ffffff'} onChange={(e) => set({ color: e.target.value })} />
         </Field>
-        <Check label="Vis sted" checked={c.showLocation !== false} onChange={(v) => set({ showLocation: v })} />
-        <Check label="Vis ramme" checked={c.frame === true} onChange={(v) => set({ frame: v })} />
+        <Check label={tr('Vis sted')} checked={c.showLocation !== false} onChange={(v) => set({ showLocation: v })} />
+        <Check label={tr('Vis ramme')} checked={c.frame === true} onChange={(v) => set({ frame: v })} />
       </div>
     );
   }
@@ -1231,10 +1232,10 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
   if (kind === 'web') {
     return (
       <div className="grid gap-3">
-        <Field label="Nettside-URL" hint="Noen sider blokkerer innramming.">
+        <Field label={tr('Nettside-URL')} hint={tr('Noen sider blokkerer innramming.')}>
           <Input value={c.url || ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://…" />
         </Field>
-        <Field label="Oppdater hvert (min, 0 = aldri)">
+        <Field label={tr('Oppdater hvert (min, 0 = aldri)')}>
           <Input
             type="number"
             min={0}
@@ -1247,7 +1248,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
   }
 
   if (kind === 'sponsors') {
-    return <p className="text-sm text-muted">Viser alle sponsorer, én om gangen i sin egen varighet.</p>;
+    return <p className="text-sm text-muted">{tr('Viser alle sponsorer, én om gangen i sin egen varighet.')}</p>;
   }
 
   return null;

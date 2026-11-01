@@ -2,6 +2,7 @@
 import { forwardRef } from 'react';
 import { brandSwatches } from '../../lib/brand.js';
 import { useBrand } from '../brandStore.js';
+import { tr } from '../../lib/i18n.js';
 
 const ICONS = {
   calendar: (
@@ -288,7 +289,7 @@ export function ColorInput({ className = '', ...props }) {
             key={c.hex}
             type="button"
             title={`${c.name} (${c.hex})`}
-            aria-label={`Merkevarefarge ${c.name}`}
+            aria-label={tr('Merkevarefarge {0}', [c.name])}
             onClick={(e) => {
               e.preventDefault();
               props.onChange?.({ target: { value: c.hex } });

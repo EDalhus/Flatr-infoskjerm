@@ -9,6 +9,7 @@ import { api } from '../../lib/api.js';
 import { backgroundStyle, FONTS } from '../../lib/deck.js';
 import SlideThumb from './deck/SlideThumb.jsx';
 import { Icon, IconButton, Button, Input, Textarea, Select, Field, ColorInput, Segmented, PageHeader, ErrorText } from './ui.jsx';
+import { tr } from '../../lib/i18n.js';
 
 export const KIND_LABEL = { kit: 'Kit', slide: 'Lysbilde', theme: 'Tema' };
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -24,10 +25,10 @@ export function MarketPreview({ item }) {
         style={{ aspectRatio: '16 / 9', ...backgroundStyle(t.background) }}
       >
         <span className="text-2xl font-extrabold leading-none" style={{ color: t.heading_color || '#fff', fontFamily: t.font || undefined }}>
-          Overskrift
+          {tr('Overskrift')}
         </span>
         <span className="text-sm" style={{ color: t.text_color || '#fff', fontFamily: t.font || undefined }}>
-          Brødtekst og detaljer
+          {tr('Brødtekst og detaljer')}
         </span>
         <span className="mt-1 h-1.5 w-12 rounded-full" style={{ background: t.accent || '#fff' }} />
       </div>
@@ -60,16 +61,16 @@ function MarketCard({ item, onUse, onWithdraw }) {
         </div>
         {item.description && <p className="m-0 line-clamp-2 text-sm text-muted">{item.description}</p>}
         <span className="mt-auto pt-1 text-xs text-muted">
-          {item.mine ? 'Delt av dere' : `av ${item.author || 'Flatr'}`} · brukt {plural(item.installs, 'gang', 'ganger')}
+          {item.mine ? tr('Delt av dere') : tr('av {0}', [item.author || 'Flatr'])} {tr('· brukt')} {plural(item.installs, 'gang', 'ganger')}
         </span>
       </div>
       <div className="flex gap-2 px-1.5 pb-1.5">
         <Button className="flex-1" onClick={() => onUse(item)}>
-          Bruk
+          {tr('Bruk')}
         </Button>
         {item.mine && (
-          <Button variant="outline" onClick={() => onWithdraw(item)} title="Fjern fra markedet">
-            Trekk tilbake
+          <Button variant="outline" onClick={() => onWithdraw(item)} title={tr('Fjern fra markedet')}>
+            {tr('Trekk tilbake')}
           </Button>
         )}
       </div>
@@ -88,7 +89,7 @@ function Dialog({ title, onClose, children }) {
       <div role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-line bg-card p-6 shadow-pop">
         <div className="mb-4 flex items-center gap-2">
           <h2 className="m-0 flex-1 text-lg font-bold text-ink">{title}</h2>
-          <IconButton name="x" label="Lukk" onClick={onClose} />
+          <IconButton name="x" label={tr('Lukk')} onClick={onClose} />
         </div>
         {children}
       </div>
@@ -117,16 +118,16 @@ function UseDialog({ item, playlists, onClose, onDone }) {
   };
 
   return (
-    <Dialog title={`Bruk «${item.title}»`} onClose={onClose}>
+    <Dialog title={tr('Bruk «{0}»', [item.title])} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <MarketPreview item={item} />
         {item.kind === 'theme' && (
-          <p className="m-0 text-sm text-muted">Temaet bytter bakgrunn, font og farger på alle lysbildene i presentasjonen du velger.</p>
+          <p className="m-0 text-sm text-muted">{tr('Temaet bytter bakgrunn, font og farger på alle lysbildene i presentasjonen du velger.')}</p>
         )}
         {item.kind !== 'kit' && (
-          <Field label={item.kind === 'theme' ? 'Bruk på presentasjonen' : 'Legg lysbildet i'}>
+          <Field label={item.kind === 'theme' ? tr('Bruk på presentasjonen') : tr('Legg lysbildet i')}>
             <Select value={target} onChange={(e) => setTarget(e.target.value)}>
-              {item.kind === 'slide' && <option value="new">+ Ny presentasjon</option>}
+              {item.kind === 'slide' && <option value="new">{tr('+ Ny presentasjon')}</option>}
               {playlists.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -136,17 +137,17 @@ function UseDialog({ item, playlists, onClose, onDone }) {
           </Field>
         )}
         {target === 'new' && (
-          <Field label="Navn på presentasjonen">
+          <Field label={tr('Navn på presentasjonen')}>
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </Field>
         )}
         <ErrorText>{error}</ErrorText>
         <div className="flex gap-2">
           <Button type="submit" disabled={busy || (item.kind === 'theme' && !target)}>
-            {busy ? 'Henter …' : item.kind === 'theme' ? 'Bruk temaet' : 'Hent og rediger'}
+            {busy ? tr('Henter …') : item.kind === 'theme' ? tr('Bruk temaet') : tr('Hent og rediger')}
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>
-            Avbryt
+            {tr('Avbryt')}
           </Button>
         </div>
       </form>
@@ -192,21 +193,21 @@ function ShareDialog({ playlists, templates, initial, onClose, onDone }) {
   };
 
   return (
-    <Dialog title="Del en mal med alle" onClose={onClose}>
+    <Dialog title={tr('Del en mal med alle')} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Segmented
           value={kind}
           onChange={setKind}
           options={[
-            { value: 'kit', label: 'Hel presentasjon' },
-            { value: 'slide', label: 'Ett lysbilde' },
-            { value: 'theme', label: 'Tema' }
+            { value: 'kit', label: tr('Hel presentasjon') },
+            { value: 'slide', label: tr('Ett lysbilde') },
+            { value: 'theme', label: tr('Tema') }
           ]}
           className="w-fit"
         />
 
         {kind === 'kit' && (
-          <Field label="Presentasjon" hint="Alle lysbildene deles som et kit. Bilder følger med.">
+          <Field label={tr('Presentasjon')} hint={tr('Alle lysbildene deles som et kit. Bilder følger med.')}>
             <Select value={playlistId} onChange={(e) => setPlaylistId(e.target.value)}>
               {playlists.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -220,7 +221,7 @@ function ShareDialog({ playlists, templates, initial, onClose, onDone }) {
         {kind === 'slide' &&
           (templates.length ? (
             <div className="grid grid-cols-[1fr_auto] gap-3">
-              <Field label="Lysbilde-mal">
+              <Field label={tr('Lysbilde-mal')}>
                 <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
                   {templates.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -229,16 +230,16 @@ function ShareDialog({ playlists, templates, initial, onClose, onDone }) {
                   ))}
                 </Select>
               </Field>
-              <Field label="Format">
+              <Field label={tr('Format')}>
                 <Select value={orientation} onChange={(e) => setOrientation(e.target.value)}>
-                  <option value="landscape">Liggende</option>
-                  <option value="portrait">Stående</option>
+                  <option value="landscape">{tr('Liggende')}</option>
+                  <option value="portrait">{tr('Stående')}</option>
                 </Select>
               </Field>
             </div>
           ) : (
             <p className="m-0 rounded-xl bg-zone px-4 py-3 text-sm text-muted">
-              Du har ingen lysbilde-maler ennå. Åpne en presentasjon og velg «Lagre som mal» på lysbildet du vil dele.
+              {tr('Du har ingen lysbilde-maler ennå. Åpne en presentasjon og velg «Lagre som mal» på lysbildet du vil dele.')}
             </p>
           ))}
 
@@ -246,13 +247,13 @@ function ShareDialog({ playlists, templates, initial, onClose, onDone }) {
           <div className="flex flex-col gap-3">
             <MarketPreview item={{ kind: 'theme', payload: { theme } }} />
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Bakgrunn">
+              <Field label={tr('Bakgrunn')}>
                 <div className="flex items-center gap-2">
                   <ColorInput value={bg.from || bg.color} onChange={(e) => setT({ background: { type: 'gradient', angle: 135, to: bg.to || bg.color, from: e.target.value } })} />
                   <ColorInput value={bg.to || bg.color} onChange={(e) => setT({ background: { type: 'gradient', angle: 135, from: bg.from || bg.color, to: e.target.value } })} />
                 </div>
               </Field>
-              <Field label="Font">
+              <Field label={tr('Font')}>
                 <Select value={theme.font} onChange={(e) => setT({ font: e.target.value })}>
                   {FONTS.map((f) => (
                     <option key={f.label} value={f.value}>
@@ -261,34 +262,34 @@ function ShareDialog({ playlists, templates, initial, onClose, onDone }) {
                   ))}
                 </Select>
               </Field>
-              <Field label="Overskrifter">
+              <Field label={tr('Overskrifter')}>
                 <ColorInput value={theme.heading_color} onChange={(e) => setT({ heading_color: e.target.value })} />
               </Field>
-              <Field label="Brødtekst">
+              <Field label={tr('Brødtekst')}>
                 <ColorInput value={theme.text_color} onChange={(e) => setT({ text_color: e.target.value })} />
               </Field>
-              <Field label="Aksent (figurer)">
+              <Field label={tr('Aksent (figurer)')}>
                 <ColorInput value={theme.accent} onChange={(e) => setT({ accent: e.target.value })} />
               </Field>
             </div>
           </div>
         )}
 
-        <Field label="Navn">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={80} placeholder={kind === 'theme' ? 'Nordlys' : 'Kafémeny'} />
+        <Field label={tr('Navn')}>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={80} placeholder={kind === 'theme' ? tr('Nordlys') : tr('Kafémeny')} />
         </Field>
-        <Field label="Beskrivelse (valgfritt)">
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={300} placeholder="Hva passer den til?" />
+        <Field label={tr('Beskrivelse (valgfritt)')}>
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={300} placeholder={tr('Hva passer den til?')} />
         </Field>
-        <p className="m-0 text-xs text-muted">Malen blir synlig for alle Flatr-kunder, med kontonavnet deres som avsender. Du kan trekke den tilbake når som helst.</p>
+        <p className="m-0 text-xs text-muted">{tr('Malen blir synlig for alle Flatr-kunder, med kontonavnet deres som avsender. Du kan trekke den tilbake når som helst.')}</p>
 
         <ErrorText>{error}</ErrorText>
         <div className="flex gap-2">
           <Button type="submit" disabled={busy || !ready || !title.trim()}>
-            {busy ? 'Deler …' : 'Del med alle'}
+            {busy ? tr('Deler …') : tr('Del med alle')}
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>
-            Avbryt
+            {tr('Avbryt')}
           </Button>
         </div>
       </form>
@@ -338,7 +339,7 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
   };
 
   const withdraw = async (item) => {
-    if (!confirm(`Trekke tilbake «${item.title}»? Den forsvinner fra markedet. De som allerede har hentet den, beholder kopien sin.`)) return;
+    if (!confirm(tr('Trekke tilbake «{0}»? Den forsvinner fra markedet. De som allerede har hentet den, beholder kopien sin.', [item.title]))) return;
     try {
       await api.market.remove(item.id);
       say('Malen er trukket tilbake.');
@@ -350,7 +351,7 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
   };
 
   const removeTemplate = async (id) => {
-    if (!confirm('Slette lysbilde-malen?')) return;
+    if (!confirm(tr('Slette lysbilde-malen?'))) return;
     try {
       await api.templates.remove(id);
       await loadOwn();
@@ -379,22 +380,22 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
       {/* Som fane under Presentasjoner (embedded) står overskriften der. */}
       {!embedded && (
         <PageHeader
-          title="Maler"
-          subtitle="Ferdige kits, lysbilder og temaer delt av Flatr-brukere. Gratis å hente, og gratis å dele."
+          title={tr('Maler')}
+          subtitle={tr('Ferdige kits, lysbilder og temaer delt av Flatr-brukere. Gratis å hente, og gratis å dele.')}
           action={
             <Button onClick={() => setSharing({})}>
               <Icon name="plus" className="h-4 w-4" />
-              Del en mal
+              {tr('Del en mal')}
             </Button>
           }
         />
       )}
       {embedded && (
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 pt-2 sm:px-8">
-          <p className="m-0 text-sm text-muted">Ferdige kits, lysbilder og temaer delt av Flatr-brukere. Gratis å hente, og gratis å dele.</p>
+          <p className="m-0 text-sm text-muted">{tr('Ferdige kits, lysbilder og temaer delt av Flatr-brukere. Gratis å hente, og gratis å dele.')}</p>
           <Button variant="outline" size="sm" onClick={() => setSharing({})}>
             <Icon name="plus" className="h-4 w-4" />
-            Del en mal
+            {tr('Del en mal')}
           </Button>
         </div>
       )}
@@ -403,8 +404,8 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
           value={tab}
           onChange={setTab}
           options={[
-            { value: 'explore', label: 'Utforsk' },
-            { value: 'mine', label: 'Mine maler' }
+            { value: 'explore', label: tr('Utforsk') },
+            { value: 'mine', label: tr('Mine maler') }
           ]}
           className="w-fit"
         />
@@ -425,12 +426,12 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
               <div className="ml-auto flex items-center gap-2">
                 <label className="flex w-56 max-w-full items-center gap-2">
                   <Icon name="search" className="h-4 w-4 shrink-0 text-muted" />
-                  <span className="sr-only">Søk</span>
-                  <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Søk i maler …" />
+                  <span className="sr-only">{tr('Søk')}</span>
+                  <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr('Søk i maler …')} />
                 </label>
-                <Select value={sort} onChange={(e) => setSort(e.target.value)} className="!w-36" aria-label="Sortering">
-                  <option value="popular">Mest brukt</option>
-                  <option value="new">Nyeste</option>
+                <Select value={sort} onChange={(e) => setSort(e.target.value)} className="!w-36" aria-label={tr('Sortering')}>
+                  <option value="popular">{tr('Mest brukt')}</option>
+                  <option value="new">{tr('Nyeste')}</option>
                 </Select>
               </div>
             </div>
@@ -440,9 +441,9 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
                 <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-tint text-brand">
                   <Icon name="copy" className="h-7 w-7" />
                 </div>
-                <h2 className="m-0 text-xl font-bold text-ink">{query || kind ? 'Ingen treff' : 'Ingen maler ennå'}</h2>
-                <p className="m-0 max-w-md text-sm text-muted">Har du laget noe fint? Del det, så kan andre bygge videre på det.</p>
-                <Button onClick={() => setSharing({})}>Del en mal</Button>
+                <h2 className="m-0 text-xl font-bold text-ink">{query || kind ? tr('Ingen treff') : tr('Ingen maler ennå')}</h2>
+                <p className="m-0 max-w-md text-sm text-muted">{tr('Har du laget noe fint? Del det, så kan andre bygge videre på det.')}</p>
+                <Button onClick={() => setSharing({})}>{tr('Del en mal')}</Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -456,11 +457,11 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
           <>
             <section className="space-y-3">
               <div>
-                <h2 className="m-0 text-base font-bold text-ink">Lysbilde-maler</h2>
-                <p className="m-0 text-sm text-muted">Lag dem med «Lagre som mal» på et lysbilde i editoren. Bare dere ser dem, til dere deler dem.</p>
+                <h2 className="m-0 text-base font-bold text-ink">{tr('Lysbilde-maler')}</h2>
+                <p className="m-0 text-sm text-muted">{tr('Lag dem med «Lagre som mal» på et lysbilde i editoren. Bare dere ser dem, til dere deler dem.')}</p>
               </div>
               {templates.length === 0 ? (
-                <p className="m-0 rounded-2xl border border-dashed border-line px-6 py-8 text-center text-sm text-muted">Ingen lysbilde-maler ennå.</p>
+                <p className="m-0 rounded-2xl border border-dashed border-line px-6 py-8 text-center text-sm text-muted">{tr('Ingen lysbilde-maler ennå.')}</p>
               ) : (
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                   {templates.map((t) => (
@@ -468,8 +469,8 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
                       <SlideThumb slide={t.payload || {}} orientation="landscape" />
                       <div className="flex items-center gap-1 px-1">
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{t.name}</span>
-                        <IconButton name="share" label="Del med alle" onClick={() => setSharing({ kind: 'slide', template_id: t.id, title: t.name })} />
-                        <IconButton name="trash" label="Slett" tone="danger" onClick={() => removeTemplate(t.id)} />
+                        <IconButton name="share" label={tr('Del med alle')} onClick={() => setSharing({ kind: 'slide', template_id: t.id, title: t.name })} />
+                        <IconButton name="trash" label={tr('Slett')} tone="danger" onClick={() => removeTemplate(t.id)} />
                       </div>
                     </article>
                   ))}
@@ -478,9 +479,9 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
             </section>
 
             <section className="space-y-3">
-              <h2 className="m-0 text-base font-bold text-ink">Delt av dere</h2>
+              <h2 className="m-0 text-base font-bold text-ink">{tr('Delt av dere')}</h2>
               {mine.length === 0 ? (
-                <p className="m-0 rounded-2xl border border-dashed border-line px-6 py-8 text-center text-sm text-muted">Dere har ikke delt noe ennå.</p>
+                <p className="m-0 rounded-2xl border border-dashed border-line px-6 py-8 text-center text-sm text-muted">{tr('Dere har ikke delt noe ennå.')}</p>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {mine.map((item) => (
@@ -516,7 +517,7 @@ export default function TemplatesManager({ onChange, onNavigate, embedded = fals
             setTab('explore');
             setSort('new');
             setKind('');
-            say('Takk for at du deler! Malen ligger nå i markedet.');
+            say(tr('Takk for at du deler! Malen ligger nå i markedet.'));
             loadMarket();
             loadOwn();
           }}

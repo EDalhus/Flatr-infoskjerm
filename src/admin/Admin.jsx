@@ -28,30 +28,31 @@ import { useTheme } from './components/ThemePicker.jsx';
 import OnlineBar from './components/OnlineBar.jsx';
 import { LogoMark, LogoLockup } from './components/Logo.jsx';
 import { useCollab } from '../hooks/useCollab.js';
+import { tr, getLang, setLang, LANGS, LANG_PUBLIC } from '../lib/i18n.js';
 
 // `group` styrer hvor punktet vises: i hovednavigasjonen ('main'), i
 // Innhold-menyen ('content') eller i brukermenyen ('account').
 const NAV = [
-  { id: 'dashboard', label: 'Hjem', icon: 'home', group: 'main', Component: Dashboard },
-  { id: 'screens', label: 'Skjermer', icon: 'monitor', group: 'main', Component: ScreensManager },
-  { id: 'playlists', label: 'Presentasjoner', icon: 'layers', group: 'main', Component: PlaylistsManager },
+  { id: 'dashboard', label: tr('Hjem'), icon: 'home', group: 'main', Component: Dashboard },
+  { id: 'screens', label: tr('Skjermer'), icon: 'monitor', group: 'main', Component: ScreensManager },
+  { id: 'playlists', label: tr('Presentasjoner'), icon: 'layers', group: 'main', Component: PlaylistsManager },
   // Tidsplan og Program er Flatr Apps (requires): vises bare når appen er aktivert.
-  { id: 'timetable', label: 'Tidsplan', icon: 'clock', group: 'main', Component: TimetableManager, requires: 'timetable' },
-  { id: 'schedule', label: 'Program', icon: 'calendar', group: 'content', Component: ProgramManager, requires: 'events' },
-  { id: 'media', label: 'Bibliotek', icon: 'image', group: 'content', Component: MediaLibraryManager },
+  { id: 'timetable', label: tr('Tidsplan'), icon: 'clock', group: 'main', Component: TimetableManager, requires: 'timetable' },
+  { id: 'schedule', label: tr('Program'), icon: 'calendar', group: 'content', Component: ProgramManager, requires: 'events' },
+  { id: 'media', label: tr('Bibliotek'), icon: 'image', group: 'content', Component: MediaLibraryManager },
   // Maler er en fane under Presentasjoner (?view=playlists&tab=templates).
-  { id: 'templates', label: 'Maler', icon: 'copy', group: 'hidden', Component: TemplatesManager },
+  { id: 'templates', label: tr('Maler'), icon: 'copy', group: 'hidden', Component: TemplatesManager },
   { id: 'apps', label: 'Flatr Apps', icon: 'sparkle', group: 'apps', Component: AppsManager },
-  { id: 'reports', label: 'Rapporter', icon: 'chart', group: 'content', Component: ReportsManager },
+  { id: 'reports', label: tr('Rapporter'), icon: 'chart', group: 'content', Component: ReportsManager },
   // Bare på Node-serveren (kontoer med e-postinnlogging).
-  { id: 'billing', label: 'Abonnement', icon: 'card', group: 'account', Component: BillingManager, tenantOnly: true },
-  { id: 'brand', label: 'Merkevare', icon: 'tag', group: 'account', Component: BrandManager, tenantOnly: true },
-  { id: 'account', label: 'Konto og sikkerhet', icon: 'lock', group: 'account', Component: AccountManager, tenantOnly: true },
-  { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
-  { id: 'activity', label: 'Aktivitet', icon: 'clock', group: 'account', Component: ActivityManager, tenantOnly: true },
+  { id: 'billing', label: tr('Abonnement'), icon: 'card', group: 'account', Component: BillingManager, tenantOnly: true },
+  { id: 'brand', label: tr('Merkevare'), icon: 'tag', group: 'account', Component: BrandManager, tenantOnly: true },
+  { id: 'account', label: tr('Konto og sikkerhet'), icon: 'lock', group: 'account', Component: AccountManager, tenantOnly: true },
+  { id: 'team', label: tr('Team'), icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
+  { id: 'activity', label: tr('Aktivitet'), icon: 'clock', group: 'account', Component: ActivityManager, tenantOnly: true },
   { id: 'api', label: 'API', icon: 'link', group: 'account', Component: ApiManager, tenantOnly: true },
-  { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager },
-  { id: 'data', label: 'Eksport og sletting', icon: 'download', group: 'account', Component: DataManager, tenantOnly: true }
+  { id: 'trash', label: tr('Nylig slettet'), icon: 'trash', group: 'account', Component: RecentlyDeletedManager },
+  { id: 'data', label: tr('Eksport og sletting'), icon: 'download', group: 'account', Component: DataManager, tenantOnly: true }
 ];
 
 // Gamle adresser som er slått sammen med andre sider.
@@ -107,9 +108,9 @@ function Require2fa({ tenant }) {
       <div className="mx-auto grid max-w-lg gap-5">
         <LogoLockup className="h-8" />
         <div>
-          <h1 className="m-0 text-2xl font-bold text-ink">Slå på tofaktor</h1>
+          <h1 className="m-0 text-2xl font-bold text-ink">{tr('Slå på tofaktor')}</h1>
           <p className="m-0 mt-2 text-sm leading-relaxed text-muted">
-            {tenant?.name || 'Kontoen'} krever tofaktor for alle i teamet. Det tar et minutt: skann en QR-kode med en autentiseringsapp (f.eks. Google Authenticator, 1Password eller Microsoft Authenticator) og skriv inn koden.
+            {tenant?.name || tr('Kontoen')} {tr('krever tofaktor for alle i teamet. Det tar et minutt: skann en QR-kode med en autentiseringsapp (f.eks. Google Authenticator, 1Password eller Microsoft Authenticator) og skriv inn koden.')}
           </p>
         </div>
         <TwoFactorCard enabled={false} onChange={() => window.location.reload()} />
@@ -121,7 +122,7 @@ function Require2fa({ tenant }) {
           }}
           className="justify-self-start text-sm font-semibold text-muted hover:text-ink"
         >
-          Logg ut
+          {tr('Logg ut')}
         </button>
       </div>
     </div>
@@ -146,7 +147,7 @@ function AdminShell({ context }) {
   const current = nav.find((n) => n.id === tab) ?? nav[0];
 
   useEffect(() => {
-    document.title = tenant ? `${tenant.name} – Flatr` : 'Flatr';
+    document.title = tenant ? tr('{0} – Flatr', [tenant.name]) : 'Flatr';
     if (tenant) {
       try {
         localStorage.setItem('flatr.lastSlug', tenant.slug);
@@ -223,7 +224,7 @@ function AdminShell({ context }) {
     <>
       <RailShell {...shared}>
         {me?.role === 'viewer' && (
-          <div className="border-b border-line bg-zone px-6 py-2 text-center text-xs font-medium text-muted">Du har lesetilgang i {tenant?.name || 'kontoen'}: du kan se alt, men ikke endre noe.</div>
+          <div className="border-b border-line bg-zone px-6 py-2 text-center text-xs font-medium text-muted">{tr('Du har lesetilgang i')} {tenant?.name || 'kontoen'}{tr(': du kan se alt, men ikke endre noe.')}</div>
         )}
         {content}
       </RailShell>
@@ -265,7 +266,7 @@ function AppsSection({ tab, go, wide }) {
       {wide ? (
         <div className="flex items-center justify-between px-3 pb-1">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">Flatr Apps</span>
-          <button type="button" onClick={() => go('apps')} className="grid h-6 w-6 place-items-center rounded-md text-muted hover:bg-hair hover:text-ink" title="Finn flere apper" aria-label="Finn flere apper">
+          <button type="button" onClick={() => go('apps')} className="grid h-6 w-6 place-items-center rounded-md text-muted hover:bg-hair hover:text-ink" title={tr('Finn flere apper')} aria-label={tr('Finn flere apper')}>
             <Icon name="plus" className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -278,11 +279,11 @@ function AppsSection({ tab, go, wide }) {
         const page = APP_PAGE[a.kind];
         const active = page ? tab === page : tab === 'apps' && openApp === id;
         const icon = <AppIcon icon={a.definition?.icon || def?.icon || 'sparkle'} color={a.definition?.color || def?.color || '#5b5bd6'} size={wide ? 20 : 24} />;
-        return item(`a${a.id}`, a.name, icon, active, () => (page ? go(page) : go('apps', { app: id })));
+        return item(`a${a.id}`, tr(a.name), icon, active, () => (page ? go(page) : go('apps', { app: id })));
       })}
       {wide && !apps.length && (
         <button type="button" onClick={() => go('apps')} className="px-3 py-1.5 text-left text-xs text-muted hover:text-ink">
-          Ingen apper aktivert. Utforsk →
+          {tr('Ingen apper aktivert. Utforsk →')}
         </button>
       )}
       {wide && apps.length > 0 && item('market', 'Alle apper', <Icon name="sparkle" className="h-5 w-5 shrink-0" />, tab === 'apps' && !openApp, () => go('apps'))}
@@ -325,8 +326,8 @@ function RailShell({ nav, tab, go, me, tenant, theme, setTheme, setColor, logout
           <button
             type="button"
             onClick={toggleWide}
-            title={wide ? 'Lukk menyen' : 'Åpne menyen'}
-            aria-label={wide ? 'Lukk menyen' : 'Åpne menyen'}
+            title={wide ? tr('Lukk menyen') : tr('Åpne menyen')}
+            aria-label={wide ? tr('Lukk menyen') : tr('Åpne menyen')}
             aria-expanded={wide}
             className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-hair hover:text-ink"
           >
@@ -409,7 +410,7 @@ function MenuItem({ icon, active, onClick, children }) {
   );
 }
 
-const ROLE_LABEL = { owner: 'Eier', editor: 'Redaktør' };
+const ROLE_LABEL = { owner: tr('Eier'), editor: tr('Redaktør') };
 
 function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, placement, showTenant, expanded }) {
   const [open, setOpen] = useState(false);
@@ -435,7 +436,7 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label="Brukermeny"
+        aria-label={tr('Brukermeny')}
         className={`flex items-center gap-2 transition-colors ${
           expanded ? 'w-full rounded-lg p-1 text-left hover:bg-hair' : showTenant ? 'rounded-full bg-zone py-1 pl-1 pr-3 hover:bg-hair' : 'rounded-full'
         }`}
@@ -471,16 +472,41 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
             )}
           </div>
 
+          {/* Språk (gjelder hele flatr.no; lagres også på brukeren). */}
+          {(LANG_PUBLIC || getLang() !== 'nb') && (
+            <div className="border-t border-line px-1 py-3">
+              <div className="mb-2 text-xs font-semibold text-muted">{tr('Språk')}</div>
+              <div className="flex gap-1.5">
+                {LANGS.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    lang={l.id === 'nb' ? 'no' : l.id}
+                    onClick={() => {
+                      if (l.id === getLang()) return;
+                      api.prefs?.({ lang: l.id }).catch(() => {});
+                      // Hoveddomenet (kundens adresse uten subdomenet), så valget gjelder hele flatr.no.
+                      setLang(l.id, window.location.host.split('.').slice(1).join('.'));
+                    }}
+                    className={`rounded-lg px-2.5 py-1 text-sm ${l.id === getLang() ? 'bg-brand-tint font-semibold text-brand' : 'text-muted hover:bg-hair hover:text-ink'}`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {me?.palette && (
             <div className="border-t border-line px-1 py-3">
-              <div className="mb-2 text-xs font-semibold text-muted">Din farge i editoren</div>
+              <div className="mb-2 text-xs font-semibold text-muted">{tr('Din farge i editoren')}</div>
               <div className="flex flex-wrap gap-1.5">
                 {me.palette.map((c) => (
                   <button
                     key={c}
                     type="button"
                     onClick={() => setColor(c)}
-                    aria-label={`Velg farge ${c}`}
+                    aria-label={tr('Velg farge {0}', [c])}
                     aria-pressed={me.color === c}
                     className={`h-6 w-6 rounded-full transition-transform hover:scale-110 ${
                       me.color === c ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''
@@ -494,7 +520,7 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
 
           {orgs && (
             <div className="border-t border-line px-1 py-2">
-              {orgs.length > 1 && <div className="mb-1 px-1 text-xs font-semibold text-muted">Bytt organisasjon</div>}
+              {orgs.length > 1 && <div className="mb-1 px-1 text-xs font-semibold text-muted">{tr('Bytt organisasjon')}</div>}
               {orgs.length > 1 && orgs.map((o) => {
                 const current = o.slug === tenant?.slug;
                 return (
@@ -518,7 +544,7 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-dashed border-line">
                   <Icon name="plus" className="h-3 w-3" />
                 </span>
-                Ny organisasjon
+                {tr('Ny organisasjon')}
               </a>
               {/* Kjeder og kommuner: oversikten over alle organisasjonene i gruppen (flatr.no/gruppe). */}
               {(me?.groups || []).map((g) => (
@@ -530,7 +556,7 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-brand-tint text-brand">
                     <Icon name="layers" className="h-3.5 w-3.5" />
                   </span>
-                  <span className="min-w-0 flex-1 truncate">{g.name}: alle organisasjoner</span>
+                  <span className="min-w-0 flex-1 truncate">{g.name}{tr(': alle organisasjoner')}</span>
                 </a>
               ))}
             </div>
@@ -551,7 +577,7 @@ function UserMenu({ me, nav, go, theme, setTheme, setColor, logout, tenant, plac
             ))}
             {tenant && (
               <MenuItem icon="logout" onClick={logout}>
-                Logg ut
+                {tr('Logg ut')}
               </MenuItem>
             )}
           </div>

@@ -1,4 +1,5 @@
-// Kampprogram: kamper fra lagenes kalendere på fotball.no og handball.no (iCal).
+
+import { tr } from './i18n.js';// Kampprogram: kamper fra lagenes kalendere på fotball.no og handball.no (iCal).
 // fotball.no skriver «Hjemmelag - Bortelag» i SUMMARY, turnering og runde på
 // første linje i DESCRIPTION, og lagets navn i kalendernavnet (X-WR-CALNAME).
 // Felles for server (src/api/fixtures.js) og nettleser (innstillinger, visning).
@@ -63,7 +64,7 @@ export function fixtureTime(iso, tz, now = Date.now()) {
 /** «om 3 dager» / «om 5 timer» / «snart» til nedtellingen før neste kamp. */
 export function untilText(iso, now = Date.now()) {
   const min = Math.round((Date.parse(iso) - now) / 60_000);
-  if (min <= 0) return 'nå';
+  if (min <= 0) return tr('nå');
   if (min < 60) return `om ${min} min`;
   const h = Math.round(min / 60);
   if (h < 36) return `om ${h} ${h === 1 ? 'time' : 'timer'}`;

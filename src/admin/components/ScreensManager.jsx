@@ -17,6 +17,7 @@ import { AddScreenForm, AddedScreen, codeFromUrl } from './AddScreen.jsx';
 import { clientSummary, timeAgo } from './pairingHelpers.js';
 import { screenState, StatusPill, showing } from './screenStatus.jsx';
 import { Icon, Input, Select, Button, PageHeader, ErrorText } from './ui.jsx';
+import { tr } from '../../lib/i18n.js';
 
 const LAST_KEY = 'flatr.screens.open';
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -30,7 +31,7 @@ function ScreenCard({ s, selected, selecting, onToggle, onOpen }) {
         selected ? 'border-brand ring-2 ring-brand/30' : 'border-hair'
       }`}
     >
-      <button type="button" onClick={() => (selecting ? onToggle(s.id) : onOpen(s.id))} className="block text-left" aria-label={`Åpne ${s.name}`}>
+      <button type="button" onClick={() => (selecting ? onToggle(s.id) : onOpen(s.id))} className="block text-left" aria-label={tr('Åpne {0}', [s.name])}>
         <div className={st === 'offline' ? 'opacity-60 grayscale' : ''}>
           <LiveScreenView screenId={s.id} orientation={s.orientation} />
         </div>
@@ -40,7 +41,7 @@ function ScreenCard({ s, selected, selecting, onToggle, onOpen }) {
           selected || selecting ? 'opacity-100' : 'opacity-0 focus-within:opacity-100 group-hover:opacity-100'
         } ${selected ? 'border-brand' : 'border-line'}`}
       >
-        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} className="h-4 w-4" aria-label={`Velg ${s.name}`} />
+        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} className="h-4 w-4" aria-label={tr('Velg {0}', [s.name])} />
       </label>
 
       <div className="flex flex-col gap-1.5 px-1.5 pb-1.5">
@@ -51,7 +52,7 @@ function ScreenCard({ s, selected, selecting, onToggle, onOpen }) {
         <span className="truncate text-sm text-muted">
           {s.location ? `${s.location} · ` : ''}
           {showing(s)}
-          {st === 'offline' && s.device.last_seen ? ` · sist sett ${timeAgo(s.device.last_seen)}` : ''}
+          {st === 'offline' && s.device.last_seen ? tr(' · sist sett {0}', [timeAgo(s.device.last_seen)]) : ''}
         </span>
         {(model || s.tags?.length > 0 || s.hours?.enabled) && (
           <div className="flex flex-wrap items-center gap-1.5">
@@ -195,7 +196,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
   const runCommand = async (ids, command, label) => {
     if (!ids.length) return say('Ingen av de valgte skjermene har en Apple TV.');
     await Promise.allSettled(ids.map((screen_id) => api.pairing.command({ screen_id, command })));
-    say(`${label} sendt til ${plural(ids.length, 'skjerm', 'skjermer')}.`);
+    say(tr('{0} sendt til {1}.', [label, plural(ids.length, 'skjerm', 'skjermer')]));
   };
 
   const patch = (id, body, msg) =>
@@ -207,7 +208,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
   const removeScreens = (ids) => {
     if (!ids.length) return;
     const n = plural(ids.length, 'skjerm', 'skjermer');
-    if (!confirm(`Slette ${n}? Presentasjonene beholdes. En Apple TV som er koblet til viser en ny kode.`)) return;
+    if (!confirm(tr('Slette {0}? Presentasjonene beholdes. En Apple TV som er koblet til viser en ny kode.', [n]))) return;
     act(async () => {
       await Promise.allSettled(ids.map((id) => api.screens.remove(id)));
       setSelected(new Set());
@@ -225,7 +226,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
     act(async () => {
       await Promise.allSettled(chosen.map((s) => api.screens.update(s.id, { hours })));
       setBulkHours(null);
-    }, `Åpningstider satt for ${plural(chosen.length, 'skjerm', 'skjermer')}.`);
+    }, tr('Åpningstider satt for {0}.', [plural(chosen.length, 'skjerm', 'skjermer')]));
 
   const saveHook = () =>
     act(async () => {
@@ -236,7 +237,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
   const testHook = () => act(() => api.settings.testWebhook(), 'Testvarsel sendt – sjekk kanalen.');
 
   const addTag = () => {
-    const tag = window.prompt('Legg i gruppe (f.eks. «2. etasje»):')?.trim();
+    const tag = window.prompt(tr('Legg i gruppe (f.eks. «2. etasje»):'))?.trim();
     if (!tag) return;
     act(async () => {
       await Promise.allSettled(chosen.map((s) => api.screens.update(s.id, { tags: [...new Set([...(s.tags || []), tag])] })));
@@ -283,27 +284,27 @@ export default function ScreensManager({ onChange, onNavigate }) {
   return (
     <>
       <PageHeader
-        title="Skjermer"
+        title={tr('Skjermer')}
         subtitle={
           plan ? (
             <span className="inline-flex flex-wrap items-center gap-x-2">
               <span>
-                {plan.screens.used} av {plan.screens.limit} {plan.screens.limit === 1 ? 'skjerm' : 'skjermer'} i bruk
+                {plan.screens.used} {tr('av')} {plan.screens.limit} {plan.screens.limit === 1 ? 'skjerm' : 'skjermer'} {tr('i bruk')}
               </span>
               <span aria-hidden="true">·</span>
               <button type="button" onClick={more} className="font-semibold text-brand hover:underline">
-                Trenger du flere?
+                {tr('Trenger du flere?')}
               </button>
             </span>
           ) : (
-            'TV-ene og skjermene som viser innholdet ditt.'
+            tr('TV-ene og skjermene som viser innholdet ditt.')
           )
         }
         action={
           !showAdd && (
             <Button onClick={() => setAdding(true)}>
               <Icon name="plus" className="h-4 w-4" />
-              Legg til skjerm
+              {tr('Legg til skjerm')}
             </Button>
           )
         }
@@ -314,11 +315,11 @@ export default function ScreensManager({ onChange, onNavigate }) {
             <Icon name="monitor" className="h-4 w-4 text-brand" />
             <span className="flex-1">
               {plan?.billing
-                ? 'Du har brukt alle skjermene i planen. Legg til flere under Abonnement.'
-                : 'Du har brukt alle skjermene i planen. Trenger du flere, gir vi deg gjerne en eller to til – gratis i betaperioden.'}
+                ? tr('Du har brukt alle skjermene i planen. Legg til flere under Abonnement.')
+                : tr('Du har brukt alle skjermene i planen. Trenger du flere, gir vi deg gjerne en eller to til – gratis i betaperioden.')}
             </span>
             <Button size="sm" onClick={more}>
-              {plan?.billing ? 'Legg til skjermer' : 'Be om flere'}
+              {plan?.billing ? tr('Legg til skjermer') : tr('Be om flere')}
             </Button>
           </div>
         </div>
@@ -343,8 +344,8 @@ export default function ScreensManager({ onChange, onNavigate }) {
               />
             ) : (
               <>
-                <h2 className="m-0 mb-1 text-xl font-bold text-ink">Legg til en skjerm</h2>
-                <p className="m-0 mb-5 text-sm text-muted">Koble til en TV med koden den viser (Apple TV, Android TV eller flatr.no/tv i en nettleser), eller lag en lenke.</p>
+                <h2 className="m-0 mb-1 text-xl font-bold text-ink">{tr('Legg til en skjerm')}</h2>
+                <p className="m-0 mb-5 text-sm text-muted">{tr('Koble til en TV med koden den viser (Apple TV, Android TV eller flatr.no/tv i en nettleser), eller lag en lenke.')}</p>
                 <AddScreenForm
                   key={formKey}
                   playlists={playlists}
@@ -393,18 +394,18 @@ export default function ScreensManager({ onChange, onNavigate }) {
                   onClick={() => setSelected(new Set(filtered.map((s) => s.id)))}
                   className="text-sm font-semibold text-brand hover:underline"
                 >
-                  Velg hele gruppen ({filtered.length})
+                  {tr('Velg hele gruppen (')}{filtered.length})
                 </button>
               )}
               <label className="ml-auto flex w-64 max-w-full items-center gap-2">
                 <Icon name="search" className="h-4 w-4 shrink-0 text-muted" />
-                <span className="sr-only">Søk</span>
-                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Søk navn, sted, innhold …" />
+                <span className="sr-only">{tr('Søk')}</span>
+                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr('Søk navn, sted, innhold …')} />
               </label>
             </div>
 
             {filtered.length === 0 ? (
-              <p className="m-0 rounded-2xl border border-dashed border-line px-6 py-10 text-center text-muted">Ingen skjermer her.</p>
+              <p className="m-0 rounded-2xl border border-dashed border-line px-6 py-10 text-center text-muted">{tr('Ingen skjermer her.')}</p>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((s) => (
@@ -421,12 +422,12 @@ export default function ScreensManager({ onChange, onNavigate }) {
               <Icon name="megaphone" className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-ink">Varsling når en skjerm faller ut</div>
-              <div className="text-muted">Eierne av kontoen får e-post når en Apple TV har vært borte en stund, og når den er tilbake.</div>
+              <div className="font-semibold text-ink">{tr('Varsling når en skjerm faller ut')}</div>
+              <div className="text-muted">{tr('Eierne av kontoen får e-post når en Apple TV har vært borte en stund, og når den er tilbake.')}</div>
             </div>
             <label className="flex items-center gap-2 text-muted">
               <input type="checkbox" checked={alerts.offline_alerts} onChange={(e) => saveAlerts({ offline_alerts: e.target.checked })} />
-              På, etter
+              {tr('På, etter')}
               <Select
                 value={alerts.offline_minutes}
                 disabled={!alerts.offline_alerts}
@@ -437,23 +438,23 @@ export default function ScreensManager({ onChange, onNavigate }) {
                   .sort((a, b) => a - b)
                   .map((m) => (
                     <option key={m} value={m}>
-                      {m} min
+                      {m} {tr('min')}
                     </option>
                   ))}
               </Select>
             </label>
             <div className="flex w-full flex-wrap items-center gap-2 border-t border-hair pt-3">
-              <span className="text-muted">Også til Slack eller Teams:</span>
+              <span className="text-muted">{tr('Også til Slack eller Teams:')}</span>
               {alerts.webhook ? (
                 <>
                   <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-xs font-semibold text-brand">
-                    {alerts.webhook.kind === 'teams' ? 'Teams' : 'Slack'} koblet til {alerts.webhook.hint}
+                    {alerts.webhook.kind === 'teams' ? 'Teams' : 'Slack'} {tr('koblet til')} {alerts.webhook.hint}
                   </span>
                   <Button variant="outline" size="sm" onClick={testHook}>
-                    Send testvarsel
+                    {tr('Send testvarsel')}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => act(async () => setAlerts(await api.settings.update({ webhook_url: '' })), 'Slack/Teams er fjernet.')}>
-                    Fjern
+                    {tr('Fjern')}
                   </Button>
                 </>
               ) : (
@@ -467,11 +468,11 @@ export default function ScreensManager({ onChange, onNavigate }) {
                   <Input
                     value={hookDraft}
                     onChange={(e) => setHookDraft(e.target.value)}
-                    placeholder="Lim inn webhook-adressen (https://hooks.slack.com/… eller fra Teams)"
+                    placeholder={tr('Lim inn webhook-adressen (https://hooks.slack.com/… eller fra Teams)')}
                     className="!h-8 min-w-[240px] flex-1"
                   />
                   <Button type="submit" size="sm" disabled={!hookDraft.trim()}>
-                    Koble til
+                    {tr('Koble til')}
                   </Button>
                 </form>
               )}
@@ -479,13 +480,13 @@ export default function ScreensManager({ onChange, onNavigate }) {
             <label className="flex w-full items-center gap-2 border-t border-hair pt-3 text-muted">
               <input type="checkbox" checked={!!alerts.daily_digest} onChange={(e) => saveAlerts({ daily_digest: e.target.checked })} />
               <span>
-                <span className="font-semibold text-ink">Daglig helsesjekk kl. 07</span> – e-post{alerts.webhook ? ' og Slack/Teams' : ''} med frakoblede TV-er, skjermer uten innhold, widgeter som feiler og lysbilder som utløper. Sendes bare når noe bør sjekkes.
+                <span className="font-semibold text-ink">{tr('Daglig helsesjekk kl. 07')}</span> {tr('– e-post')}{alerts.webhook ? tr(' og Slack/Teams') : ''} {tr('med frakoblede TV-er, skjermer uten innhold, widgeter som feiler og lysbilder som utløper. Sendes bare når noe bør sjekkes.')}
               </span>
             </label>
             <label className="flex w-full items-center gap-2 border-t border-hair pt-3 text-muted">
               <input type="checkbox" checked={alerts.weekly_reminder !== false} onChange={(e) => saveAlerts({ weekly_reminder: e.target.checked })} />
               <span>
-                <span className="font-semibold text-ink">Ukentlig påminnelse mandag kl. 08</span> – e-post til eiere og redaktører når en skjerm har vist det samme lenge, lysbilder går ut på dato eller noe venter på godkjenning. Sendes bare når noe bør gjøres.
+                <span className="font-semibold text-ink">{tr('Ukentlig påminnelse mandag kl. 08')}</span> {tr('– e-post til eiere og redaktører når en skjerm har vist det samme lenge, lysbilder går ut på dato eller noe venter på godkjenning. Sendes bare når noe bør gjøres.')}
               </span>
             </label>
           </section>
@@ -493,15 +494,15 @@ export default function ScreensManager({ onChange, onNavigate }) {
 
         {bulkHours && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onMouseDown={(e) => e.target === e.currentTarget && setBulkHours(null)}>
-            <div role="dialog" aria-modal="true" aria-label="Åpningstider" className="w-full max-w-md rounded-2xl border border-line bg-card p-5 shadow-pop">
-              <h2 className="m-0 mb-1 text-lg font-bold text-ink">Åpningstider</h2>
-              <p className="m-0 mb-4 text-sm text-muted">For {plural(chosen.length, 'valgt skjerm', 'valgte skjermer')}. Erstatter åpningstidene de har nå.</p>
+            <div role="dialog" aria-modal="true" aria-label={tr('Åpningstider')} className="w-full max-w-md rounded-2xl border border-line bg-card p-5 shadow-pop">
+              <h2 className="m-0 mb-1 text-lg font-bold text-ink">{tr('Åpningstider')}</h2>
+              <p className="m-0 mb-4 text-sm text-muted">{tr('For')} {plural(chosen.length, 'valgt skjerm', 'valgte skjermer')}{tr('. Erstatter åpningstidene de har nå.')}</p>
               <HoursEditor value={bulkHours} onSave={(h) => setBulkHours(h)} />
               <div className="mt-5 flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setBulkHours(null)}>
-                  Avbryt
+                  {tr('Avbryt')}
                 </Button>
-                <Button onClick={() => applyHours(bulkHours)}>Bruk på {plural(chosen.length, 'skjerm', 'skjermer')}</Button>
+                <Button onClick={() => applyHours(bulkHours)}>{tr('Bruk på')} {plural(chosen.length, 'skjerm', 'skjermer')}</Button>
               </div>
             </div>
           </div>
@@ -513,7 +514,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
         <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={() => setDetailId(null)}>
           <div
             role="dialog"
-            aria-label={`Detaljer for ${detail.name}`}
+            aria-label={tr('Detaljer for {0}', [detail.name])}
             onClick={(e) => e.stopPropagation()}
             className="h-full w-full max-w-md overflow-hidden border-l border-line bg-card shadow-pop"
             style={{ animation: 'drawerIn 0.2s ease-out' }}
@@ -529,7 +530,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
               onTimetable={() => onNavigate?.('timetable', { screen: detail.id })}
               onReplaceTv={(code) => act(() => api.pairing.link(code, detail.id), 'Ny TV koblet til.')}
               onUnpairTv={() =>
-                confirm('Koble fra Apple TV-en? Den viser en ny kode. Skjermen og innstillingene beholdes.') &&
+                confirm(tr('Koble fra Apple TV-en? Den viser en ny kode. Skjermen og innstillingene beholdes.')) &&
                 act(() => api.pairing.unpair({ screen_id: detail.id }), 'TV-en er koblet fra.')
               }
               onDelete={() => removeScreens([detail.id])}
@@ -541,20 +542,20 @@ export default function ScreensManager({ onChange, onNavigate }) {
       {/* masseendringer */}
       {selected.size > 0 && (
         <div className="fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-1 rounded-full border border-line bg-ink px-2 py-2 text-paper shadow-pop">
-          <span className="px-2 text-sm font-semibold">{selected.size} valgt</span>
+          <span className="px-2 text-sm font-semibold">{selected.size} {tr('valgt')}</span>
           <span className="mx-1 h-5 w-px bg-paper/20" />
-          <BulkBtn onClick={() => runCommand(withTv, 'identify', 'Identifiser')}>Identifiser</BulkBtn>
-          <BulkBtn onClick={() => runCommand(withTv, 'reload', 'Last inn')}>Last inn</BulkBtn>
-          <BulkBtn onClick={addTag}>+ Gruppe</BulkBtn>
-          <BulkBtn onClick={() => setBulkHours(defaultHours())}>Åpningstider</BulkBtn>
+          <BulkBtn onClick={() => runCommand(withTv, 'identify', 'Identifiser')}>{tr('Identifiser')}</BulkBtn>
+          <BulkBtn onClick={() => runCommand(withTv, 'reload', 'Last inn')}>{tr('Last inn')}</BulkBtn>
+          <BulkBtn onClick={addTag}>{tr('+ Gruppe')}</BulkBtn>
+          <BulkBtn onClick={() => setBulkHours(defaultHours())}>{tr('Åpningstider')}</BulkBtn>
           <select
             value=""
             onChange={(e) => bulkShow(e.target.value)}
             className="rounded-full bg-paper/10 px-3 py-1.5 text-xs font-semibold text-paper focus:outline-none"
-            aria-label="Vis presentasjon"
+            aria-label={tr('Vis presentasjon')}
           >
             <option value="" className="text-ink">
-              Vis presentasjon …
+              {tr('Vis presentasjon …')}
             </option>
             {playlists.map((p) => (
               <option key={p.id} value={p.id} className="text-ink">
@@ -563,10 +564,10 @@ export default function ScreensManager({ onChange, onNavigate }) {
             ))}
           </select>
           <BulkBtn danger onClick={() => removeScreens([...selected])}>
-            Slett
+            {tr('Slett')}
           </BulkBtn>
           <span className="mx-1 h-5 w-px bg-paper/20" />
-          <button type="button" onClick={() => setSelected(new Set())} className="grid h-7 w-7 place-items-center rounded-full hover:bg-paper/10" aria-label="Fjern utvalg">
+          <button type="button" onClick={() => setSelected(new Set())} className="grid h-7 w-7 place-items-center rounded-full hover:bg-paper/10" aria-label={tr('Fjern utvalg')}>
             <Icon name="x" className="h-4 w-4" />
           </button>
         </div>

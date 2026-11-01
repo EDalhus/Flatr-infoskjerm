@@ -5,8 +5,9 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { Button } from '../ui.jsx';
+import { tr, locale } from '../../../lib/i18n.js';
 
-const when = (iso) => new Date(iso).toLocaleString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const when = (iso) => new Date(iso).toLocaleString(locale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 export default function ReviewBar({ playlistId, version, readOnly, onPublished }) {
   const [s, setS] = useState(null);
@@ -48,14 +49,14 @@ export default function ReviewBar({ playlistId, version, readOnly, onPublished }
   const tone = s.has_changes ? 'border-warn/40 bg-warn/10' : 'border-line bg-zone/50';
   return (
     <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2 text-sm ${tone}`}>
-      <span className="font-semibold text-ink">{s.has_changes ? 'Utkast' : '✓ Publisert'}</span>
+      <span className="font-semibold text-ink">{s.has_changes ? tr('Utkast') : tr('✓ Publisert')}</span>
       <span className="min-w-0 flex-1 text-muted">
         {s.requested
-          ? `${s.requested.by || 'Noen'} ba om godkjenning ${when(s.requested.at)}${s.requested.note ? `: «${s.requested.note}»` : ''}`
+          ? tr('{0} ba om godkjenning {1}{2}', [s.requested.by || tr('Noen'), when(s.requested.at), s.requested.note ? `: «${s.requested.note}»` : ''])
           : s.has_changes
-            ? s.note || 'Endringene vises ikke på skjermene før en eier publiserer dem.'
+            ? s.note || tr('Endringene vises ikke på skjermene før en eier publiserer dem.')
             : s.published
-              ? `Skjermene viser versjonen fra ${when(s.published.at)}${s.published.by ? ` (${s.published.by})` : ''}.`
+              ? tr('Skjermene viser versjonen fra {0}{1}.', [when(s.published.at), s.published.by ? ` (${s.published.by})` : ''])
               : ''}
       </span>
       {error && <span className="text-xs text-danger">{error}</span>}
@@ -71,14 +72,14 @@ export default function ReviewBar({ playlistId, version, readOnly, onPublished }
             autoFocus
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder={asking === 'reject' ? 'Hva må endres? (valgfritt)' : 'Melding til eieren (valgfritt)'}
+            placeholder={asking === 'reject' ? tr('Hva må endres? (valgfritt)') : tr('Melding til eieren (valgfritt)')}
             className="h-8 w-64 rounded-lg border border-line bg-paper px-2 text-sm text-ink outline-none focus:border-focus"
           />
           <Button size="sm" type="submit" variant={asking === 'reject' ? 'danger' : 'primary'} disabled={busy}>
-            {asking === 'reject' ? 'Avvis' : 'Send'}
+            {asking === 'reject' ? tr('Avvis') : tr('Send')}
           </Button>
           <Button size="sm" type="button" variant="ghost" onClick={() => setAsking(null)}>
-            Avbryt
+            {tr('Avbryt')}
           </Button>
         </form>
       ) : (
@@ -89,18 +90,18 @@ export default function ReviewBar({ playlistId, version, readOnly, onPublished }
               <>
                 {s.requested && (
                   <Button size="sm" variant="outline" onClick={() => setAsking('reject')} disabled={busy}>
-                    Avvis
+                    {tr('Avvis')}
                   </Button>
                 )}
                 <Button size="sm" onClick={() => act('publish')} disabled={busy}>
-                  {busy ? 'Publiserer …' : 'Publiser til skjermene'}
+                  {busy ? tr('Publiserer …') : tr('Publiser til skjermene')}
                 </Button>
               </>
             ) : s.requested ? (
-              <span className="text-xs font-semibold text-muted">Venter på godkjenning</span>
+              <span className="text-xs font-semibold text-muted">{tr('Venter på godkjenning')}</span>
             ) : (
               <Button size="sm" onClick={() => setAsking('request')} disabled={busy}>
-                Send til godkjenning
+                {tr('Send til godkjenning')}
               </Button>
             )}
           </div>

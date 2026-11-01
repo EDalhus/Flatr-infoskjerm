@@ -3,14 +3,15 @@ import { api } from '../../../lib/api.js';
 import { SLIDE_LAYOUTS, ELEMENT_LABEL } from '../../../lib/deck.js';
 import { Icon, Input, Button, Field } from '../ui.jsx';
 import { MediaPicker } from '../MediaPicker.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Hurtigvalg: ett lysbilde med mediet i fullskjerm.
 const MEDIA_OPTIONS = [
-  { id: 'image', label: 'Bilde', icon: 'image', hint: 'Fra biblioteket' },
-  { id: 'video', label: 'Video', icon: 'play', hint: 'Fra biblioteket' },
-  { id: 'youtube', label: 'YouTube', icon: 'play', hint: 'Lim inn lenke' },
-  { id: 'web', label: 'Nettside', icon: 'external', hint: 'Lim inn adresse' },
-  { id: 'document', label: 'Dokument', icon: 'layers', hint: 'PDF, PowerPoint, Word' }
+  { id: 'image', label: tr('Bilde'), icon: 'image', hint: tr('Fra biblioteket') },
+  { id: 'video', label: tr('Video'), icon: 'play', hint: tr('Fra biblioteket') },
+  { id: 'youtube', label: 'YouTube', icon: 'play', hint: tr('Lim inn lenke') },
+  { id: 'web', label: tr('Nettside'), icon: 'external', hint: tr('Lim inn adresse') },
+  { id: 'document', label: tr('Dokument'), icon: 'layers', hint: tr('PDF, PowerPoint, Word') }
 ];
 
 function UrlForm({ kind, onSubmit, onCancel }) {
@@ -25,7 +26,7 @@ function UrlForm({ kind, onSubmit, onCancel }) {
       }}
       className="grid gap-3 rounded-xl border border-line bg-paper p-4 sm:grid-cols-[1fr_auto_auto] sm:items-end"
     >
-      <Field label={kind === 'youtube' ? 'YouTube-lenke' : 'Nettadresse'}>
+      <Field label={kind === 'youtube' ? tr('YouTube-lenke') : tr('Nettadresse')}>
         <Input
           autoFocus
           value={url}
@@ -34,22 +35,22 @@ function UrlForm({ kind, onSubmit, onCancel }) {
         />
       </Field>
       {kind === 'web' && (
-        <Field label="Oppdater (min)">
+        <Field label={tr('Oppdater (min)')}>
           <Input type="number" min={0} value={refresh} onChange={(e) => setRefresh(Number(e.target.value) || 0)} className="!w-24" />
         </Field>
       )}
       <div className="flex gap-2">
         <Button type="submit" disabled={!valid}>
-          Legg til
+          {tr('Legg til')}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Avbryt
+          {tr('Avbryt')}
         </Button>
       </div>
       <p className="m-0 text-xs text-muted sm:col-span-3">
         {kind === 'youtube'
-          ? 'Spilles av når skjermen vises i en nettleser. Apple TV viser videoens forsidebilde.'
-          : 'Vises levende i nettlesere. Apple TV får et skjermbilde som oppdateres automatisk.'}
+          ? tr('Spilles av når skjermen vises i en nettleser. Apple TV viser videoens forsidebilde.')
+          : tr('Vises levende i nettlesere. Apple TV får et skjermbilde som oppdateres automatisk.')}
       </p>
     </form>
   );
@@ -89,7 +90,7 @@ function MiniSlide({ elements }) {
         );
       })}
       {(!elements || elements.length === 0) && (
-        <div className="grid h-full w-full place-items-center text-[10px] text-white/40">Tom</div>
+        <div className="grid h-full w-full place-items-center text-[10px] text-white/40">{tr('Tom')}</div>
       )}
     </div>
   );
@@ -122,7 +123,7 @@ export default function LayoutPicker({ onPick, onPickTemplate, onPickMedia, onIm
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-hair px-5 py-3">
-          <h2 className="m-0 text-base font-bold text-ink">Nytt lysbilde</h2>
+          <h2 className="m-0 text-base font-bold text-ink">{tr('Nytt lysbilde')}</h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full hover:bg-hair">
             <Icon name="x" className="h-4 w-4" />
           </button>
@@ -130,7 +131,7 @@ export default function LayoutPicker({ onPick, onPickTemplate, onPickMedia, onIm
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {onPickMedia && (
             <>
-              <div className="mb-2 text-xs font-semibold text-muted">Medier i fullskjerm</div>
+              <div className="mb-2 text-xs font-semibold text-muted">{tr('Medier i fullskjerm')}</div>
               <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
                 {MEDIA_OPTIONS.map((o) => (
                   <button
@@ -170,7 +171,7 @@ export default function LayoutPicker({ onPick, onPickTemplate, onPickMedia, onIm
                   />
                 </div>
               )}
-              <div className="mb-2 mt-6 text-xs font-semibold text-muted">Oppsett</div>
+              <div className="mb-2 mt-6 text-xs font-semibold text-muted">{tr('Oppsett')}</div>
             </>
           )}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -192,7 +193,7 @@ export default function LayoutPicker({ onPick, onPickTemplate, onPickMedia, onIm
           {templates.length > 0 && (
             <>
               <div className="mb-2 mt-6 text-xs font-bold text-muted">
-                Mine maler
+                {tr('Mine maler')}
               </div>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 {templates.map((t) => (

@@ -6,12 +6,13 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { authClient } from '../../lib/authClient.js';
 import { Button, Card, Field, Input, PageHeader, ErrorText, Icon } from './ui.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
 const LINK_BUTTON =
   'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-onbrand no-underline shadow-card transition-all hover:bg-brand-dark hover:shadow-pop';
 
 const size = (bytes) =>
-  bytes >= 1e9 ? `${(bytes / 1e9).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} GB` : `${Math.max(1, Math.round(bytes / 1e6))} MB`;
+  bytes >= 1e9 ? `${(bytes / 1e9).toLocaleString(locale(), { maximumFractionDigits: 1 })} GB` : `${Math.max(1, Math.round(bytes / 1e6))} MB`;
 
 /** Skjema for å slette noe for godt: skriv `expected` – og passordet, hvis du har et. */
 export function ConfirmDelete({ expected, label, button, onDelete }) {
@@ -50,7 +51,7 @@ export function ConfirmDelete({ expected, label, button, onDelete }) {
           <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={expected} autoComplete="off" spellCheck={false} />
         </Field>
         {hasPassword && (
-          <Field label="Passordet ditt">
+          <Field label={tr('Passordet ditt')}>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
           </Field>
         )}
@@ -59,7 +60,7 @@ export function ConfirmDelete({ expected, label, button, onDelete }) {
       <div>
         <Button type="submit" variant="danger" disabled={busy || !matches || (hasPassword && !password)}>
           <Icon name="trash" className="h-4 w-4" />
-          {busy ? 'Sletter …' : button}
+          {busy ? tr('Sletter …') : button}
         </Button>
       </div>
     </form>
@@ -77,20 +78,19 @@ export default function DataManager({ me, tenant }) {
 
   return (
     <>
-      <PageHeader title="Eksport og sletting" subtitle="Last ned alt dere har i Flatr, eller slett organisasjonen." />
+      <PageHeader title={tr('Eksport og sletting')} subtitle={tr('Last ned alt dere har i Flatr, eller slett organisasjonen.')} />
       <div className="mx-auto w-full max-w-3xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         {me && !owner && (
           <Card>
-            <p className="m-0 text-sm text-muted">Bare eiere kan laste ned alt innholdet eller slette organisasjonen. Eierne finner du under Team.</p>
+            <p className="m-0 text-sm text-muted">{tr('Bare eiere kan laste ned alt innholdet eller slette organisasjonen. Eierne finner du under Team.')}</p>
           </Card>
         )}
         {owner && (
           <>
-            <Card title="Last ned alt">
+            <Card title={tr('Last ned alt')}>
               <p className="m-0 text-sm leading-relaxed text-muted">
-                Én ZIP-fil med alt innholdet i {name}: presentasjoner og lysbilder, skjermer, apper, innstillinger, avstemninger, historikk og statistikk
-                som JSON, og alle filene i biblioteket
-                {plan?.storage?.used ? ` (omtrent ${size(plan.storage.used)})` : ''}. Pålogging til integrasjoner og API-nøkler er ikke med.
+                {tr('Én ZIP-fil med alt innholdet i')} {name}{tr(': presentasjoner og lysbilder, skjermer, apper, innstillinger, avstemninger, historikk og statistikk som JSON, og alle filene i biblioteket')}
+                {plan?.storage?.used ? tr(' (omtrent {0})', [size(plan.storage.used)]) : ''}{tr('. Pålogging til integrasjoner og API-nøkler er ikke med.')}
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <a
@@ -105,19 +105,18 @@ export default function DataManager({ me, tenant }) {
                   aria-disabled={started}
                 >
                   <Icon name="download" className="h-4 w-4" />
-                  Last ned ZIP
+                  {tr('Last ned ZIP')}
                 </a>
-                {started && <span className="text-sm text-muted">Nedlastingen er startet. Med mange filer i biblioteket kan den ta litt tid.</span>}
+                {started && <span className="text-sm text-muted">{tr('Nedlastingen er startet. Med mange filer i biblioteket kan den ta litt tid.')}</span>}
               </div>
             </Card>
 
-            <Card title="Slett organisasjonen">
+            <Card title={tr('Slett organisasjonen')}>
               <p className="m-0 mb-4 text-sm leading-relaxed text-muted">
-                Sletter {name} for godt: alle presentasjoner, skjermer, filer i biblioteket, apper, statistikk og teamets tilgang.{' '}
-                {window.location.host} slutter å virke, og skjermene slutter å vise innholdet. Dette kan ikke angres – last ned alt først hvis dere vil ta
-                vare på noe. Kontoene til teamet blir ikke slettet.
+                {tr('Sletter')} {name} {tr('for godt: alle presentasjoner, skjermer, filer i biblioteket, apper, statistikk og teamets tilgang.')}{' '}
+                {window.location.host} {tr('slutter å virke, og skjermene slutter å vise innholdet. Dette kan ikke angres – last ned alt først hvis dere vil ta vare på noe. Kontoene til teamet blir ikke slettet.')}
               </p>
-              <ConfirmDelete expected={name} label={`Skriv «${name}» for å bekrefte`} button="Slett organisasjonen for godt" onDelete={api.org.remove} />
+              <ConfirmDelete expected={name} label={tr('Skriv «{0}» for å bekrefte', [name])} button={tr('Slett organisasjonen for godt')} onDelete={api.org.remove} />
             </Card>
           </>
         )}

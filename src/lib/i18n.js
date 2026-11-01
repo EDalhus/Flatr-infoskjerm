@@ -42,7 +42,17 @@ function fromBrowser() {
 
 /** Velger språk og henter oversettelsene. Kalles én gang før appen tegnes. */
 export async function initLang() {
-  const chosen = fromCookie();
+  // ?lang=en i adressen velger språk (f.eks. for å prøve før det er slått på for alle).
+  let chosen = fromCookie();
+  try {
+    const asked = new URLSearchParams(window.location.search).get('lang');
+    if (IDS.includes(asked)) {
+      document.cookie = `flatr_lang=${asked}; path=/; max-age=31536000; samesite=lax`;
+      chosen = asked;
+    }
+  } catch {
+    /* uten window (server) */
+  }
   lang = IDS.includes(chosen) ? chosen : fromBrowser();
   if (LOADERS[lang]) {
     try {

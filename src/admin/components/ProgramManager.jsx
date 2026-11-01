@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Input, Textarea, Button, IconButton, PageHeader, ErrorText } from './ui.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
 const COLORS = ['#027353', '#3e63dd', '#c2410c', '#8e4ec6', '#0d9488', '#b91c1c', '#a16207', '#d6409f', '#475569'];
 
@@ -25,16 +26,16 @@ const dayLabel = (key) => {
   const d = new Date(`${key}T12:00`);
   const today = dateKey(new Date().toISOString());
   const tomorrow = dateKey(new Date(Date.now() + 86_400_000).toISOString());
-  const base = d.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' });
+  const base = d.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
   const cap = base.charAt(0).toUpperCase() + base.slice(1);
   return key === today ? `I dag · ${cap}` : key === tomorrow ? `I morgen · ${cap}` : cap;
 };
 
 const STATUS = {
-  live: { label: 'Pågår', cls: 'bg-ok-tint text-ok' },
-  scheduled: { label: 'Kommer', cls: 'bg-zone text-muted' },
-  done: { label: 'Ferdig', cls: 'bg-zone text-muted' },
-  cancelled: { label: 'Avlyst', cls: 'bg-danger-tint text-danger' }
+  live: { label: tr('Pågår'), cls: 'bg-ok-tint text-ok' },
+  scheduled: { label: tr('Kommer'), cls: 'bg-zone text-muted' },
+  done: { label: tr('Ferdig'), cls: 'bg-zone text-muted' },
+  cancelled: { label: tr('Avlyst'), cls: 'bg-danger-tint text-danger' }
 };
 
 /* ------------------------------ kategorier ------------------------------ */
@@ -52,14 +53,14 @@ function CategoryEditor({ initial, onSave, onDelete, onCancel }) {
       }}
       className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-card p-3 shadow-pop"
     >
-      <Input ref={ref} value={name} onChange={(e) => setName(e.target.value)} placeholder="Navn, f.eks. Foredrag" className="!w-48" />
+      <Input ref={ref} value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('Navn, f.eks. Foredrag')} className="!w-48" />
       <div className="flex gap-1">
         {COLORS.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setColor(c)}
-            aria-label={`Farge ${c}`}
+            aria-label={tr('Farge {0}', [c])}
             aria-pressed={color === c}
             className={`h-7 w-7 rounded-full ${color === c ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''}`}
             style={{ background: c }}
@@ -67,14 +68,14 @@ function CategoryEditor({ initial, onSave, onDelete, onCancel }) {
         ))}
       </div>
       <Button type="submit" size="sm" disabled={!name.trim()}>
-        {initial ? 'Lagre' : 'Legg til'}
+        {initial ? tr('Lagre') : tr('Legg til')}
       </Button>
       <Button type="button" size="sm" variant="outline" onClick={onCancel}>
-        Avbryt
+        {tr('Avbryt')}
       </Button>
       {onDelete && (
         <button type="button" onClick={onDelete} className="ml-1 text-sm font-semibold text-danger hover:underline">
-          Slett
+          {tr('Slett')}
         </button>
       )}
     </form>
@@ -102,8 +103,8 @@ function ItemForm({ initial, categories, onSave, onCancel, onDelete }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!f.title.trim()) return setError('Skriv inn en tittel.');
-    if (f.to && f.to <= f.from) return setError('Slutt må være etter start.');
+    if (!f.title.trim()) return setError(tr('Skriv inn en tittel.'));
+    if (f.to && f.to <= f.from) return setError(tr('Slutt må være etter start.'));
     setBusy(true);
     setError('');
     try {
@@ -129,30 +130,30 @@ function ItemForm({ initial, categories, onSave, onCancel, onDelete }) {
       onKeyDown={(e) => e.key === 'Escape' && onCancel()}
       className="space-y-4 rounded-2xl border-2 border-brand/40 bg-card p-4 shadow-pop"
     >
-      <Input ref={titleRef} value={f.title} onChange={(e) => set({ title: e.target.value })} placeholder="Tittel, f.eks. Åpning og velkommen" className="!h-11 !text-base font-semibold" />
+      <Input ref={titleRef} value={f.title} onChange={(e) => set({ title: e.target.value })} placeholder={tr('Tittel, f.eks. Åpning og velkommen')} className="!h-11 !text-base font-semibold" />
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-muted">Dato</span>
+          <span className="text-xs font-semibold text-muted">{tr('Dato')}</span>
           <Input type="date" value={f.date} onChange={(e) => set({ date: e.target.value })} className="!w-40" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-muted">Fra</span>
+          <span className="text-xs font-semibold text-muted">{tr('Fra')}</span>
           <Input type="time" value={f.from} onChange={(e) => set({ from: e.target.value })} className="!w-28" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-muted">Til (valgfritt)</span>
+          <span className="text-xs font-semibold text-muted">{tr('Til (valgfritt)')}</span>
           <Input type="time" value={f.to} onChange={(e) => set({ to: e.target.value })} className="!w-28" />
         </label>
         <label className="flex min-w-[10rem] flex-1 flex-col gap-1">
-          <span className="text-xs font-semibold text-muted">Sted / scene</span>
-          <Input value={f.stage} onChange={(e) => set({ stage: e.target.value })} placeholder="Hovedscenen" />
+          <span className="text-xs font-semibold text-muted">{tr('Sted / scene')}</span>
+          <Input value={f.stage} onChange={(e) => set({ stage: e.target.value })} placeholder={tr('Hovedscenen')} />
         </label>
       </div>
 
       {categories.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-xs font-semibold text-muted">Kategori</span>
+          <span className="mr-1 text-xs font-semibold text-muted">{tr('Kategori')}</span>
           {categories.map((c) => (
             <button
               key={c.id}
@@ -171,24 +172,24 @@ function ItemForm({ initial, categories, onSave, onCancel, onDelete }) {
         </div>
       )}
 
-      <Textarea value={f.description} onChange={(e) => set({ description: e.target.value })} placeholder="Beskrivelse (valgfritt)" rows={2} />
+      <Textarea value={f.description} onChange={(e) => set({ description: e.target.value })} placeholder={tr('Beskrivelse (valgfritt)')} rows={2} />
 
       <ErrorText>{error}</ErrorText>
 
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" disabled={busy}>
-          {busy ? 'Lagrer …' : 'Lagre'}
+          {busy ? tr('Lagrer …') : tr('Lagre')}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Avbryt
+          {tr('Avbryt')}
         </Button>
         <label className="ml-2 flex items-center gap-2 text-sm text-ink">
           <input type="checkbox" checked={f.cancelled} onChange={(e) => set({ cancelled: e.target.checked })} />
-          Avlyst
+          {tr('Avlyst')}
         </label>
         {onDelete && (
           <button type="button" onClick={onDelete} className="ml-auto text-sm font-semibold text-danger hover:underline">
-            Slett
+            {tr('Slett')}
           </button>
         )}
       </div>
@@ -215,7 +216,7 @@ function ItemRow({ item, category, onEdit, onDuplicate }) {
         <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${st.cls}`}>{st.label}</span>
       </button>
       <div className="flex shrink-0 items-center pr-3 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-        <IconButton name="copy" label="Dupliser" onClick={onDuplicate} />
+        <IconButton name="copy" label={tr('Dupliser')} onClick={onDuplicate} />
       </div>
     </div>
   );
@@ -272,7 +273,7 @@ export default function ProgramManager({ onChange }) {
   };
 
   const remove = async (id) => {
-    if (!confirm('Slette programposten? Den havner i «Nylig slettet».')) return;
+    if (!confirm(tr('Slette programposten? Den havner i «Nylig slettet».'))) return;
     await api.schedule.remove(id);
     setEditing(null);
     await load();
@@ -281,7 +282,7 @@ export default function ProgramManager({ onChange }) {
 
   const duplicate = async (it) => {
     const { id, effective_status, ...rest } = it;
-    await api.schedule.create({ ...rest, title: `${it.title} (kopi)` });
+    await api.schedule.create({ ...rest, title: tr('{0} (kopi)', [it.title]) });
     await load();
   };
 
@@ -305,7 +306,7 @@ export default function ProgramManager({ onChange }) {
   };
 
   const deleteCategory = async (c) => {
-    if (!confirm(`Slette kategorien «${c.name}»? Postene beholdes, men mister kategorien.`)) return;
+    if (!confirm(tr('Slette kategorien «{0}»? Postene beholdes, men mister kategorien.', [c.name]))) return;
     await api.categories.remove(c.id);
     if (catFilter === c.id) setCatFilter(null);
     setCatEdit(null);
@@ -319,12 +320,12 @@ export default function ProgramManager({ onChange }) {
   return (
     <>
       <PageHeader
-        title="Program"
-        subtitle="Vises med program-widgeten på skjermene og på den offentlige programsiden. Status oppdateres automatisk."
+        title={tr('Program')}
+        subtitle={tr('Vises med program-widgeten på skjermene og på den offentlige programsiden. Status oppdateres automatisk.')}
         action={
           <Button onClick={() => startNew(day !== 'all' ? day : days.find(([k]) => k >= today)?.[0] || today)}>
             <Icon name="plus" className="h-4 w-4" />
-            Ny programpost
+            {tr('Ny programpost')}
           </Button>
         }
       />
@@ -340,7 +341,7 @@ export default function ProgramManager({ onChange }) {
             aria-pressed={!catFilter}
             className={`h-9 rounded-full px-4 text-sm font-semibold ${!catFilter ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'}`}
           >
-            Alle kategorier
+            {tr('Alle kategorier')}
           </button>
           {categories.map((c) => (
             <span key={c.id} className="group relative flex items-center">
@@ -359,8 +360,8 @@ export default function ProgramManager({ onChange }) {
               <button
                 type="button"
                 onClick={() => setCatEdit(c)}
-                aria-label={`Endre ${c.name}`}
-                title="Endre kategori"
+                aria-label={tr('Endre {0}', [c.name])}
+                title={tr('Endre kategori')}
                 className={`absolute right-1.5 grid h-6 w-6 place-items-center rounded-full ${catFilter === c.id ? 'text-white hover:bg-white/20' : 'text-muted hover:bg-hair hover:text-ink'}`}
               >
                 <Icon name="edit" className="h-3.5 w-3.5" />
@@ -373,7 +374,7 @@ export default function ProgramManager({ onChange }) {
             className="flex h-9 items-center gap-1.5 rounded-full border border-dashed border-line px-3 text-sm font-semibold text-brand hover:bg-brand-tint"
           >
             <Icon name="plus" className="h-4 w-4" />
-            Kategori
+            {tr('Kategori')}
           </button>
         </section>
         {catEdit && (
@@ -388,8 +389,8 @@ export default function ProgramManager({ onChange }) {
 
         {/* dager */}
         {days.length > 1 && (
-          <nav className="flex gap-1 overflow-x-auto rounded-2xl bg-zone p-1" aria-label="Dager">
-            {[['all', 'Alle dager'], ...days.map(([k]) => [k, new Date(`${k}T12:00`).toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' })])].map(([k, label]) => (
+          <nav className="flex gap-1 overflow-x-auto rounded-2xl bg-zone p-1" aria-label={tr('Dager')}>
+            {[['all', 'Alle dager'], ...days.map(([k]) => [k, new Date(`${k}T12:00`).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' })])].map(([k, label]) => (
               <button
                 key={k}
                 type="button"
@@ -412,9 +413,9 @@ export default function ProgramManager({ onChange }) {
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-tint text-brand">
               <Icon name="calendar" className="h-7 w-7" />
             </span>
-            <h2 className="m-0 text-xl font-bold text-ink">Ingen programposter ennå</h2>
-            <p className="m-0 max-w-md text-sm text-muted">Legg inn programmet én gang – skjermene viser hva som skjer nå og hva som kommer.</p>
-            <Button onClick={() => startNew(today)}>Legg til første post</Button>
+            <h2 className="m-0 text-xl font-bold text-ink">{tr('Ingen programposter ennå')}</h2>
+            <p className="m-0 max-w-md text-sm text-muted">{tr('Legg inn programmet én gang – skjermene viser hva som skjer nå og hva som kommer.')}</p>
+            <Button onClick={() => startNew(today)}>{tr('Legg til første post')}</Button>
           </div>
         )}
 
@@ -444,7 +445,7 @@ export default function ProgramManager({ onChange }) {
                 className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-2.5 text-sm font-semibold text-brand hover:bg-brand-tint"
               >
                 <Icon name="plus" className="h-4 w-4" />
-                Legg til
+                {tr('Legg til')}
               </button>
             )}
           </section>

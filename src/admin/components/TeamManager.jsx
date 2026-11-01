@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Field, Input, Select, Button, IconButton, Card, GroupCard, Row, PageHeader, ErrorText } from './ui.jsx';
 import ReferralCard from './ReferralCard.jsx';
+import { tr } from '../../lib/i18n.js';
 
-const ROLE_LABEL = { owner: 'Eier', editor: 'Redaktør', viewer: 'Leser' };
+const ROLE_LABEL = { owner: tr('Eier'), editor: tr('Redaktør'), viewer: tr('Leser') };
 
 export default function TeamManager({ me }) {
   const [members, setMembers] = useState([]);
@@ -20,7 +21,7 @@ export default function TeamManager({ me }) {
     api.review.pending().then((r) => setApproval(!!r.required)).catch(() => {});
   }, []);
   const toggleApproval = async (on) => {
-    if (on && !confirm('Slå på godkjenning? Slik presentasjonene ser ut nå, blir publisert. Etter dette må en eier publisere endringer før de vises på skjermene.')) return;
+    if (on && !confirm(tr('Slå på godkjenning? Slik presentasjonene ser ut nå, blir publisert. Etter dette må en eier publisere endringer før de vises på skjermene.'))) return;
     setError('');
     try {
       setApproval((await api.review.setRequired(on)).required);
@@ -54,7 +55,7 @@ export default function TeamManager({ me }) {
     setBusy(true);
     try {
       setMembers(await api.team.invite(email, role));
-      setNotice(`Invitasjon sendt til ${email}.`);
+      setNotice(tr('Invitasjon sendt til {0}.', [email]));
       setEmail('');
     } catch (err) {
       setError(err.message);
@@ -73,7 +74,7 @@ export default function TeamManager({ me }) {
   };
 
   const remove = async (m) => {
-    if (!confirm(`Fjerne ${m.email} fra teamet? Personen logges ut med en gang.`)) return;
+    if (!confirm(tr('Fjerne {0} fra teamet? Personen logges ut med en gang.', [m.email]))) return;
     setError('');
     try {
       setMembers(await api.team.remove(m.user_id));
@@ -84,13 +85,13 @@ export default function TeamManager({ me }) {
 
   return (
     <>
-      <PageHeader title="Team" subtitle="Hvem som har tilgang til kontoen." />
+      <PageHeader title={tr('Team')} subtitle={tr('Hvem som har tilgang til kontoen.')} />
 
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-12 pt-4 sm:px-8">
         {isOwner && (
-          <Card title="Inviter en kollega">
+          <Card title={tr('Inviter en kollega')}>
             <form onSubmit={invite} className="grid gap-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
-              <Field label="E-post">
+              <Field label={tr('E-post')}>
                 <Input
                   type="email"
                   required
@@ -99,20 +100,20 @@ export default function TeamManager({ me }) {
                   placeholder="kollega@firma.no"
                 />
               </Field>
-              <Field label="Rolle">
+              <Field label={tr('Rolle')}>
                 <Select value={role} onChange={(e) => setRole(e.target.value)}>
-                  <option value="editor">Redaktør</option>
-                  <option value="viewer">Leser</option>
-                  <option value="owner">Eier</option>
+                  <option value="editor">{tr('Redaktør')}</option>
+                  <option value="viewer">{tr('Leser')}</option>
+                  <option value="owner">{tr('Eier')}</option>
                 </Select>
               </Field>
               <Button type="submit" disabled={busy}>
                 <Icon name="plus" className="h-4 w-4" />
-                {busy ? 'Sender …' : 'Send invitasjon'}
+                {busy ? tr('Sender …') : tr('Send invitasjon')}
               </Button>
             </form>
             <p className="mt-3 text-xs text-muted">
-              Lesere kan se alt, men ikke endre noe. Redaktører kan endre alt innhold og alle skjermer. Eiere kan i tillegg administrere teamet og godkjenne.
+              {tr('Lesere kan se alt, men ikke endre noe. Redaktører kan endre alt innhold og alle skjermer. Eiere kan i tillegg administrere teamet og godkjenne.')}
             </p>
             {notice && <p className="mt-3 text-sm font-medium text-brand">{notice}</p>}
           </Card>
@@ -121,13 +122,13 @@ export default function TeamManager({ me }) {
         <ErrorText>{error}</ErrorText>
 
         {isOwner && require2fa !== null && (
-          <Card title="Sikkerhet">
+          <Card title={tr('Sikkerhet')}>
             <label className="flex items-start gap-3 text-sm">
               <input type="checkbox" className="mt-1" checked={require2fa} onChange={(e) => toggle2fa(e.target.checked)} />
               <span>
-                <span className="font-semibold text-ink">Krev tofaktor for alle i teamet</span>
+                <span className="font-semibold text-ink">{tr('Krev tofaktor for alle i teamet')}</span>
                 <span className="block text-muted">
-                  Alle må bruke en autentiseringsapp i tillegg til passordet. De som ikke har slått det på, blir bedt om å gjøre det før de kommer inn. Du må ha det på selv først.
+                  {tr('Alle må bruke en autentiseringsapp i tillegg til passordet. De som ikke har slått det på, blir bedt om å gjøre det før de kommer inn. Du må ha det på selv først.')}
                 </span>
               </span>
             </label>
@@ -135,9 +136,9 @@ export default function TeamManager({ me }) {
               <label className="mt-4 flex items-start gap-3 border-t border-hair pt-4 text-sm">
                 <input type="checkbox" className="mt-1" checked={approval} onChange={(e) => toggleApproval(e.target.checked)} />
                 <span>
-                  <span className="font-semibold text-ink">Krev godkjenning før publisering</span>
+                  <span className="font-semibold text-ink">{tr('Krev godkjenning før publisering')}</span>
                   <span className="block text-muted">
-                    Endringer i presentasjoner vises ikke på skjermene før en eier har publisert dem. Redaktører trykker «Send til godkjenning», og eierne får beskjed på e-post (og Slack/Teams).
+                    {tr('Endringer i presentasjoner vises ikke på skjermene før en eier har publisert dem. Redaktører trykker «Send til godkjenning», og eierne får beskjed på e-post (og Slack/Teams).')}
                   </span>
                 </span>
               </label>
@@ -145,7 +146,7 @@ export default function TeamManager({ me }) {
           </Card>
         )}
 
-        <GroupCard label={`Medlemmer · ${members.length}`} icon="home">
+        <GroupCard label={tr('Medlemmer · {0}', [members.length])} icon="home">
           {members.map((m) => {
             const self = m.email === me?.email;
             return (
@@ -159,7 +160,7 @@ export default function TeamManager({ me }) {
                 title={
                   <>
                     {m.name || m.email.split('@')[0]}
-                    {self && <span className="ml-2 text-xs font-medium text-muted">(deg)</span>}
+                    {self && <span className="ml-2 text-xs font-medium text-muted">{tr('(deg)')}</span>}
                   </>
                 }
                 meta={
@@ -174,13 +175,13 @@ export default function TeamManager({ me }) {
                         value={m.role}
                         onChange={(e) => changeRole(m, e.target.value)}
                         className="!w-32"
-                        aria-label="Rolle"
+                        aria-label={tr('Rolle')}
                       >
-                        <option value="editor">Redaktør</option>
-                        <option value="viewer">Leser</option>
-                        <option value="owner">Eier</option>
+                        <option value="editor">{tr('Redaktør')}</option>
+                        <option value="viewer">{tr('Leser')}</option>
+                        <option value="owner">{tr('Eier')}</option>
                       </Select>
-                      <IconButton name="x" label="Fjern fra teamet" tone="danger" onClick={() => remove(m)} />
+                      <IconButton name="x" label={tr('Fjern fra teamet')} tone="danger" onClick={() => remove(m)} />
                     </>
                   )
                 }

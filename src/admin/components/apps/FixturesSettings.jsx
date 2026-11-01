@@ -4,6 +4,7 @@ import { MAX_TEAMS } from '../../../lib/fixtures.js';
 import FixturesView from '../../../viewer/slides/FixturesView.jsx';
 import { Button, IconButton, Input } from '../ui.jsx';
 import { Section } from './parts.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Kampprogram: lagenes kalenderlenker fra fotball.no og handball.no.
 // Serveren henter kalenderen når et lag legges til, så vi vet at lenken virker
@@ -51,9 +52,9 @@ export default function FixturesSettings({ app, onSaved }) {
       <div className="min-w-0 space-y-5">
         <Section
           icon="calendar"
-          title="Lagene"
+          title={tr('Lagene')}
           count={teams.length}
-          hint="Lim inn lenken fra «Abonner på kalender» på lagets side på fotball.no eller handball.no (under Kamper)."
+          hint={tr('Lim inn lenken fra «Abonner på kalender» på lagets side på fotball.no eller handball.no (under Kamper).')}
         >
           <form onSubmit={add} className="flex flex-wrap gap-2">
             <Input
@@ -65,7 +66,7 @@ export default function FixturesSettings({ app, onSaved }) {
               disabled={teams.length >= MAX_TEAMS}
             />
             <Button type="submit" disabled={busy || !url.trim() || teams.length >= MAX_TEAMS}>
-              {busy ? 'Henter …' : 'Legg til lag'}
+              {busy ? tr('Henter …') : tr('Legg til lag')}
             </Button>
           </form>
           {error && <p className="m-0 mt-2 text-sm text-danger">{error}</p>}
@@ -76,25 +77,25 @@ export default function FixturesSettings({ app, onSaved }) {
                   value={t.name}
                   onChange={(e) => rename(t.id, e.target.value)}
                   onBlur={() => save(teams)}
-                  aria-label="Navn på skjermen"
+                  aria-label={tr('Navn på skjermen')}
                   className="!h-8 max-w-[14rem]"
                 />
                 <span className="min-w-0 flex-1 truncate text-xs text-muted" title={t.url}>
                   {t.calname || new URL(t.url).hostname}
                 </span>
-                <IconButton name="x" label={`Fjern ${t.name}`} tone="danger" onClick={() => save(teams.filter((x) => x.id !== t.id))} />
+                <IconButton name="x" label={tr('Fjern {0}', [t.name])} tone="danger" onClick={() => save(teams.filter((x) => x.id !== t.id))} />
               </li>
             ))}
           </ul>
-          {!teams.length && <p className="m-0 mt-2 text-sm text-muted">Ingen lag ennå. Legg til A-laget, eller alle lagene i klubben – opptil {MAX_TEAMS}.</p>}
+          {!teams.length && <p className="m-0 mt-2 text-sm text-muted">{tr('Ingen lag ennå. Legg til A-laget, eller alle lagene i klubben – opptil')} {MAX_TEAMS}.</p>}
           {live?.errors?.length > 0 && <p className="m-0 mt-2 text-sm text-danger">{live.errors.join(' · ')}</p>}
         </Section>
       </div>
       <div className="min-w-0">
         <div className="sticky top-4 space-y-2">
-          <div className="text-xs font-semibold text-muted">Forhåndsvisning</div>
+          <div className="text-xs font-semibold text-muted">{tr('Forhåndsvisning')}</div>
           <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg, #0e4d64, #082f3d)', containerType: 'size' }}>
-            {live ? <FixturesView data={live} view="list" max={5} /> : <p className="text-sm opacity-70">{teams.length ? 'Henter kamper …' : 'Legg til et lag.'}</p>}
+            {live ? <FixturesView data={live} view="list" max={5} /> : <p className="text-sm opacity-70">{teams.length ? tr('Henter kamper …') : tr('Legg til et lag.')}</p>}
           </div>
         </div>
       </div>

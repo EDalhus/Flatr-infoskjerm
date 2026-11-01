@@ -4,6 +4,7 @@ import { cleanStock, STOCK_GROUPS, PALLET_TYPES } from '../../../lib/stock.js';
 import StockView from '../../../viewer/slides/StockView.jsx';
 import { Input, Textarea, IconButton, Segmented } from '../ui.jsx';
 import { Section, SaveBar } from './parts.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Lagerbeholdning: varene skrives inn for hånd. Forhåndsvisningen viser
 // boksen slik den blir på skjermene.
@@ -80,7 +81,7 @@ export default function StockSettings({ app, onSaved }) {
               icon="layers"
               title={g.label}
               count={list.length}
-              hint={g.id === 'bulk' ? 'Skjermene oppdateres med en gang du lagrer. Tall som 1052,44 vises som 1 052,44.' : g.id === 'pallets' ? 'Velg EP (Europalle) eller SRS for hver vare.' : null}
+              hint={g.id === 'bulk' ? tr('Skjermene oppdateres med en gang du lagrer. Tall som 1052,44 vises som 1 052,44.') : g.id === 'pallets' ? tr('Velg EP (Europalle) eller SRS for hver vare.') : null}
             >
               <div className="grid gap-3">
                 {list.map((it, k) => (
@@ -89,33 +90,33 @@ export default function StockSettings({ app, onSaved }) {
                       {g.id === 'pallets' && (
                         <Segmented value={it.pallet || 'EP'} onChange={(v) => edit(it.id, { pallet: v })} options={PALLET_TYPES.map((p) => ({ value: p.id, label: p.label }))} />
                       )}
-                      <Input value={it.name} onChange={(e) => edit(it.id, { name: e.target.value })} placeholder="Navn på varen" className="font-semibold" />
-                      <IconButton name="up" label="Flytt opp" onClick={() => move(it.id, -1)} disabled={k === 0} />
-                      <IconButton name="down" label="Flytt ned" onClick={() => move(it.id, 1)} disabled={k === list.length - 1} />
-                      <IconButton name="x" label="Fjern varen" tone="danger" onClick={() => remove(it.id)} />
+                      <Input value={it.name} onChange={(e) => edit(it.id, { name: e.target.value })} placeholder={tr('Navn på varen')} className="font-semibold" />
+                      <IconButton name="up" label={tr('Flytt opp')} onClick={() => move(it.id, -1)} disabled={k === 0} />
+                      <IconButton name="down" label={tr('Flytt ned')} onClick={() => move(it.id, 1)} disabled={k === list.length - 1} />
+                      <IconButton name="x" label={tr('Fjern varen')} tone="danger" onClick={() => remove(it.id)} />
                     </div>
                     <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
                       <label className="grid gap-1 text-xs font-semibold text-muted">
-                        På lager
-                        <Input value={it.amount} onChange={(e) => edit(it.id, { amount: e.target.value })} placeholder="Antall" inputMode="decimal" className="tabular-nums" />
+                        {tr('På lager')}
+                        <Input value={it.amount} onChange={(e) => edit(it.id, { amount: e.target.value })} placeholder={tr('Antall')} inputMode="decimal" className="tabular-nums" />
                       </label>
                       <label className="grid gap-1 text-xs font-semibold text-muted">
-                        Enhet
+                        {tr('Enhet')}
                         <Input value={it.unit} onChange={(e) => edit(it.id, { unit: e.target.value })} placeholder={g.unit} list="stock-units" />
                       </label>
                       <label className="grid gap-1 text-xs font-semibold text-muted">
-                        Varsle under (valgfritt)
-                        <Input value={it.min} onChange={(e) => edit(it.id, { min: e.target.value })} placeholder="Ingen varsel" inputMode="decimal" className="tabular-nums" />
+                        {tr('Varsle under (valgfritt)')}
+                        <Input value={it.min} onChange={(e) => edit(it.id, { min: e.target.value })} placeholder={tr('Ingen varsel')} inputMode="decimal" className="tabular-nums" />
                       </label>
                     </div>
                     <label className="grid gap-1 text-xs font-semibold text-muted">
-                      Detaljer (valgfritt, én per linje, f.eks. silo eller lagerplass)
-                      <Textarea rows={2} value={it.details} onChange={(e) => edit(it.id, { details: e.target.value })} placeholder="Tomt = ingen detaljer" />
+                      {tr('Detaljer (valgfritt, én per linje, f.eks. silo eller lagerplass)')}
+                      <Textarea rows={2} value={it.details} onChange={(e) => edit(it.id, { details: e.target.value })} placeholder={tr('Tomt = ingen detaljer')} />
                     </label>
                   </div>
                 ))}
                 <button type="button" onClick={() => add(g)} className="justify-self-start text-sm font-semibold text-brand hover:underline">
-                  + Legg til i {g.label.toLowerCase()}
+                  {tr('+ Legg til i')} {g.label.toLowerCase()}
                 </button>
               </div>
             </Section>
@@ -126,22 +127,22 @@ export default function StockSettings({ app, onSaved }) {
             <option key={u} value={u} />
           ))}
         </datalist>
-        <Section icon="edit" title="Overskrift og sted">
+        <Section icon="edit" title={tr('Overskrift og sted')}>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-xs font-semibold text-muted">
-              Overskrift
-              <Input value={f.title} onChange={(e) => setF((x) => ({ ...x, title: e.target.value }))} placeholder="Standard: Lagerbeholdning" />
+              {tr('Overskrift')}
+              <Input value={f.title} onChange={(e) => setF((x) => ({ ...x, title: e.target.value }))} placeholder={tr('Standard: Lagerbeholdning')} />
             </label>
             <label className="grid gap-1 text-xs font-semibold text-muted">
-              Sted (valgfritt)
-              <Input value={f.location} onChange={(e) => setF((x) => ({ ...x, location: e.target.value }))} placeholder="F.eks. Ålesund" />
+              {tr('Sted (valgfritt)')}
+              <Input value={f.location} onChange={(e) => setF((x) => ({ ...x, location: e.target.value }))} placeholder={tr('F.eks. Ålesund')} />
             </label>
           </div>
         </Section>
       </div>
       <div className="min-w-0">
         <div className="sticky top-4 space-y-2">
-          <div className="text-xs font-semibold text-muted">Forhåndsvisning</div>
+          <div className="text-xs font-semibold text-muted">{tr('Forhåndsvisning')}</div>
           <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl p-6 text-white" style={{ background: '#0f172a', containerType: 'size' }}>
             <StockView data={preview} />
           </div>

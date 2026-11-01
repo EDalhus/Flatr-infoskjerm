@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon, Button } from '../ui.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 // Felles byggeklosser for innstillingssidene til Flatr Apps.
 
@@ -71,18 +72,18 @@ export function SaveBar({ dirty, busy, error, onSave, onDiscard }) {
       <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-line bg-card px-4 py-2.5 shadow-pop">
         {saved && !dirty ? (
           <span className="flex items-center gap-2 text-sm font-medium text-brand">
-            <Icon name="check" className="h-4 w-4" /> Lagret
+            <Icon name="check" className="h-4 w-4" /> {tr('Lagret')}
           </span>
         ) : (
           <>
-            <span className={`text-sm ${error ? 'text-danger' : 'text-ink'}`}>{error || 'Ulagrede endringer'}</span>
+            <span className={`text-sm ${error ? 'text-danger' : 'text-ink'}`}>{error || tr('Ulagrede endringer')}</span>
             {onDiscard && (
               <Button variant="ghost" size="sm" onClick={onDiscard} disabled={busy}>
-                Forkast
+                {tr('Forkast')}
               </Button>
             )}
             <Button size="sm" onClick={onSave} disabled={busy || !dirty}>
-              {busy ? 'Lagrer …' : 'Lagre'}
+              {busy ? tr('Lagrer …') : tr('Lagre')}
             </Button>
           </>
         )}

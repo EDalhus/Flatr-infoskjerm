@@ -6,18 +6,19 @@ import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import SlideThumb from '../deck/SlideThumb.jsx';
 import { Icon, Button } from '../ui.jsx';
+import { tr, locale } from '../../../lib/i18n.js';
 
-const KIND = { published: 'Publisert', before_restore: 'Før gjenoppretting', restore: 'Gjenopprettet' };
+const KIND = { published: tr('Publisert'), before_restore: tr('Før gjenoppretting'), restore: tr('Gjenopprettet') };
 
 function when(iso) {
   const d = new Date(iso);
   const min = Math.round((Date.now() - d.getTime()) / 60_000);
-  const clock = d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
-  if (min < 1) return 'Nå nettopp';
+  const clock = d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+  if (min < 1) return tr('Nå nettopp');
   if (min < 60) return `${min} min siden`;
   if (d.toDateString() === new Date().toDateString()) return `I dag ${clock}`;
-  if (d.toDateString() === new Date(Date.now() - 86_400_000).toDateString()) return `I går ${clock}`;
-  return `${d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' })} ${clock}`;
+  if (d.toDateString() === new Date(Date.now() - 86_400_000).toDateString()) return tr('I går {0}', [clock]);
+  return `${d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' })} ${clock}`;
 }
 
 export default function VersionHistory({ playlistId, orientation, onClose, onRestored, readOnly }) {
@@ -43,7 +44,7 @@ export default function VersionHistory({ playlistId, orientation, onClose, onRes
   };
 
   const restore = async (v) => {
-    if (!confirm(`Gjenopprette versjonen fra ${when(v.created_at).toLowerCase()}? Slik presentasjonen ser ut nå, lagres som egen versjon, så du kan angre.`)) return;
+    if (!confirm(tr('Gjenopprette versjonen fra {0}? Slik presentasjonen ser ut nå, lagres som egen versjon, så du kan angre.', [when(v.created_at).toLowerCase()]))) return;
     setBusy(true);
     setError('');
     try {
@@ -62,10 +63,10 @@ export default function VersionHistory({ playlistId, orientation, onClose, onRes
       <aside className="flex h-full w-full max-w-md flex-col border-l border-line bg-card shadow-pop" onMouseDown={(e) => e.stopPropagation()}>
         <header className="flex items-center justify-between border-b border-line px-5 py-3">
           <div>
-            <h2 className="m-0 text-base font-bold text-ink">Versjonshistorikk</h2>
-            <p className="m-0 text-xs text-muted">Lagres automatisk når du har jobbet en stund.</p>
+            <h2 className="m-0 text-base font-bold text-ink">{tr('Versjonshistorikk')}</h2>
+            <p className="m-0 text-xs text-muted">{tr('Lagres automatisk når du har jobbet en stund.')}</p>
           </div>
-          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full hover:bg-zone" aria-label="Lukk">
+          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full hover:bg-zone" aria-label={tr('Lukk')}>
             <Icon name="x" className="h-4 w-4" />
           </button>
         </header>
@@ -74,7 +75,7 @@ export default function VersionHistory({ playlistId, orientation, onClose, onRes
         {open ? (
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <button type="button" onClick={() => setOpen(null)} className="mb-3 text-sm font-semibold text-brand hover:underline">
-              ← Alle versjoner
+              {tr('← Alle versjoner')}
             </button>
             <div className="mb-3 text-sm text-ink">
               <strong>{when(open.created_at)}</strong>
@@ -84,20 +85,20 @@ export default function VersionHistory({ playlistId, orientation, onClose, onRes
               {open.deck.slides.map((s) => (
                 <div key={s.id}>
                   <SlideThumb slide={s} orientation={open.deck.orientation || orientation} />
-                  <div className="mt-1 truncate text-xs text-muted">{s.name || 'Lysbilde'}</div>
+                  <div className="mt-1 truncate text-xs text-muted">{s.name || tr('Lysbilde')}</div>
                 </div>
               ))}
             </div>
             {!readOnly && (
               <Button className="mt-4 w-full" onClick={() => restore(open)} disabled={busy}>
-                {busy ? 'Gjenoppretter …' : 'Gjenopprett denne versjonen'}
+                {busy ? tr('Gjenoppretter …') : tr('Gjenopprett denne versjonen')}
               </Button>
             )}
           </div>
         ) : (
           <ul className="m-0 min-h-0 flex-1 list-none overflow-y-auto p-2">
-            {list === null && <li className="p-4 text-sm text-muted">Laster …</li>}
-            {list?.length === 0 && <li className="p-4 text-sm text-muted">Ingen versjoner ennå. Den første lagres litt etter at du har gjort endringer.</li>}
+            {list === null && <li className="p-4 text-sm text-muted">{tr('Laster …')}</li>}
+            {list?.length === 0 && <li className="p-4 text-sm text-muted">{tr('Ingen versjoner ennå. Den første lagres litt etter at du har gjort endringer.')}</li>}
             {list?.map((v, i) => (
               <li key={v.id}>
                 <button type="button" onClick={() => show(v)} className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-zone">
@@ -105,14 +106,14 @@ export default function VersionHistory({ playlistId, orientation, onClose, onRes
                   <div className="min-w-0 flex-1 text-sm">
                     <div className="font-semibold text-ink">
                       {when(v.created_at)}
-                      {i === 0 && <span className="ml-1.5 rounded-full bg-zone px-1.5 py-0.5 text-[10px] font-semibold text-muted">Siste</span>}
+                      {i === 0 && <span className="ml-1.5 rounded-full bg-zone px-1.5 py-0.5 text-[10px] font-semibold text-muted">{tr('Siste')}</span>}
                     </div>
                     <div className="truncate text-xs text-muted">
                       {[v.author, `${v.slide_count} lysbilde${v.slide_count === 1 ? '' : 'r'}`].filter(Boolean).join(' · ')}
                     </div>
                     {(KIND[v.kind] || v.published) && (
                       <div className="mt-1 flex gap-1">
-                        {v.published && <span className="rounded-full bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold text-brand">På skjermene</span>}
+                        {v.published && <span className="rounded-full bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold text-brand">{tr('På skjermene')}</span>}
                         {KIND[v.kind] && v.kind !== 'published' && <span className="rounded-full bg-zone px-1.5 py-0.5 text-[10px] font-semibold text-muted">{KIND[v.kind]}</span>}
                       </div>
                     )}

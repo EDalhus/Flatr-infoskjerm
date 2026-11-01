@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Icon, Input, Button, PageHeader, ErrorText } from './ui.jsx';
+import { tr, locale } from '../../lib/i18n.js';
 
 const initials = (s) =>
   String(s || '?')
@@ -20,8 +21,8 @@ function dayLabel(iso) {
   const today = new Date();
   const yesterday = new Date(Date.now() - 86_400_000);
   if (d.toDateString() === today.toDateString()) return 'I dag';
-  if (d.toDateString() === yesterday.toDateString()) return 'I går';
-  return d.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' });
+  if (d.toDateString() === yesterday.toDateString()) return tr('I går');
+  return d.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 export default function ActivityManager({ onNavigate }) {
@@ -62,14 +63,14 @@ export default function ActivityManager({ onNavigate }) {
 
   return (
     <>
-      <PageHeader title="Aktivitet" subtitle="Hvem som har endret hva, og når. Lagres i et halvt år." />
+      <PageHeader title={tr('Aktivitet')} subtitle={tr('Hvem som har endret hva, og når. Lagres i et halvt år.')} />
       <div className="mx-auto w-full max-w-4xl space-y-5 px-6 pb-12 pt-4 sm:px-8">
         <label className="flex items-center gap-2">
           <Icon name="search" className="h-4 w-4 text-muted" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Søk på person, presentasjon, skjerm …" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('Søk på person, presentasjon, skjerm …')} />
         </label>
         <ErrorText>{error}</ErrorText>
-        {rows && !rows.length && <p className="py-10 text-center text-sm text-muted">{q ? 'Ingen treff.' : 'Ingen aktivitet ennå.'}</p>}
+        {rows && !rows.length && <p className="py-10 text-center text-sm text-muted">{q ? tr('Ingen treff.') : tr('Ingen aktivitet ennå.')}</p>}
         {days.map((d) => (
           <section key={d.key}>
             <h2 className="m-0 mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{d.label}</h2>
@@ -79,7 +80,7 @@ export default function ActivityManager({ onNavigate }) {
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-tint text-[11px] font-bold text-brand">{initials(r.user_name || r.user_email)}</span>
                   <div className="min-w-0 flex-1 text-sm">
                     <div className="text-ink">
-                      <strong>{r.user_name || r.user_email || 'Noen'}</strong> {r.action}
+                      <strong>{r.user_name || r.user_email || tr('Noen')}</strong> {r.action}
                       {r.target_name && (
                         <>
                           {' '}
@@ -92,13 +93,13 @@ export default function ActivityManager({ onNavigate }) {
                           )}
                         </>
                       )}
-                      {r.count > 1 && <span className="text-muted"> · {r.count} endringer</span>}
+                      {r.count > 1 && <span className="text-muted"> · {r.count} {tr('endringer')}</span>}
                     </div>
                     {r.detail && <div className="mt-0.5 truncate text-xs text-muted">«{r.detail}»</div>}
                   </div>
                   <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-muted">
                     {ICON[r.target_type] && <Icon name={ICON[r.target_type]} className="h-3.5 w-3.5" />}
-                    {new Date(r.at).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(r.at).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </li>
               ))}
@@ -107,7 +108,7 @@ export default function ActivityManager({ onNavigate }) {
         ))}
         {rows?.length > 0 && more && (
           <Button variant="outline" onClick={() => load(true)} disabled={busy} className="mx-auto">
-            {busy ? 'Henter …' : 'Vis flere'}
+            {busy ? tr('Henter …') : tr('Vis flere')}
           </Button>
         )}
       </div>

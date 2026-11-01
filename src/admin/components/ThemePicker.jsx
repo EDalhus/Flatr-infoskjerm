@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
+import { tr } from '../../lib/i18n.js';
 
 // Admin har ett tema: «Presis» (mørkt, ikon-sidemeny) – variabelsettet i
 // src/index.css. «Varm» (lyst) er fjernet; gamle lagrede valg ignoreres.
-export const THEMES = [{ id: 'presis', label: 'Presis' }];
+export const THEMES = [{ id: 'presis', label: tr('Presis') }];
 export const DEFAULT_THEME = 'presis';
 
 const KEY = 'flatr.theme';

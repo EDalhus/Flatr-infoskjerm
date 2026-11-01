@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { tr } from '../../lib/i18n.js';
 
 const initials = (name = '') =>
   name
@@ -48,7 +49,7 @@ export default function OnlineBar({ peers = [], selfId }) {
   if (others.length === 0) return null;
 
   const shown = others.slice(0, 3);
-  const label = `${others.length} ${others.length === 1 ? 'annen' : 'andre'} pålogget`;
+  const label = tr('{0} {1} pålogget', [others.length, others.length === 1 ? 'annen' : 'andre']);
 
   return (
     <div ref={wrapRef} className="relative">
@@ -71,7 +72,7 @@ export default function OnlineBar({ peers = [], selfId }) {
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-line bg-card p-2 shadow-pop">
-          <div className="px-2 pb-1.5 pt-1 text-xs font-semibold text-muted">Pålogget nå</div>
+          <div className="px-2 pb-1.5 pt-1 text-xs font-semibold text-muted">{tr('Pålogget nå')}</div>
           {others.map((p) => (
             <div key={p.id} className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm">
               <Avatar p={p} ring={false} />

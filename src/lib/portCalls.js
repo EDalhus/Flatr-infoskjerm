@@ -1,4 +1,5 @@
-// Anløp (tillegg i NAIS): båtanløp man vet om på forhånd – hvilken båt, hvilken
+
+import { tr } from './i18n.js';// Anløp (tillegg i NAIS): båtanløp man vet om på forhånd – hvilken båt, hvilken
 // kai, forventet ankomst/avgang, neste havn og hvilke varer som lastes eller
 // losses. Lagres i NAIS-appens config.calls. Felles for server og nettleser.
 //
@@ -7,8 +8,8 @@
 // ikke er kjent.
 
 export const CARGO_DIRS = [
-  { value: 'unload', label: 'Leverer', short: 'Lossing', icon: '↓' },
-  { value: 'load', label: 'Henter', short: 'Lasting', icon: '↑' }
+  { value: 'unload', label: tr('Leverer'), short: tr('Lossing'), icon: '↓' },
+  { value: 'load', label: tr('Henter'), short: tr('Lasting'), icon: '↑' }
 ];
 export const UNITS = ['tonn', 'm³', 'stk', 'paller', 'containere', 'big bags', 'liter'];
 

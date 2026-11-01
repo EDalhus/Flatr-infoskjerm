@@ -14,6 +14,7 @@ import { alertColors, alertHeading } from '../../lib/alerts.js';
 import { screenState, StatusPill, showing } from './screenStatus.jsx';
 import { timeAgo } from './pairingHelpers.js';
 import qrcode from 'qrcode-generator';
+import { tr, locale } from '../../lib/i18n.js';
 
 const OPEN_SCREEN_KEY = 'flatr.screens.open';
 const WIZARD_SKIP_KEY = 'flatr.onboarding.skipped';
@@ -115,7 +116,7 @@ function ScreenCard({ s, onOpen }) {
         </div>
         <span className="truncate text-sm text-muted">
           {showing(s)}
-          {st === 'offline' && s.device.last_seen && ` · sist sett ${timeAgo(s.device.last_seen)}`}
+          {st === 'offline' && s.device.last_seen && tr(' · sist sett {0}', [timeAgo(s.device.last_seen)])}
         </span>
       </div>
     </button>
@@ -128,11 +129,11 @@ function ScreenTable({ rows, onOpen }) {
       <table className="w-full min-w-[720px] border-collapse text-sm">
         <thead>
           <tr className="bg-zone text-left text-xs text-muted">
-            <th className="px-4 py-2.5 font-medium">Skjerm</th>
-            <th className="px-4 py-2.5 font-medium">Status</th>
-            <th className="px-4 py-2.5 font-medium">Viser</th>
-            <th className="px-4 py-2.5 font-medium">Spiller</th>
-            <th className="px-4 py-2.5 text-right font-medium">Sist sett</th>
+            <th className="px-4 py-2.5 font-medium">{tr('Skjerm')}</th>
+            <th className="px-4 py-2.5 font-medium">{tr('Status')}</th>
+            <th className="px-4 py-2.5 font-medium">{tr('Viser')}</th>
+            <th className="px-4 py-2.5 font-medium">{tr('Spiller')}</th>
+            <th className="px-4 py-2.5 text-right font-medium">{tr('Sist sett')}</th>
           </tr>
         </thead>
         <tbody>
@@ -153,9 +154,9 @@ function ScreenTable({ rows, onOpen }) {
                   <StatusPill s={s} />
                 </td>
                 <td className="px-4 py-2.5 text-ink/80">{showing(s)}</td>
-                <td className="px-4 py-2.5 font-mono text-xs text-muted">{s.device ? s.device.client_info?.model || 'Apple TV' : 'Nettleser'}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-muted">{s.device ? s.device.client_info?.model || 'Apple TV' : tr('Nettleser')}</td>
                 <td className="px-4 py-2.5 text-right font-mono text-xs text-muted">
-                  {st === 'online' || st === 'browser' ? 'nå' : seen ? timeAgo(seen) : '–'}
+                  {st === 'online' || st === 'browser' ? tr('nå') : seen ? timeAgo(seen) : '–'}
                 </td>
               </tr>
             );
@@ -187,7 +188,7 @@ function ViewToggle({ view, setView }) {
   );
 }
 
-const clock = (iso) => new Date(iso).toLocaleString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\./g, '');
+const clock = (iso) => new Date(iso).toLocaleString(locale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\./g, '');
 
 function alertMeta(a, screens) {
   const where = a.target_tag
@@ -203,7 +204,7 @@ function alertMeta(a, screens) {
         : a.created_at
           ? `sendt ${timeAgo(a.starts_at || a.created_at)}`
           : '';
-  const until = a.ends_at ? `til ${clock(a.ends_at)}` : '';
+  const until = a.ends_at ? tr('til {0}', [clock(a.ends_at)]) : '';
   return [where, when, until].filter(Boolean).join(' · ');
 }
 
@@ -323,16 +324,16 @@ export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
     <>
       <PageHeader
         eyebrow={greeting(me?.name)}
-        title="Oversikt"
+        title={tr('Oversikt')}
         action={
           <>
             <Button variant="outline" onClick={() => setComposer((v) => !v)} aria-expanded={composer}>
               <Icon name="megaphone" className="h-4 w-4" />
-              Send et varsel
+              {tr('Send et varsel')}
             </Button>
             <Button onClick={() => go('screens')}>
               <Icon name="plus" className="h-4 w-4" />
-              Legg til skjerm
+              {tr('Legg til skjerm')}
             </Button>
           </>
         }
@@ -354,10 +355,10 @@ export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
           <section className="rounded-2xl border border-danger/30 bg-danger-tint/40 p-4">
             <div className="mb-2 flex items-center gap-2">
               <Icon name="megaphone" className="h-4 w-4 text-danger" />
-              <h2 className="m-0 flex-1 text-sm font-bold text-ink">{liveAlerts.length ? 'Vises på skjermene nå' : 'Planlagte varsler'}</h2>
+              <h2 className="m-0 flex-1 text-sm font-bold text-ink">{liveAlerts.length ? tr('Vises på skjermene nå') : tr('Planlagte varsler')}</h2>
               {ownLive.length > 1 && (
                 <button type="button" onClick={() => dismissAlert(null)} className="text-sm font-semibold text-danger hover:underline">
-                  Avslutt alle
+                  {tr('Avslutt alle')}
                 </button>
               )}
             </div>
@@ -373,10 +374,10 @@ export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
                     <span className="block text-xs text-muted">{alertMeta(a, all)}</span>
                   </span>
                   {a.source === 'met' ? (
-                    <span className="shrink-0 text-xs font-semibold text-muted">Fra MET</span>
+                    <span className="shrink-0 text-xs font-semibold text-muted">{tr('Fra MET')}</span>
                   ) : (
                     <Button variant="outline" size="sm" onClick={() => dismissAlert(a.id)}>
-                      {a.state === 'scheduled' ? 'Avlys' : 'Avslutt'}
+                      {a.state === 'scheduled' ? tr('Avlys') : tr('Avslutt')}
                     </Button>
                   )}
                 </li>
@@ -388,27 +389,27 @@ export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
         <section className="grid gap-4 md:grid-cols-3">
           <SummaryCard
             tone="brand"
-            label="Online akkurat nå"
-            value={inUse.length ? `${live.length} av ${inUse.length}` : '0'}
+            label={tr('Online akkurat nå')}
+            value={inUse.length ? tr('{0} av {1}', [live.length, inUse.length]) : '0'}
             sub={!inUse.length ? 'Ingen skjermer i bruk' : offline.length ? 'Noen trenger tilsyn' : 'Alt ser bra ut'}
           />
           {offline.length > 0 ? (
-            <SummaryCard tone="warn" label="Trenger tilsyn" value={plural(offline.length, 'skjerm', 'skjermer')} sub={offline.map((s) => s.name).join(', ')} />
+            <SummaryCard tone="warn" label={tr('Trenger tilsyn')} value={plural(offline.length, 'skjerm', 'skjermer')} sub={offline.map((s) => s.name).join(', ')} />
           ) : (
-            <SummaryCard tone="plain" label="Presentasjoner" value={playlists.length} sub={playlists.map((p) => p.name).slice(0, 3).join(', ') || 'Ingen ennå'} />
+            <SummaryCard tone={'plain'} label={tr('Presentasjoner')} value={playlists.length} sub={playlists.map((p) => p.name).slice(0, 3).join(', ') || tr('Ingen ennå')} />
           )}
           <SummaryCard
             tone="plain"
-            label="Aktive varsler"
+            label={tr('Aktive varsler')}
             value={liveAlerts.length}
-            sub={liveAlerts[0] ? alertHeading(liveAlerts[0]) + ': ' + liveAlerts[0].message : scheduledAlerts.length ? `${plural(scheduledAlerts.length, 'planlagt varsel', 'planlagte varsler')}` : 'Ingen varsler vises nå'}
+            sub={liveAlerts[0] ? alertHeading(liveAlerts[0]) + ': ' + liveAlerts[0].message : scheduledAlerts.length ? `${plural(scheduledAlerts.length, tr('planlagt varsel'), tr('planlagte varsler'))}` : tr('Ingen varsler vises nå')}
           />
         </section>
 
         {all.length > 0 && (
           <section className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="m-0 mr-2 text-lg font-bold text-ink">Skjermene dine</h2>
+              <h2 className="m-0 mr-2 text-lg font-bold text-ink">{tr('Skjermene dine')}</h2>
               {tagFilters.length > 0 &&
                 ['all', ...tagFilters].map((f) => (
                   <button
@@ -420,7 +421,7 @@ export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
                       filter === f ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'
                     }`}
                   >
-                    {f === 'all' ? 'Alle' : f}
+                    {f === 'all' ? tr('Alle') : f}
                   </button>
                 ))}
               <div className="ml-auto">
@@ -444,9 +445,9 @@ export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
 
         {!running && (
           <p className="text-center text-sm text-muted">
-            Ingen skjerm viser noe ennå ·{' '}
+            {tr('Ingen skjerm viser noe ennå ·')}{' '}
             <button type="button" onClick={() => setWizard(true)} className="font-semibold text-brand hover:underline">
-              Start veiviseren
+              {tr('Start veiviseren')}
             </button>
           </p>
         )}
@@ -472,14 +473,13 @@ function MobileCard() {
     <section className="flex items-center gap-4 rounded-2xl border border-line bg-card p-4 shadow-card">
       {qr && <img src={qr} alt="" className="hidden h-24 w-24 shrink-0 rounded-lg bg-white p-1 sm:block" style={{ imageRendering: 'pixelated' }} />}
       <div className="min-w-0 flex-1">
-        <h2 className="m-0 text-sm font-bold text-ink">Legg ut fra mobilen</h2>
+        <h2 className="m-0 text-sm font-bold text-ink">{tr('Legg ut fra mobilen')}</h2>
         <p className="m-0 mt-1 text-sm text-muted">
-          Ta et bilde eller skriv en beskjed og legg det rett ut på skjermene. Skann koden med telefonen, og legg siden på hjemskjermen, så har du den
-          som en app.
+          {tr('Ta et bilde eller skriv en beskjed og legg det rett ut på skjermene. Skann koden med telefonen, og legg siden på hjemskjermen, så har du den som en app.')}
         </p>
       </div>
       <a href="/mobil" className="shrink-0 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-onbrand sm:hidden">
-        Åpne
+        {tr('Åpne')}
       </a>
     </section>
   );

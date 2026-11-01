@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { Button, Icon, ErrorText } from '../ui.jsx';
+import { tr } from '../../../lib/i18n.js';
 
 /** Media-id-en i en Flatr-adresse («/api/media?id=12&raw=1» eller «/m/12.jpg»), ellers null. */
 export const mediaIdFrom = (url) => Number((/[?&]id=(\d+)/.exec(url || '') || /\/m\/(\d+)[v.]/.exec(url || '') || [])[1]) || null;
@@ -20,28 +21,28 @@ export function FocusPicker({ url, value, onChange }) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs font-semibold text-muted">
-        <span>Fokuspunkt</span>
+        <span>{tr('Fokuspunkt')}</span>
         {value && (
           <button type="button" onClick={() => onChange(null)} className="font-semibold text-brand hover:underline">
-            Midten
+            {tr('Midten')}
           </button>
         )}
       </div>
-      <button type="button" onClick={pick} className="relative block max-w-full cursor-crosshair overflow-hidden rounded-lg border border-hair bg-zone" aria-label="Velg fokuspunkt">
+      <button type="button" onClick={pick} className="relative block max-w-full cursor-crosshair overflow-hidden rounded-lg border border-hair bg-zone" aria-label={tr('Velg fokuspunkt')}>
         <img src={url} alt="" className="block max-h-40 max-w-full select-none" draggable={false} />
         <span
           className="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand/40 shadow-[0_0_0_2px_rgba(0,0,0,0.45)]"
           style={{ left: `${f.x}%`, top: `${f.y}%` }}
         />
       </button>
-      <p className="m-0 mt-1 text-xs text-muted">Klikk på det som alltid skal synes når bildet fyller flaten.</p>
+      <p className="m-0 mt-1 text-xs text-muted">{tr('Klikk på det som alltid skal synes når bildet fyller flaten.')}</p>
     </div>
   );
 }
 
 const ASPECTS = [
-  { id: 'free', label: 'Fri' },
-  { id: 'box', label: 'Som boksen' },
+  { id: 'free', label: tr('Fri') },
+  { id: 'box', label: tr('Som boksen') },
   { id: '16:9', label: '16:9', ratio: 16 / 9 },
   { id: '9:16', label: '9:16', ratio: 9 / 16 },
   { id: '1:1', label: '1:1', ratio: 1 },
@@ -91,7 +92,7 @@ export function CropModal({ src, initial, boxRatio, onDone, onClose }) {
         setType(blob.type || 'image/jpeg');
         setBitmap(bmp);
       })
-      .catch(() => alive && setError('Fikk ikke åpnet bildet. Bilder fra andre nettsteder kan ikke beskjæres – legg dem i biblioteket først.'));
+      .catch(() => alive && setError(tr('Fikk ikke åpnet bildet. Bilder fra andre nettsteder kan ikke beskjæres – legg dem i biblioteket først.')));
     return () => {
       alive = false;
     };
@@ -200,10 +201,10 @@ export function CropModal({ src, initial, boxRatio, onDone, onClose }) {
       // Gjennomsiktighet beholdes for PNG og WebP, ellers JPEG.
       const outType = /png|webp|gif/.test(type) ? 'image/png' : 'image/jpeg';
       const blob = await new Promise((resolve) => out.toBlob(resolve, outType, 0.9));
-      if (!blob) throw new Error('Fikk ikke laget bildet');
+      if (!blob) throw new Error(tr('Fikk ikke laget bildet'));
       await onDone({ blob, type: outType, crop, rotate });
     } catch (e) {
-      setError(e.message || 'Noe gikk galt');
+      setError(e.message || tr('Noe gikk galt'));
       setBusy(false);
     }
   };
@@ -215,8 +216,8 @@ export function CropModal({ src, initial, boxRatio, onDone, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}>
       <div className="flex max-h-full w-full max-w-4xl flex-col gap-4 rounded-2xl border border-hair bg-card p-5 shadow-pop">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="m-0 mr-auto text-lg font-bold text-ink">Beskjær og roter</h2>
-          <div className="flex flex-wrap gap-1 rounded-xl border border-line bg-paper p-1" role="group" aria-label="Forhold">
+          <h2 className="m-0 mr-auto text-lg font-bold text-ink">{tr('Beskjær og roter')}</h2>
+          <div className="flex flex-wrap gap-1 rounded-xl border border-line bg-paper p-1" role="group" aria-label={tr('Forhold')}>
             {ASPECTS.filter((a) => a.id !== 'box' || boxRatio).map((a) => (
               <button
                 key={a.id}
@@ -229,10 +230,10 @@ export function CropModal({ src, initial, boxRatio, onDone, onClose }) {
               </button>
             ))}
           </div>
-          <Button variant="outline" size="sm" onClick={() => turn(-90)} aria-label="Roter mot klokka">
+          <Button variant="outline" size="sm" onClick={() => turn(-90)} aria-label={tr('Roter mot klokka')}>
             ⟲
           </Button>
-          <Button variant="outline" size="sm" onClick={() => turn(90)} aria-label="Roter med klokka">
+          <Button variant="outline" size="sm" onClick={() => turn(90)} aria-label={tr('Roter med klokka')}>
             ⟳
           </Button>
         </div>
@@ -261,21 +262,21 @@ export function CropModal({ src, initial, boxRatio, onDone, onClose }) {
               </div>
             </div>
           ) : (
-            <p className="m-0 py-16 text-sm text-white/60">{error ? '' : 'Åpner bildet …'}</p>
+            <p className="m-0 py-16 text-sm text-white/60">{error ? '' : tr('Åpner bildet …')}</p>
           )}
         </div>
 
         <ErrorText>{error}</ErrorText>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">
-            {bitmap ? `${Math.round((crop.w / 100) * W)} × ${Math.round((crop.h / 100) * H)} px · originalen beholdes i biblioteket` : ''}
+            {bitmap ? tr('{0} × {1} px · originalen beholdes i biblioteket', [Math.round((crop.w / 100) * W), Math.round((crop.h / 100) * H)]) : ''}
           </span>
           <Button variant="ghost" className="ml-auto" onClick={onClose} disabled={busy}>
-            Avbryt
+            {tr('Avbryt')}
           </Button>
           <Button onClick={apply} disabled={!bitmap || busy}>
             <Icon name="check" className="h-4 w-4" />
-            {busy ? 'Lagrer …' : 'Bruk'}
+            {busy ? tr('Lagrer …') : tr('Bruk')}
           </Button>
         </div>
       </div>
@@ -293,7 +294,7 @@ export async function saveCropped({ blob, type }, originalUrl) {
     folder = m?.folder || null;
     name = String(m?.name || name).replace(/\.[a-z0-9]+$/i, '').replace(/ \(beskåret\)$/, '');
   }
-  const file = new File([blob], `${name} (beskåret).${type === 'image/png' ? 'png' : 'jpg'}`, { type });
+  const file = new File([blob], tr('{0} (beskåret).{1}', [name, type === 'image/png' ? 'png' : 'jpg']), { type });
   const row = await api.media.upload(file, folder);
   return api.media.url(row.id);
 }
