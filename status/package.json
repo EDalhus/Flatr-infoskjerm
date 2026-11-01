@@ -1,0 +1,13 @@
+{
+  "name": "flatr-status",
+  "private": true,
+  "description": "Driftsstatus for Flatr på status.flatr.no (Cloudflare Worker, uavhengig av serveren)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.156.0"
+  }
+}

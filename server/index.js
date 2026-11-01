@@ -39,6 +39,7 @@ import { afterWrite, beforeWrite } from '../src/api/activity.js';
 import { notifyChange, waitForChange } from './changes.js';
 import { notifier, teamMembers } from './notify.js';
 import { trustedClientIp } from './clientIp.js';
+import { healthChecks } from './health.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -385,7 +386,11 @@ async function handlePlatform(request) {
     const key = apiKey(url.pathname);
     if (key === '/api/context') return json({ mode: 'platform', base_domain: BASE_DOMAIN, social: SOCIAL_PROVIDERS });
     if (key === '/api/platform/apps' && request.method === 'GET') return json(publicCatalog());
-    if (key === '/api/health') return json({ ok: true, time: new Date().toISOString() });
+    // ?deep=1: ja/nei per del til statussiden (status.flatr.no), se server/health.js.
+    if (key === '/api/health') {
+      const checks = url.searchParams.get('deep') ? await healthChecks() : undefined;
+      return json({ ok: true, time: new Date().toISOString(), checks });
+    }
     return jsonError(404, 'Ukjent endepunkt');
   }
   return ASSETS.fetch(request);

@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "flatr-status",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  // Svarer på status.flatr.no (dekkes av *.flatr.no hos Cloudflare, ingen ny DNS).
+  "routes": [{ "pattern": "status.flatr.no/*", "zone_name": "flatr.no" }],
+  "workers_dev": false,
+  // Sjekker Flatr hvert minutt.
+  "triggers": { "crons": ["* * * * *"] },
+  // Opprettes automatisk ved første deploy.
+  "d1_databases": [{ "binding": "DB", "database_name": "flatr-status" }],
+  "vars": {
+    "SITE": "https://flatr.no",
+    // En kundeadresse: sjekker at skjermene når kundedatabasene (demokontoen til App Store).
+    "SCREENS": "https://appreview.flatr.no/api/health"
+  },
+  "observability": { "enabled": true }
+}
