@@ -15,6 +15,7 @@ import { twoFactor } from 'better-auth/plugins/two-factor';
 import { getMigrations } from 'better-auth/db/migration';
 import { platformDb, upsertUser, normEmail } from './platform.js';
 import { sendMail, buttonMail } from './mail.js';
+import { tr } from '../src/lib/i18n.js';
 
 const PROTOCOL = process.env.PUBLIC_PROTOCOL || 'http';
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -72,13 +73,13 @@ const options = {
     sendResetPassword: async ({ user, url }) => {
       await sendMail({
         to: user.email,
-        subject: 'Sett nytt passord – Flatr',
+        subject: tr('Sett nytt passord – Flatr'),
         ...buttonMail({
-          heading: 'Sett nytt passord',
-          intro: 'Klikk på knappen for å velge et nytt passord. Lenken virker i én time.',
-          button: 'Velg passord',
+          heading: tr('Sett nytt passord'),
+          intro: tr('Klikk på knappen for å velge et nytt passord. Lenken virker i én time.'),
+          button: tr('Velg passord'),
           url,
-          outro: 'Har du ikke bedt om dette, kan du se bort fra e-posten. Passordet ditt er uendret.'
+          outro: tr('Har du ikke bedt om dette, kan du se bort fra e-posten. Passordet ditt er uendret.')
         })
       });
     }
@@ -92,13 +93,13 @@ const options = {
     sendVerificationEmail: async ({ user, url }) => {
       await sendMail({
         to: user.email,
-        subject: 'Bekreft e-postadressen din – Flatr',
+        subject: tr('Bekreft e-postadressen din – Flatr'),
         ...buttonMail({
-          heading: 'Bekreft e-postadressen din',
-          intro: 'Klikk på knappen for å bekrefte adressen og ta i bruk Flatr. Lenken virker i 24 timer.',
-          button: 'Bekreft e-post',
+          heading: tr('Bekreft e-postadressen din'),
+          intro: tr('Klikk på knappen for å bekrefte adressen og ta i bruk Flatr. Lenken virker i 24 timer.'),
+          button: tr('Bekreft e-post'),
           url,
-          outro: 'Har du ikke opprettet en Flatr-konto, kan du se bort fra e-posten.'
+          outro: tr('Har du ikke opprettet en Flatr-konto, kan du se bort fra e-posten.')
         })
       });
     },

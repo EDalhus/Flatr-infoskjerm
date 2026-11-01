@@ -11,13 +11,15 @@
 //     allerede har gjort det, og presentasjoner som venter på godkjenning –
 //     til eiere og redaktører. Sendes bare når noe bør gjøres.
 
-import { platformDb, tenantResources } from './platform.js';
+import { platformDb, tenantResources, orgLang } from './platform.js';
 import { getTimezone } from '../src/api/_shared.js';
 import { appData } from '../src/api/apps.js';
 import { etaTo } from '../src/lib/ais.js';
 import { hasClock, cargoText } from '../src/lib/portCalls.js';
 import { sendWebhook } from '../src/lib/webhook.js';
-import { sendMail, buttonMail } from './mail.js';
+import { sendMailTo, buttonMail } from './mail.js';
+import { withLang, currentLang, translateMessage } from './i18n.js';
+import { tr, locale } from '../src/lib/i18n.js';
 
 const TICK_MS = 5 * 60_000;
 const DIGEST_HOUR = 7;
@@ -69,7 +71,7 @@ export function zoned(t, tz, end = false) {
   return guess - (asLocal - guess);
 }
 
-const clockIn = (ms, tz) => new Date(ms).toLocaleTimeString('nb-NO', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+const clockIn = (ms, tz) => new Date(ms).toLocaleTimeString(locale(), { timeZone: tz, hour: '2-digit', minute: '2-digit' });
 
 /* ------------------------------ 1. anløp -------------------------------- */
 
@@ -109,14 +111,14 @@ async function callNotices(t, env, tz, hook) {
     const add = (kind, title) => {
       if (done.has(kind)) return;
       done.add(kind);
-      events.push({ title, lines: [c.cargo?.length ? cargoText(c.cargo) : null, c.next ? `Neste havn: ${c.next}` : null].filter(Boolean) });
+      events.push({ title, lines: [c.cargo?.length ? cargoText(c.cargo) : null, c.next ? tr('Neste havn: {0}', [c.next]) : null].filter(Boolean) });
     };
-    if (live.state === 'arrived') add('arrived', `${name} har ankommet ${q.name}`);
+    if (live.state === 'arrived') add('arrived', tr('{0} har ankommet {1}', [name, q.name]));
     else if (live.state === 'eta') {
       const min = Math.round((live.eta.getTime() - now) / 60_000);
-      if (min <= 60) add('approaching', `${name} er ventet til ${q.name} om ca. ${Math.max(1, min)} min (kl. ${clockIn(live.eta.getTime(), tz)})`);
+      if (min <= 60) add('approaching', tr('{0} er ventet til {1} om ca. {2} min (kl. {3})', [name, q.name, Math.max(1, min), clockIn(live.eta.getTime(), tz)]));
       if (hasClock(c.eta) && live.eta.getTime() - zoned(c.eta, tz) > 3600_000) {
-        add('late', `${name} er forsinket: ventet kl. ${clockIn(live.eta.getTime(), tz)} til ${q.name}, planlagt ${c.eta.slice(11, 16)}`);
+        add('late', tr('{0} er forsinket: ventet kl. {1} til {2}, planlagt {3}', [name, clockIn(live.eta.getTime(), tz), q.name, c.eta.slice(11, 16)]));
       }
     }
     sent[c.id] = [...done];
@@ -128,7 +130,7 @@ async function callNotices(t, env, tz, hook) {
 
   const url = `${ORIGIN()}${t.slug}.${BASE()}/admin?view=apps&app=ais`;
   for (const e of events) {
-    await sendWebhook(hook, { title: e.title, lines: e.lines, link: { url, label: 'Åpne anløpene i Flatr' } }).catch((err) =>
+    await sendWebhook(hook, { title: e.title, lines: e.lines, link: { url, label: tr('Åpne anløpene i Flatr') } }).catch((err) =>
       console.error(`[notices] anløp-webhook feilet (${t.slug}):`, err.message)
     );
   }
@@ -143,7 +145,7 @@ const ownerEmails = (tenantId) =>
     .allSync()
     .results.map((r) => r.email);
 
-/** Det som bør sjekkes i dag. Tom liste = alt ser bra ut. */
+/** Det som bør sjekkes i dag (på språket som er satt med withLang). Tom liste = alt ser bra ut. */
 export async function healthIssues(env, tz) {
   const issues = [];
   const now = Date.now();
@@ -153,7 +155,11 @@ export async function healthIssues(env, tz) {
   for (const d of devices || []) {
     const where = d.screen_name ? ` (${d.screen_name})` : '';
     if (!d.last_seen || now - Date.parse(d.last_seen) > 3600_000) {
-      issues.push(`TV frakoblet${where}${d.last_seen ? ` siden ${new Date(d.last_seen).toLocaleString('nb-NO', { timeZone: tz, dateStyle: 'short', timeStyle: 'short' })}` : ''}`);
+      issues.push(
+        d.last_seen
+          ? tr('TV frakoblet{0} siden {1}', [where, new Date(d.last_seen).toLocaleString(locale(), { timeZone: tz, dateStyle: 'short', timeStyle: 'short' })])
+          : tr('TV frakoblet{0}', [where])
+      );
       continue;
     }
     // Det TV-appen selv melder (client_info fra status-pollen).
@@ -163,28 +169,35 @@ export async function healthIssues(env, tz) {
     } catch {
       /* ingen info */
     }
-    if (ci.storage_pct >= 90) issues.push(`Lagringen på TV-en${where} er nesten full (${ci.storage_pct} %)`);
-    if (ci.content_at && now - Date.parse(ci.content_at) > 3 * 3600_000) issues.push(`TV-en${where} har ikke fått nytt innhold på over tre timer`);
-    if (ci.restarts >= 3) issues.push(`Visningen på TV-en${where} har startet seg selv på nytt ${ci.restarts} ganger`);
+    if (ci.storage_pct >= 90) issues.push(tr('Lagringen på TV-en{0} er nesten full ({1} %)', [where, ci.storage_pct]));
+    if (ci.content_at && now - Date.parse(ci.content_at) > 3 * 3600_000) issues.push(tr('TV-en{0} har ikke fått nytt innhold på over tre timer', [where]));
+    if (ci.restarts >= 3) issues.push(tr('Visningen på TV-en{0} har startet seg selv på nytt {1} ganger', [where, ci.restarts]));
   }
   const { results: screens } = await env.DB.prepare(
     `SELECT s.name, s.playlist_id, (SELECT COUNT(*) FROM deck_slides d WHERE d.playlist_id = s.playlist_id AND d.enabled = 1 AND d.layer IS NULL) AS slides FROM screens s`
   ).all();
   for (const s of screens || []) {
-    if (!s.playlist_id) issues.push(`Skjermen «${s.name}» har ingen presentasjon`);
-    else if (!s.slides) issues.push(`Presentasjonen på «${s.name}» har ingen aktive lysbilder`);
+    if (!s.playlist_id) issues.push(tr('Skjermen «{0}» har ingen presentasjon', [s.name]));
+    else if (!s.slides) issues.push(tr('Presentasjonen på «{0}» har ingen aktive lysbilder', [s.name]));
   }
   const { results: shots } = await env.DB.prepare(`SELECT url, error FROM web_snapshots WHERE error IS NOT NULL`).all().catch(() => ({ results: [] }));
-  if (shots?.length) issues.push(`${shots.length} widget${shots.length === 1 ? '' : 'er'} eller nettside${shots.length === 1 ? '' : 'r'} kunne ikke vises på Apple TV (${shots[0].error.slice(0, 80)})`);
+  if (shots?.length) {
+    const why = translateMessage(currentLang(), shots[0].error.slice(0, 80));
+    issues.push(
+      shots.length === 1
+        ? tr('1 widget eller nettside kunne ikke vises på Apple TV ({0})', [why])
+        : tr('{0} widgeter eller nettsider kunne ikke vises på Apple TV ({1})', [shots.length, why])
+    );
+  }
 
   const ais = await env.DB.prepare(`SELECT id FROM apps WHERE kind = 'ais' LIMIT 1`).first().catch(() => null);
   if (ais) {
     try {
       const data = await appData(env, ais.id);
-      if (data.ais_error) issues.push(`NAIS: ${data.ais_error}`);
-      else if (data.stale) issues.push('NAIS: får ikke ferske AIS-data fra BarentsWatch (viser siste kjente)');
+      if (data.ais_error) issues.push(`NAIS: ${translateMessage(currentLang(), data.ais_error)}`);
+      else if (data.stale) issues.push(tr('NAIS: får ikke ferske AIS-data fra BarentsWatch (viser siste kjente)'));
     } catch (err) {
-      issues.push(`NAIS: ${err.message}`);
+      issues.push(`NAIS: ${translateMessage(currentLang(), err.message)}`);
     }
   }
 
@@ -196,7 +209,7 @@ export async function healthIssues(env, tz) {
   )
     .bind(today, soon)
     .all();
-  for (const s of expiring || []) issues.push(`Lysbildet «${s.name || 'uten navn'}» i «${s.playlist}» utløper ${s.active_to_date}`);
+  for (const s of expiring || []) issues.push(tr('Lysbildet «{0}» i «{1}» utløper {2}', [s.name || tr('uten navn'), s.playlist, s.active_to_date]));
   return issues;
 }
 
@@ -206,19 +219,27 @@ async function digest(t, env, tz, hook) {
   if (hour < DIGEST_HOUR || (await setting(env, 'digest_sent', '')) === date) return;
   await setSetting(env, 'digest_sent', date);
 
-  const issues = await healthIssues(env, tz);
-  if (!issues.length) return; // ingen nyheter er gode nyheter
-  const title = `Helsesjekk for ${t.name}: ${issues.length} ting å se på`;
+  if (!(await healthIssues(env, tz)).length) return; // ingen nyheter er gode nyheter
   const url = `${ORIGIN()}${t.slug}.${BASE()}/admin?view=screens`;
+  // Lages på hver eiers språk (e-post) og kontoens språk (Slack/Teams).
+  const report = async () => {
+    const issues = await healthIssues(env, tz);
+    return { issues, title: tr('Helsesjekk for {0}: {1} ting å se på', [t.name, issues.length]) };
+  };
   const to = ownerEmails(t.id);
   if (to.length) {
-    await sendMail({
-      to,
-      subject: title,
-      ...buttonMail({ heading: title, intro: issues.map((i) => `• ${i}`).join('\n'), button: 'Åpne Flatr', url, outro: 'Den daglige helsesjekken kan slås av under Skjermer i Flatr.' })
+    await sendMailTo(to, async () => {
+      const { issues, title } = await report();
+      return {
+        subject: title,
+        ...buttonMail({ heading: title, intro: issues.map((i) => `• ${i}`).join('\n'), button: tr('Åpne Flatr'), url, outro: tr('Den daglige helsesjekken kan slås av under Skjermer i Flatr.') })
+      };
     }).catch((err) => console.error('[notices] e-post feilet:', err.message));
   }
-  if (hook) await sendWebhook(hook, { title, lines: issues, link: { url, label: 'Åpne Flatr' } }).catch(() => {});
+  if (hook) {
+    const { issues, title, label } = await withLang(orgLang(t.id), async () => ({ ...(await report()), label: tr('Åpne Flatr') }));
+    await sendWebhook(hook, { title, lines: issues, link: { url, label } }).catch(() => {});
+  }
 }
 
 /* -------------------------- ukentlig påminnelse --------------------------- */
@@ -241,13 +262,13 @@ export function isoWeek(date) {
 
 const days = (ms) => Math.floor(ms / 86_400_000);
 
-/** Det som bør gjøres denne uka. Tom liste = ingenting å si fra om. */
+/** Det som bør gjøres denne uka (på språket som er satt med withLang). Tom liste = ingenting å si fra om. */
 export async function weeklyItems(env, tz) {
   const items = [];
   const now = Date.now();
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
   const inWeek = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date(now + 7 * 86_400_000));
-  const fmt = (iso) => new Date(iso).toLocaleDateString('nb-NO', { timeZone: tz, day: 'numeric', month: 'long' });
+  const fmt = (iso) => new Date(iso).toLocaleDateString(locale(), { timeZone: tz, day: 'numeric', month: 'long' });
 
   // 1. Skjermer i bruk (sett siste uka) som har vist samme presentasjon uendret lenge.
   //    Presentasjoner der minst halvparten av lysbildene har ferske data (vær, apper …) teller ikke.
@@ -276,7 +297,7 @@ export async function weeklyItems(env, tz) {
       live.set(s.playlist_id, !row?.total || (row.fresh || 0) * 2 >= row.total);
     }
     if (live.get(s.playlist_id)) continue;
-    items.push(`«${s.name}» har vist «${s.playlist}» uendret i ${days(now - changed)} dager. Noe nytt å fortelle?`);
+    items.push(tr('«{0}» har vist «{1}» uendret i {2} dager. Noe nytt å fortelle?', [s.name, s.playlist, days(now - changed)]));
   }
 
   // 2. Lysbilder som går ut på dato denne uka, og utløpte som fortsatt ligger i presentasjonene.
@@ -288,7 +309,7 @@ export async function weeklyItems(env, tz) {
     .bind(today, inWeek)
     .all()
     .catch(() => ({ results: [] }));
-  for (const d of expiring || []) items.push(`Lysbildet «${d.name || 'uten navn'}» i «${d.playlist}» går ut på dato ${fmt(d.active_to_date)}.`);
+  for (const d of expiring || []) items.push(tr('Lysbildet «{0}» i «{1}» går ut på dato {2}.', [d.name || tr('uten navn'), d.playlist, fmt(d.active_to_date)]));
   const { results: expired } = await env.DB.prepare(
     `SELECT p.name AS playlist, COUNT(*) AS n FROM deck_slides d JOIN playlists p ON p.id = d.playlist_id
       WHERE d.enabled = 1 AND d.active_to_date IS NOT NULL AND d.active_to_date < ? GROUP BY p.id ORDER BY n DESC`
@@ -297,7 +318,11 @@ export async function weeklyItems(env, tz) {
     .all()
     .catch(() => ({ results: [] }));
   for (const e of expired || [])
-    items.push(`${e.n === 1 ? 'Ett lysbilde' : `${e.n} lysbilder`} i «${e.playlist}» har gått ut på dato og vises ikke lenger. Slett ${e.n === 1 ? 'det' : 'dem'} eller gi ny dato.`);
+    items.push(
+      e.n === 1
+        ? tr('Ett lysbilde i «{0}» har gått ut på dato og vises ikke lenger. Slett det eller gi ny dato.', [e.playlist])
+        : tr('{0} lysbilder i «{1}» har gått ut på dato og vises ikke lenger. Slett dem eller gi ny dato.', [e.n, e.playlist])
+    );
 
   // 3. Presentasjoner som har ventet på godkjenning i mer enn et døgn.
   const { results: waiting } = await env.DB.prepare(
@@ -307,7 +332,11 @@ export async function weeklyItems(env, tz) {
     .all()
     .catch(() => ({ results: [] }));
   for (const w of waiting || [])
-    items.push(`«${w.name}» har ventet på godkjenning siden ${fmt(w.review_requested_at)}${w.review_requested_by ? ` (sendt av ${w.review_requested_by})` : ''}.`);
+    items.push(
+      w.review_requested_by
+        ? tr('«{0}» har ventet på godkjenning siden {1} (sendt av {2}).', [w.name, fmt(w.review_requested_at), w.review_requested_by])
+        : tr('«{0}» har ventet på godkjenning siden {1}.', [w.name, fmt(w.review_requested_at)])
+    );
 
   // 4. TV-er som har vært borte i mer enn et døgn.
   const { results: gone } = await env.DB.prepare(
@@ -317,7 +346,8 @@ export async function weeklyItems(env, tz) {
     .bind(new Date(now - 86_400_000).toISOString())
     .all()
     .catch(() => ({ results: [] }));
-  for (const d of gone || []) items.push(`TV-en ${d.screen_name ? `på «${d.screen_name}» ` : ''}har vært frakoblet siden ${fmt(d.last_seen)}.`);
+  for (const d of gone || [])
+    items.push(d.screen_name ? tr('TV-en på «{0}» har vært frakoblet siden {1}.', [d.screen_name, fmt(d.last_seen)]) : tr('TV-en har vært frakoblet siden {0}.', [fmt(d.last_seen)]));
 
   return items;
 }
@@ -332,21 +362,23 @@ async function weekly(t, env, tz) {
   if ((await setting(env, 'weekly_sent', '')) === week) return;
   await setSetting(env, 'weekly_sent', week);
 
-  const items = await weeklyItems(env, tz);
-  if (!items.length) return;
+  if (!(await weeklyItems(env, tz)).length) return;
   const to = editorEmails(t.id);
   if (!to.length) return;
-  const title = `Ukens påminnelse for ${t.name}: ${items.length === 1 ? 'én ting' : `${items.length} ting`} å se på`;
-  await sendMail({
-    to,
-    subject: title,
-    ...buttonMail({
-      heading: 'Hold skjermene ferske',
-      intro: items.map((i) => `• ${i}`).join('\n'),
-      button: 'Åpne Flatr',
-      url: `${ORIGIN()}${t.slug}.${BASE()}/admin`,
-      outro: 'Skjermer med nytt innhold blir lagt merke til. Påminnelsen kan slås av under Skjermer i Flatr.'
-    })
+  // Lages på hver mottakers språk.
+  await sendMailTo(to, async () => {
+    const items = await weeklyItems(env, tz);
+    return {
+      subject:
+        items.length === 1 ? tr('Ukens påminnelse for {0}: én ting å se på', [t.name]) : tr('Ukens påminnelse for {0}: {1} ting å se på', [t.name, items.length]),
+      ...buttonMail({
+        heading: tr('Hold skjermene ferske'),
+        intro: items.map((i) => `• ${i}`).join('\n'),
+        button: tr('Åpne Flatr'),
+        url: `${ORIGIN()}${t.slug}.${BASE()}/admin`,
+        outro: tr('Skjermer med nytt innhold blir lagt merke til. Påminnelsen kan slås av under Skjermer i Flatr.')
+      })
+    };
   }).catch((err) => console.error('[notices] ukentlig e-post feilet:', err.message));
 }
 
@@ -362,7 +394,8 @@ async function tick() {
         const env = tenantResources(t.slug);
         const tz = await getTimezone(env);
         const hook = await setting(env, 'webhook_url', '');
-        if (hook) await callNotices(t, env, tz, hook);
+        // Anløpsvarslene går bare til Slack/Teams: på kontoens språk.
+        if (hook) await withLang(orgLang(t.id), () => callNotices(t, env, tz, hook));
         await digest(t, env, tz, hook);
         await weekly(t, env, tz);
       } catch (err) {

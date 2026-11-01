@@ -6,6 +6,7 @@ import { getUser } from './_access.js';
 import { activeSlot, DEFAULT_TZ } from '../lib/timeslots.js';
 import { isLive } from '../lib/alerts.js';
 import { metAlertsNow } from './metAlerts.js';
+import { tr, locale } from '../lib/i18n.js';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -147,7 +148,7 @@ export async function viewerTarget(request, env) {
   return { screenId: playlistId ? null : params.get('screen'), playlistId };
 }
 
-const fmtGb = (b) => `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`;
+const fmtGb = (b) => `${(b / 1024 ** 3).toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} GB`;
 
 /** Bruk mot kvotene (env.LIMITS settes av Node-serveren; mangler den, ingen grenser). */
 export async function usage(env) {
@@ -173,21 +174,23 @@ export async function checkLimit(env, kind, extraBytes = 0) {
       {
         error:
           u.storageBytes >= L.storageBytes * 0.95
-            ? `Lagringsplassen er full (${fmtGb(u.storageBytes)} av ${fmtGb(L.storageBytes)} i planen din). Slett filer i biblioteket, eller ${L.billing ? 'legg til lagring under Abonnement' : 'kontakt oss for mer plass'}.`
-            : `Filen er for stor for plassen som er igjen (${fmtGb(L.storageBytes - u.storageBytes)} ledig av ${fmtGb(L.storageBytes)} i planen din).`
+            ? L.billing
+              ? tr('Lagringsplassen er full ({0} av {1} i planen din). Slett filer i biblioteket, eller legg til lagring under Abonnement.', [fmtGb(u.storageBytes), fmtGb(L.storageBytes)])
+              : tr('Lagringsplassen er full ({0} av {1} i planen din). Slett filer i biblioteket, eller kontakt oss for mer plass.', [fmtGb(u.storageBytes), fmtGb(L.storageBytes)])
+            : tr('Filen er for stor for plassen som er igjen ({0} ledig av {1} i planen din).', [fmtGb(L.storageBytes - u.storageBytes), fmtGb(L.storageBytes)])
       },
       { status: 413 }
     );
   }
-  const more = L.billing ? 'Legg til flere under Abonnement.' : 'Trenger du flere? Be om det under Skjermer.';
+  const more = L.billing ? tr('Legg til flere under Abonnement.') : tr('Trenger du flere? Be om det under Skjermer.');
   // Avtale gjennom en gruppe (kjede/kommune): skjermene deles med de andre medlemmene.
   const full = L.groupMax
-    ? `Alle de ${L.groupMax} skjermene i avtalen til ${L.groupName} er i bruk. Kontakt den som har avtalen for flere.`
-    : `Planen din har plass til ${L.screens === 1 ? '1 skjerm' : `${L.screens} skjermer`}. ${more}`;
+    ? tr('Alle de {0} skjermene i avtalen til {1} er i bruk. Kontakt den som har avtalen for flere.', [L.groupMax, L.groupName])
+    : `${L.screens === 1 ? tr('Planen din har plass til 1 skjerm.') : tr('Planen din har plass til {0} skjermer.', [L.screens])} ${more}`;
   if (kind === 'devices' && u.devices >= L.devices) return json({ error: full }, { status: 403 });
   if (kind === 'screens' && u.screens >= L.screens) return json({ error: full }, { status: 403 });
   if (kind === 'video' && !L.video) {
-    return json({ error: `Video er med i Pro. Gratisplanen har plass til bilder.${L.billing ? ' Oppgrader under Abonnement.' : ''}` }, { status: 403 });
+    return json({ error: L.billing ? tr('Video er med i Pro. Gratisplanen har plass til bilder. Oppgrader under Abonnement.') : tr('Video er med i Pro. Gratisplanen har plass til bilder.') }, { status: 403 });
   }
   return null;
 }

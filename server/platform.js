@@ -13,6 +13,8 @@ import { D1Database } from './d1.js';
 import { DiskBucket } from './r2.js';
 import { migrateTenant } from './tenantMigrations.js';
 import { PLANS } from '../src/lib/pricing.js';
+import { tr } from '../src/lib/i18n.js';
+import { currentLang, langOf } from './i18n.js';
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || './data');
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -324,21 +326,21 @@ const RESERVED = new Set(
 
 const SLUG_QUARANTINE_MS = 30 * 24 * 3600_000;
 
-/** Returnerer null hvis gyldig og ledig, ellers en norsk feilmelding. */
+/** Returnerer null hvis gyldig og ledig, ellers en feilmelding. */
 export function slugProblem(slug) {
   if (!/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(slug)) {
-    return 'Bruk 1–32 tegn: små bokstaver a–z, tall og bindestrek (ikke først eller sist).';
+    return tr('Bruk 1–32 tegn: små bokstaver a–z, tall og bindestrek (ikke først eller sist).');
   }
-  if (slug.length < 2) return 'Subdomenet må ha minst 2 tegn.';
-  if (RESERVED.has(slug)) return 'Dette subdomenet er reservert.';
+  if (slug.length < 2) return tr('Subdomenet må ha minst 2 tegn.');
+  if (RESERVED.has(slug)) return tr('Dette subdomenet er reservert.');
   if (platformDb.prepare('SELECT 1 FROM tenants WHERE slug = ?').bind(slug).firstSync()) {
-    return 'Subdomenet er allerede tatt.';
+    return tr('Subdomenet er allerede tatt.');
   }
   // En slettet organisasjons adresse kan stå i nettlesere, QR-koder og innebygde
   // widgeter en stund – den gis ikke til noen andre med en gang.
   const retired = platformDb.prepare('SELECT retired_at FROM retired_slugs WHERE slug = ?').bind(slug).firstSync();
   if (retired && Date.now() - Date.parse(retired.retired_at) < SLUG_QUARANTINE_MS) {
-    return 'Subdomenet ble brukt nylig og er ikke ledig ennå. Velg et annet.';
+    return tr('Subdomenet ble brukt nylig og er ikke ledig ennå. Velg et annet.');
   }
   return null;
 }
@@ -467,10 +469,32 @@ export function upsertUser(email, name) {
     }
     return existing;
   }
+  // Nye brukere får språket til forespørselen (den som registrerer seg, eller den
+  // som inviterer), så den første e-posten kommer på riktig språk.
+  const lang = currentLang();
   return platformDb
-    .prepare('INSERT INTO users (email, name) VALUES (?, ?) RETURNING *')
-    .bind(e, name || null)
+    .prepare('INSERT INTO users (email, name, prefs) VALUES (?, ?, ?) RETURNING *')
+    .bind(e, name || null, lang === 'nb' ? null : JSON.stringify({ lang }))
     .runSync().results[0];
+}
+
+/** Språket brukeren har valgt (users.prefs.lang), ellers fallback. */
+export function userLang(email, fallback = 'nb') {
+  const row = platformDb.prepare('SELECT prefs FROM users WHERE email = ?').bind(normEmail(email)).firstSync();
+  return langOf(row?.prefs) || fallback;
+}
+
+/** Språket til en kontos Slack/Teams-varsler: det de fleste eierne bruker (ellers norsk). */
+export function orgLang(tenantId) {
+  const count = {};
+  for (const r of platformDb
+    .prepare(`SELECT u.prefs FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.tenant_id = ? AND m.role = 'owner'`)
+    .bind(tenantId)
+    .allSync().results) {
+    const lang = langOf(r.prefs) || 'nb';
+    count[lang] = (count[lang] || 0) + 1;
+  }
+  return (count.en || 0) > (count.nb || 0) ? 'en' : 'nb';
 }
 
 export function getMembership(tenantId, email) {

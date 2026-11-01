@@ -1,5 +1,6 @@
 import { json, badRequest, handleOptions, requireAdmin, getTimezone } from './_shared.js';
 import { localParts, addDays } from '../lib/timeslots.js';
+import { tr } from '../lib/i18n.js';
 
 // GET /api/reports?from=YYYY-MM-DD&to=YYYY-MM-DD
 // Visningslogg (play_log, fylles av server/monitor.js): minutter pr. spilleliste,
@@ -82,7 +83,7 @@ export async function onRequestGet(context) {
       name: p.off ? 'Skjerm av' : p.name || (p.playlist_id ? 'Slettet spilleliste' : 'Ingenting'),
       minutes: p.minutes
     })),
-    screens: byScreen.map((s) => ({ screen_id: s.screen_id, name: s.name || 'Slettet skjerm', minutes: s.minutes })),
+    screens: byScreen.map((s) => ({ screen_id: s.screen_id, name: s.name || tr('Slettet skjerm'), minutes: s.minutes })),
     devices,
     days: byDay,
     slides: bySlide.map((r) => ({
@@ -147,7 +148,7 @@ async function sponsorReport(env, { mediaId, sponsorId, from, to, tz }) {
     org_logo: logo,
     shows: byScreen.reduce((n, r) => n + r.shows, 0),
     seconds: Math.round(byScreen.reduce((n, r) => n + r.seconds, 0)),
-    screens: byScreen.map((r) => ({ screen_id: r.screen_id, name: r.name || 'Slettet skjerm', location: r.location || null, shows: r.shows, seconds: Math.round(r.seconds) })),
+    screens: byScreen.map((r) => ({ screen_id: r.screen_id, name: r.name || tr('Slettet skjerm'), location: r.location || null, shows: r.shows, seconds: Math.round(r.seconds) })),
     days: byDay.map((r) => ({ day: r.day, shows: r.shows, seconds: Math.round(r.seconds) }))
   };
 }

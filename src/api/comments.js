@@ -44,12 +44,12 @@ export async function onRequestPost(context) {
   if (parent?.author_email && team.has(parent.author_email)) to.add(parent.author_email);
   to.delete(me(env).email);
   if (to.size && env.NOTIFY) {
-    const who = me(env).name || me(env).email || 'Noen';
+    const who = (tr) => me(env).name || me(env).email || tr('Noen');
     await env.NOTIFY({
       to: [...to],
-      subject: `${who} ${parent ? 'svarte' : 'nevnte deg'} i «${pl.name}»`,
-      intro: `«${body.slice(0, 400)}»`,
-      button: 'Åpne kommentaren',
+      subject: (tr) => (parent ? tr('{0} svarte i «{1}»', [who(tr), pl.name]) : tr('{0} nevnte deg i «{1}»', [who(tr), pl.name])),
+      intro: () => `«${body.slice(0, 400)}»`,
+      button: (tr) => tr('Åpne kommentaren'),
       path: `/admin?view=playlists&edit=${pl.id}&comments=1`
     });
   }

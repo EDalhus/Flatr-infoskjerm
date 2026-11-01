@@ -12,6 +12,8 @@
 // Uten SMTP_HOST logges e-posten til konsollen (lokal utvikling).
 
 import nodemailer from 'nodemailer';
+import { userLang } from './platform.js';
+import { withLang } from './i18n.js';
 
 export const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -48,6 +50,22 @@ export async function sendMail({ to, subject, text, html, replyTo }) {
   } catch (err) {
     console.error('[mail] sending feilet', err?.message ?? err);
     throw new Error('Kunne ikke sende e-post');
+  }
+}
+
+/**
+ * E-post på hver mottakers språk (users.prefs.lang, ellers `fallback`). build()
+ * lager innholdet ({ subject, ...buttonMail(…) }, gjerne async) og kalles én gang
+ * per språk, med tr() og locale() satt til det språket.
+ */
+export async function sendMailTo(to, build, { fallback = 'nb', replyTo } = {}) {
+  const groups = new Map();
+  for (const email of [].concat(to).filter(Boolean)) {
+    const lang = userLang(email, fallback);
+    groups.set(lang, [...(groups.get(lang) || []), email]);
+  }
+  for (const [lang, list] of groups) {
+    await sendMail({ to: list.length === 1 ? list[0] : list, replyTo, ...(await withLang(lang, build)) });
   }
 }
 

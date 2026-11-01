@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { systemPrompt, toolsFor, TOOL_LABEL, WRITES, makeTools } from './tools.js';
 import { openRun, closeRun } from './bridge.js';
+import { tr } from '../../lib/i18n.js';
 
 // Flatr-appen «Cursor AI»: en Cursor Cloud Agent (api.cursor.com) med kundens
 // egen nøkkel. Agenten kjører i Cursors sky uten kodelager og bruker de samme
@@ -46,7 +47,7 @@ async function cursor(key, method, path, body) {
   return data;
 }
 
-/** Sjekker en nøkkel før den lagres. Kaster med norsk melding. */
+/** Sjekker en nøkkel før den lagres. Kaster med en melding til brukeren. */
 export async function verifyKey(key) {
   if (!/^[\w.-]{20,}$/.test(key)) throw new Error('Det ser ikke ut som en Cursor API-nøkkel.');
   try {
@@ -64,12 +65,12 @@ export async function listModels(key) {
 
 export function errorText(err) {
   if (err instanceof CursorError) {
-    if (err.status === 401) return 'Cursor godtok ikke API-nøkkelen. Sjekk den under Flatr Apps → Cursor AI.';
-    if (err.status === 403) return 'Cursor-kontoen har ikke tilgang til Cloud Agents (krever et betalt Cursor-abonnement).';
-    if (err.status === 429) return 'For mange forespørsler mot Cursor akkurat nå. Prøv igjen om litt.';
+    if (err.status === 401) return tr('Cursor godtok ikke API-nøkkelen. Sjekk den under Flatr Apps → Cursor AI.');
+    if (err.status === 403) return tr('Cursor-kontoen har ikke tilgang til Cloud Agents (krever et betalt Cursor-abonnement).');
+    if (err.status === 429) return tr('For mange forespørsler mot Cursor akkurat nå. Prøv igjen om litt.');
     return `Cursor: ${err.message}`;
   }
-  return err?.message || 'Noe gikk galt';
+  return err?.message || tr('Noe gikk galt');
 }
 
 /* --------------------------------- prompt --------------------------------- */
@@ -77,7 +78,7 @@ export function errorText(err) {
 const RULES = `You are working inside Flatr, a digital signage service, through the MCP server named "flatr".
 There is no code repository and no file system for this task: do NOT write files, run commands or open pull requests.
 Read and change the presentation ONLY with the flatr tools (get_presentation, add_slide, add_elements, update_elements …).
-Always start with get_presentation. When you are done, answer the user briefly in Norwegian (bokmål) with what you changed.`;
+Always start with get_presentation. When you are done, answer the user briefly with what you changed, in the language the user writes in (usually Norwegian bokmål).`;
 
 /** Fast kontekst som tekst og bilder (Cursor tar ikke imot PDF-er). */
 async function contextPart(ids, load) {

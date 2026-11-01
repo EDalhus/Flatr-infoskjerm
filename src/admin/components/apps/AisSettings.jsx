@@ -222,7 +222,7 @@ export default function AisSettings({ app, onSaved }) {
       .live(app.id)
       .then((d) => {
         setLive(d);
-        setLiveError(d?.ais_error || '');
+        setLiveError(d?.ais_error ? tr(d.ais_error) : '');
       })
       .catch((e) => setLiveError(e.message));
 

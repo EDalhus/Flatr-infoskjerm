@@ -6,6 +6,9 @@
 // Språket velges i denne rekkefølgen: valget brukeren har gjort (lagres i en
 // cookie for hele flatr.no, så det følger med mellom kundeadressene), ellers
 // nettleserens språk. Bytte av språk laster siden på nytt.
+//
+// Samme tr() brukes på serveren (feilmeldinger og e-post). Der settes språket
+// per forespørsel eller mottaker av server/i18n.js (setLangSource).
 
 export const LANGS = [
   { id: 'nb', label: 'Norsk', locale: 'nb-NO' },
@@ -19,6 +22,11 @@ export const LANG_PUBLIC = false;
 
 let lang = 'nb';
 let dict = null;
+// På serveren: () => ({ lang, dict }) for forespørselen eller e-posten som lages nå.
+let source = null;
+export function setLangSource(fn) {
+  source = fn;
+}
 
 function fromCookie() {
   try {
@@ -28,10 +36,14 @@ function fromCookie() {
   }
 }
 
-/** Språket nettleseren ber om: norsk (og svensk/dansk foreløpig) eller engelsk. */
-function fromBrowser() {
+/**
+ * Språket for et valg (cookie eller ?lang=) og språkene nettleseren ber om
+ * (navigator.languages eller Accept-Language): norsk (og svensk/dansk foreløpig)
+ * eller engelsk. Brukes likt i nettleseren og på serveren.
+ */
+export function pickLang(chosen, wanted = []) {
+  if (IDS.includes(chosen)) return chosen;
   if (!LANG_PUBLIC) return 'nb';
-  const wanted = (typeof navigator !== 'undefined' && (navigator.languages?.length ? navigator.languages : [navigator.language])) || [];
   for (const w of wanted) {
     const code = String(w || '').toLowerCase().slice(0, 2);
     if (['nb', 'nn', 'no', 'sv', 'da'].includes(code)) return 'nb';
@@ -53,7 +65,9 @@ export async function initLang() {
   } catch {
     /* uten window (server) */
   }
-  lang = IDS.includes(chosen) ? chosen : fromBrowser();
+  const wanted = typeof navigator !== 'undefined' ? (navigator.languages?.length ? navigator.languages : [navigator.language]) : [];
+  lang = pickLang(chosen, wanted);
+  chosenHere = IDS.includes(chosen);
   if (LOADERS[lang]) {
     try {
       dict = (await LOADERS[lang]()).default;
@@ -66,9 +80,13 @@ export async function initLang() {
   return lang;
 }
 
-export const getLang = () => lang;
+let chosenHere = false;
+export const getLang = () => (source ? source().lang : lang);
+/** Er språket valgt i denne nettleseren (cookie eller ?lang=), ikke bare gjettet? */
+export const langChosen = () => chosenHere;
 /** Locale til datoer og tall (toLocaleString). */
-export const locale = () => LANGS.find((l) => l.id === lang)?.locale || 'nb-NO';
+export const localeOf = (id) => LANGS.find((l) => l.id === id)?.locale || 'nb-NO';
+export const locale = () => localeOf(getLang());
 
 /**
  * Lagrer valget for hele flatr.no (alle kundeadressene) og laster siden på nytt.
@@ -84,7 +102,11 @@ export function setLang(next, baseDomain) {
 
 /** Oversetter en norsk tekst. vars: liste ({0}, {1} …) eller objekt ({navn}). */
 export function tr(text, vars) {
-  let s = (dict && dict[text]) || text;
-  if (vars != null) s = s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m));
-  return s;
+  const d = source ? source().dict : dict;
+  return fillVars((d && d[text]) || text, vars);
+}
+
+/** Fyller inn {0}, {1} … (liste) eller {navn} (objekt). */
+export function fillVars(s, vars) {
+  return vars == null ? s : s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m));
 }

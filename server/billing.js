@@ -16,7 +16,8 @@
 import { platformDb, getTenantById, tenantLimits, paidPlan, tenantResources } from './platform.js';
 import { stripe, stripeAll, stripeEnabled, verifyWebhook } from './stripe.js';
 import { ensureCatalog } from './billing-setup.js';
-import { sendMail, buttonMail } from './mail.js';
+import { sendMailTo, buttonMail } from './mail.js';
+import { tr } from '../src/lib/i18n.js';
 import { PLANS, STORAGE_ADDONS, validOrgNumber } from '../src/lib/pricing.js';
 import { usage } from '../src/api/_shared.js';
 import { logActivity } from '../src/api/activity.js';
@@ -297,7 +298,7 @@ export async function handleBillingRoute(request, ctx, env) {
           metadata: { tenant_id: String(tenant.id) }
         });
         syncSubscription(sub);
-        await logActivity(env, user, { action: `bestilte ${PLANS[c.plan].name} med faktura`, target_type: 'billing', target_name: `${c.screens} skjermer` }).catch(() => {});
+        await logActivity(env, user, { action: 'bestilte abonnementet med faktura', target_type: 'billing', target_name: `${PLANS[c.plan].name} × ${c.screens}` }).catch(() => {});
         return json({ ok: true, billing: await overview(getTenantById(tenant.id), user) });
       }
 
@@ -325,7 +326,7 @@ export async function handleBillingRoute(request, ctx, env) {
       if (String(session.metadata?.tenant_id) !== String(tenant.id)) return fail(404, 'Fant ikke betalingen.');
       if (session.subscription) {
         const t = await syncById(typeof session.subscription === 'string' ? session.subscription : session.subscription.id);
-        if (t && paidPlan(t)) await logActivity(env, user, { action: `startet ${PLANS[t.plan].name}`, target_type: 'billing', target_name: `${t.paid_screens} skjermer` }).catch(() => {});
+        if (t && paidPlan(t)) await logActivity(env, user, { action: 'startet abonnementet', target_type: 'billing', target_name: `${PLANS[t.plan].name} × ${t.paid_screens}` }).catch(() => {});
       }
       return json(await overview(getTenantById(tenant.id), user));
     }
@@ -354,7 +355,7 @@ export async function handleBillingRoute(request, ctx, env) {
         cancel_at_period_end: false
       });
       syncSubscription(updated);
-      await logActivity(env, user, { action: 'endret abonnementet', target_type: 'billing', target_name: `${PLANS[c.plan].name}, ${c.screens} skjermer` }).catch(() => {});
+      await logActivity(env, user, { action: 'endret abonnementet', target_type: 'billing', target_name: `${PLANS[c.plan].name} × ${c.screens}` }).catch(() => {});
       return json(await overview(getTenantById(tenant.id), user));
     }
 
@@ -394,16 +395,15 @@ async function notifyPaymentFailed(invoice) {
     .results.map((r) => r.email);
   const origin = `${process.env.PUBLIC_PROTOCOL || 'http'}://${tenant.slug}.${(process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase()}`;
   for (const to of owners) {
-    await sendMail({
-      to,
-      subject: `Betalingen for Flatr feilet – ${tenant.name}`,
+    await sendMailTo(to, () => ({
+      subject: tr('Betalingen for Flatr feilet – {0}', [tenant.name]),
       ...buttonMail({
-        heading: 'Betalingen feilet',
-        intro: `Vi fikk ikke trukket betalingen for abonnementet til ${tenant.name}. Oppdater kortet, så prøver vi igjen. Skjermene virker som før i noen dager til.`,
-        button: 'Oppdater betalingen',
+        heading: tr('Betalingen feilet'),
+        intro: tr('Vi fikk ikke trukket betalingen for abonnementet til {0}. Oppdater kortet, så prøver vi igjen. Skjermene virker som før i noen dager til.', [tenant.name]),
+        button: tr('Oppdater betalingen'),
         url: `${origin}/admin?view=billing`
       })
-    }).catch(() => {});
+    })).catch(() => {});
   }
 }
 

@@ -96,9 +96,9 @@ export async function onRequestPost(context) {
     await logActivity(env, env.SESSION_USER, { action: 'ba om godkjenning av', target_type: 'playlist', target_id: pl.id, target_name: pl.name, detail: note });
     await env.NOTIFY?.({
       exclude: env.SESSION_USER?.email,
-      subject: `${who(env) || 'Noen'} ber om godkjenning av «${pl.name}»`,
-      intro: note ? `«${note}» Åpne presentasjonen for å se endringene og publisere dem.` : 'Åpne presentasjonen for å se endringene og publisere dem til skjermene.',
-      button: 'Se og godkjenn',
+      subject: (tr) => tr('{0} ber om godkjenning av «{1}»', [who(env) || tr('Noen'), pl.name]),
+      intro: (tr) => (note ? tr('«{0}» Åpne presentasjonen for å se endringene og publisere dem.', [note]) : tr('Åpne presentasjonen for å se endringene og publisere dem til skjermene.')),
+      button: (tr) => tr('Se og godkjenn'),
       path,
       webhook: true
     });
@@ -112,7 +112,13 @@ export async function onRequestPost(context) {
     await publish(env, pl.id);
     await logActivity(env, env.SESSION_USER, { action: 'publiserte', target_type: 'playlist', target_id: pl.id, target_name: pl.name });
     if (requester && requester.includes('@') && requester !== env.SESSION_USER?.email) {
-      await env.NOTIFY?.({ to: requester, subject: `«${pl.name}» er publisert`, intro: `${who(env) || 'En eier'} har godkjent endringene, og de vises nå på skjermene.`, button: 'Åpne presentasjonen', path });
+      await env.NOTIFY?.({
+        to: requester,
+        subject: (tr) => tr('«{0}» er publisert', [pl.name]),
+        intro: (tr) => tr('{0} har godkjent endringene, og de vises nå på skjermene.', [who(env) || tr('En eier')]),
+        button: (tr) => tr('Åpne presentasjonen'),
+        path
+      });
     }
     return json(await status(env, pl.id));
   }
@@ -124,7 +130,13 @@ export async function onRequestPost(context) {
       .run();
     await logActivity(env, env.SESSION_USER, { action: 'avviste endringene i', target_type: 'playlist', target_id: pl.id, target_name: pl.name, detail: note });
     if (requester && requester.includes('@')) {
-      await env.NOTIFY?.({ to: requester, subject: `Endringene i «${pl.name}» ble ikke godkjent`, intro: note ? `${who(env)}: «${note}»` : `${who(env)} har avvist endringene. Ta en titt og send på nytt.`, button: 'Åpne presentasjonen', path });
+      await env.NOTIFY?.({
+        to: requester,
+        subject: (tr) => tr('Endringene i «{0}» ble ikke godkjent', [pl.name]),
+        intro: (tr) => (note ? `${who(env)}: «${note}»` : tr('{0} har avvist endringene. Ta en titt og send på nytt.', [who(env)])),
+        button: (tr) => tr('Åpne presentasjonen'),
+        path
+      });
     }
     return json(await status(env, pl.id));
   }

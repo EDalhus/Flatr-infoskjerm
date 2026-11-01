@@ -39,7 +39,8 @@ import {
   deleteTenant,
   REFERRAL_MAX
 } from './platform.js';
-import { sendMail, buttonMail, escapeHtml } from './mail.js';
+import { sendMail, sendMailTo, buttonMail, escapeHtml } from './mail.js';
+import { tr, locale, getLang } from '../src/lib/i18n.js';
 import { usage } from '../src/api/_shared.js';
 import { userColorPalette } from '../src/api/_access.js';
 import { auth, authSession, ensureAuthUser, hasPassword, setPassword, onEmailVerified, passwordOk, deleteAccount } from './identity.js';
@@ -103,7 +104,7 @@ async function notifyOwners({ subject, lines, replyTo }) {
 }
 
 const passwordProblem = (pw) =>
-  typeof pw !== 'string' || pw.length < 10 ? 'Passordet må ha minst 10 tegn.' : pw.length > 128 ? 'Passordet er for langt.' : null;
+  typeof pw !== 'string' || pw.length < 10 ? tr('Passordet må ha minst 10 tegn.') : pw.length > 128 ? tr('Passordet er for langt.') : null;
 
 /** Kopierer Set-Cookie fra et Better Auth-svar over på vårt svar. */
 const withCookies = (res, from) => {
@@ -408,8 +409,8 @@ export async function handleTenantAuthRoute(request, ctx) {
 
 /* ------------------------------- sletting ------------------------------- */
 
-const andList = (names) => new Intl.ListFormat('nb', { type: 'conjunction' }).format(names.map((n) => `«${n}»`));
-const nowText = () => new Date().toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', dateStyle: 'long', timeStyle: 'short' });
+const andList = (names) => new Intl.ListFormat(locale(), { type: 'conjunction' }).format(names.map((n) => (getLang() === 'nb' ? `«${n}»` : `“${n}”`)));
+const nowText = () => new Date().toLocaleString(locale(), { timeZone: 'Europe/Oslo', dateStyle: 'long', timeStyle: 'short' });
 
 /** Navnet og passordet (hvis brukeren har et) må stemme før noe slettes for godt. */
 async function confirmDanger(b, expected, email, what) {
@@ -427,7 +428,7 @@ async function deleteOrg(request, ctx) {
   if (!user) return json({ error: 'Ikke innlogget' }, 401);
   if (user.role !== 'owner') return json({ error: 'Bare eiere kan slette organisasjonen.' }, 403);
   const b = (await readJson(request)) || {};
-  const denied = await confirmDanger(b, tenant.name, user.email, `navnet på organisasjonen («${tenant.name}»)`);
+  const denied = await confirmDanger(b, tenant.name, user.email, tr('navnet på organisasjonen («{0}»)', [tenant.name]));
   if (denied) return denied;
 
   const owners = listMembers(tenant.id)
@@ -435,20 +436,25 @@ async function deleteOrg(request, ctx) {
     .map((m) => m.email);
   deleteTenant(tenant);
   console.log(`[org] ${tenant.slug} er slettet av ${user.email}`);
-  const when = nowText();
   for (const to of owners) {
-    sendMail({
+    sendMailTo(
       to,
-      replyTo: supportInbox()[0],
-      subject: `${tenant.name} er slettet fra Flatr`,
-      ...buttonMail({
-        heading: `${tenant.name} er slettet`,
-        intro: `${user.name || user.email} slettet organisasjonen ${when}. Presentasjonene, skjermene, biblioteket og alt annet innhold er fjernet, og ${ctx.origin(tenant.slug)} virker ikke lenger.`,
-        button: 'Gå til Flatr',
-        url: ctx.origin(null),
-        outro: 'Var det ikke meningen? Svar på denne e-posten så fort som mulig.'
-      })
-    }).catch(() => {});
+      () => ({
+        subject: tr('{0} er slettet fra Flatr', [tenant.name]),
+        ...buttonMail({
+          heading: tr('{0} er slettet', [tenant.name]),
+          intro: tr('{0} slettet organisasjonen {1}. Presentasjonene, skjermene, biblioteket og alt annet innhold er fjernet, og {2} virker ikke lenger.', [
+            user.name || user.email,
+            nowText(),
+            ctx.origin(tenant.slug)
+          ]),
+          button: tr('Gå til Flatr'),
+          url: ctx.origin(null),
+          outro: tr('Var det ikke meningen? Svar på denne e-posten så fort som mulig.')
+        })
+      }),
+      { replyTo: supportInbox()[0] }
+    ).catch(() => {});
   }
   // Med i andre organisasjoner: velg en av dem. Ellers til forsiden.
   return json({ ok: true, redirect: tenantsForEmail(user.email).length ? `${ctx.origin(null)}/admin` : ctx.origin(null) });
@@ -460,7 +466,7 @@ async function deleteOwnAccount(request, ctx) {
   if (!s?.user) return json({ error: 'Ikke innlogget' }, 401);
   const email = normEmail(s.user.email);
   const b = (await readJson(request)) || {};
-  const denied = await confirmDanger(b, email, email, 'e-postadressen din');
+  const denied = await confirmDanger(b, email, email, tr('e-postadressen din'));
   if (denied) return denied;
 
   const sole = platformDb
@@ -486,13 +492,14 @@ async function deleteOwnAccount(request, ctx) {
   }
 
   deleteAccount(email);
+  // Til den som sletter, på språket forespørselen har.
   sendMail({
     to: email,
-    subject: 'Flatr-kontoen din er slettet',
+    subject: tr('Flatr-kontoen din er slettet'),
     ...buttonMail({
-      heading: 'Kontoen din er slettet',
-      intro: `Flatr-kontoen for ${email} ble slettet ${nowText()}. Du er logget ut overalt og er ikke lenger med i noen organisasjoner. Det du har laget, blir værende hos organisasjonene.`,
-      button: 'Gå til Flatr',
+      heading: tr('Kontoen din er slettet'),
+      intro: tr('Flatr-kontoen for {0} ble slettet {1}. Du er logget ut overalt og er ikke lenger med i noen organisasjoner. Det du har laget, blir værende hos organisasjonene.', [email, nowText()]),
+      button: tr('Gå til Flatr'),
       url: ctx.origin(null)
     })
   }).catch(() => {});
@@ -549,19 +556,19 @@ async function handleTeam(request, ctx) {
     const from = user.name || user.email;
     const newUser = !hasPassword(email);
     const token = newUser ? createLoginToken({ purpose: 'invite', email, tenantId: tenant.id, ttlMs: 7 * 24 * 3600_000 }) : null;
-    await sendMail({
-      to: email,
-      subject: `${from} har invitert deg til ${tenant.name} på Flatr`,
+    // Den inviterte får sitt eget språk, eller språket til den som inviterer (nye brukere).
+    await sendMailTo(email, () => ({
+      subject: tr('{0} har invitert deg til {1} på Flatr', [from, tenant.name]),
       ...buttonMail({
-        heading: `Du er invitert til ${tenant.name}`,
+        heading: tr('Du er invitert til {0}', [tenant.name]),
         intro: newUser
-          ? `${from} har gitt deg tilgang til infoskjermene til ${tenant.name}. Klikk for å velge passord – lenken virker i 7 dager.`
-          : `${from} har gitt deg tilgang til infoskjermene til ${tenant.name}. Logg inn med e-posten og passordet ditt.`,
-        button: newUser ? 'Velg passord og bli med' : `Åpne ${tenant.name}`,
+          ? tr('{0} har gitt deg tilgang til infoskjermene til {1}. Klikk for å velge passord – lenken virker i 7 dager.', [from, tenant.name])
+          : tr('{0} har gitt deg tilgang til infoskjermene til {1}. Logg inn med e-posten og passordet ditt.', [from, tenant.name]),
+        button: newUser ? tr('Velg passord og bli med') : tr('Åpne {0}', [tenant.name]),
         // Passordet velges på flatr.no (der all innlogging skjer), så passordbehandlere har én adresse.
         url: newUser ? `${ctx.origin('')}/invite?token=${token}` : `${ctx.origin(tenant.slug)}/admin`
       })
-    }).catch(() => {});
+    })).catch(() => {});
     return json(listMembers(tenant.id), 201);
   }
 

@@ -11,11 +11,13 @@
 //     tidsplanen): da slår folk ofte av TV-en, og Apple TV går i dvale. Tiden
 //     telles først fra skjermen skulle vært på igjen.
 
-import { platformDb, tenantResources } from './platform.js';
+import { platformDb, tenantResources, orgLang } from './platform.js';
 import { resolveScreenContent, getTimezone } from '../src/api/_shared.js';
 import { localParts } from '../src/lib/timeslots.js';
-import { sendMail, buttonMail } from './mail.js';
+import { sendMailTo, buttonMail } from './mail.js';
+import { withLang } from './i18n.js';
 import { sendWebhook } from '../src/lib/webhook.js';
+import { tr } from '../src/lib/i18n.js';
 
 const TICK_MS = 60_000;
 const ONLINE_MS = 90_000;
@@ -61,7 +63,7 @@ const deviceName = (d) => {
   } catch {
     /* ignore */
   }
-  return d.label || info.device_name || `Enhet ${d.code}`;
+  return d.label || info.device_name || tr('Enhet {0}', [d.code]);
 };
 
 export async function monitorTenant(t) {
@@ -130,33 +132,36 @@ export async function monitorTenant(t) {
   const to = ownerEmails(t.id);
   const describe = (d) => `${deviceName(d)}${d.screen_name ? ` (${d.screen_name})` : ''}`;
   const url = `${ORIGIN()}${t.slug}.${BASE()}/admin?view=screens`;
-  const subject = wentOffline.length
-    ? `${wentOffline.length === 1 ? describe(wentOffline[0]) : `${wentOffline.length} TV-er`} er frakoblet – ${t.name}`
-    : `${cameBack.length === 1 ? describe(cameBack[0]) : `${cameBack.length} TV-er`} er tilbake – ${t.name}`;
-  const lines = [
-    ...wentOffline.map((d) => `Frakoblet: ${describe(d)}`),
-    ...cameBack.map((d) => `Tilbake: ${describe(d)}`)
-  ];
-  if (to.length) await sendMail({
-    to,
-    subject,
-    ...buttonMail({
-      heading: wentOffline.length ? 'En TV har mistet forbindelsen' : 'TV-en er tilbake',
-      intro: lines.join(' · '),
-      button: 'Se enhetene',
-      url,
-      outro: wentOffline.length
-        ? `Starter ikke Flatr av seg selv etter strømbrudd? Se ${ORIGIN()}${BASE()}/hjelp/apple-tv. Varslingen kan slås av under Skjermer i Flatr.`
-        : 'Varslingen kan slås av under Skjermer i Flatr.'
-    })
-  }).catch((err) => console.error('[monitor] e-post feilet:', err.message));
+  // Teksten lages på hver eiers språk (e-post) og kontoens språk (Slack/Teams).
+  const message = () => ({
+    subject: wentOffline.length
+      ? tr('{0} er frakoblet – {1}', [wentOffline.length === 1 ? describe(wentOffline[0]) : tr('{0} TV-er', [wentOffline.length]), t.name])
+      : tr('{0} er tilbake – {1}', [cameBack.length === 1 ? describe(cameBack[0]) : tr('{0} TV-er', [cameBack.length]), t.name]),
+    lines: [...wentOffline.map((d) => tr('Frakoblet: {0}', [describe(d)])), ...cameBack.map((d) => tr('Tilbake: {0}', [describe(d)]))]
+  });
+  if (to.length) {
+    await sendMailTo(to, () => {
+      const { subject, lines } = message();
+      return {
+        subject,
+        ...buttonMail({
+          heading: wentOffline.length ? tr('En TV har mistet forbindelsen') : tr('TV-en er tilbake'),
+          intro: lines.join(' · '),
+          button: tr('Se enhetene'),
+          url,
+          outro: wentOffline.length
+            ? tr('Starter ikke Flatr av seg selv etter strømbrudd? Se {0}. Varslingen kan slås av under Skjermer i Flatr.', [`${ORIGIN()}${BASE()}/hjelp/apple-tv`])
+            : tr('Varslingen kan slås av under Skjermer i Flatr.')
+        })
+      };
+    }).catch((err) => console.error('[monitor] e-post feilet:', err.message));
+  }
 
   // Også til Slack/Teams hvis kunden har lagt inn en webhook.
   const hook = await setting(env, 'webhook_url', '');
   if (hook) {
-    await sendWebhook(hook, { title: subject, lines, link: { url, label: 'Åpne skjermene i Flatr' } }).catch((err) =>
-      console.error(`[monitor] webhook feilet (${t.slug}):`, err.message)
-    );
+    const { subject, lines, label } = withLang(orgLang(t.id), () => ({ ...message(), label: tr('Åpne skjermene i Flatr') }));
+    await sendWebhook(hook, { title: subject, lines, link: { url, label } }).catch((err) => console.error(`[monitor] webhook feilet (${t.slug}):`, err.message));
   }
 }
 

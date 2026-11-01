@@ -2,6 +2,7 @@ import { json, badRequest, handleOptions, readJson, requireAdmin, getTimezone, u
 import { webhookKind, sendWebhook } from '../lib/webhook.js';
 import { cleanBrand } from '../lib/brand.js';
 import { cleanMetSettings } from './metAlerts.js';
+import { tr } from '../lib/i18n.js';
 
 // Kontoinnstillinger: tidssone (tidsplanen) og offline-varsling (server/monitor.js),
 // også til Slack eller Teams via webhook.
@@ -111,8 +112,8 @@ export async function onRequestPost(context) {
   if (!row?.value) return badRequest('Legg inn en webhook-adresse først.');
   try {
     await sendWebhook(row.value, {
-      title: 'Testvarsel fra Flatr',
-      lines: ['Det virker! Her kommer beskjed når en skjerm går offline eller er tilbake.']
+      title: tr('Testvarsel fra Flatr'),
+      lines: [tr('Det virker! Her kommer beskjed når en skjerm går offline eller er tilbake.')]
     });
     return json({ ok: true });
   } catch (err) {

@@ -20,7 +20,7 @@ function dayLabel(iso) {
   const d = new Date(iso);
   const today = new Date();
   const yesterday = new Date(Date.now() - 86_400_000);
-  if (d.toDateString() === today.toDateString()) return 'I dag';
+  if (d.toDateString() === today.toDateString()) return tr('I dag');
   if (d.toDateString() === yesterday.toDateString()) return tr('I går');
   return d.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
 }
@@ -80,7 +80,7 @@ export default function ActivityManager({ onNavigate }) {
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-tint text-[11px] font-bold text-brand">{initials(r.user_name || r.user_email)}</span>
                   <div className="min-w-0 flex-1 text-sm">
                     <div className="text-ink">
-                      <strong>{r.user_name || r.user_email || tr('Noen')}</strong> {r.action}
+                      <strong>{r.user_name || r.user_email || tr('Noen')}</strong> {tr(r.action)}
                       {r.target_name && (
                         <>
                           {' '}

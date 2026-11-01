@@ -10,6 +10,7 @@
 // med sida i fullskjerm, lagt til sist i spillelisten.
 
 import { randomUUID } from 'node:crypto';
+import { currentLang, translateMessage } from './i18n.js';
 import { documentKind, officeToPdf, pdfToPngs } from './convert.js';
 import { checkLimit } from '../src/api/_shared.js';
 
@@ -91,7 +92,7 @@ export async function handleImportRoute(request, { tenant, user }, env) {
     const job = jobs.get(url.searchParams.get('job') || '');
     if (!job || job.tenant !== tenant.slug) return json({ error: 'Ukjent jobb' }, 404);
     const { status, phase, done, total, slide_ids, error } = job;
-    return json({ status, phase, done, total, slide_ids, error });
+    return json({ status, phase, done, total, slide_ids, error: error && translateMessage(currentLang(), error) });
   }
 
   if (request.method !== 'POST') return json({ error: 'Metode ikke tillatt' }, 405);

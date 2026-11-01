@@ -28,7 +28,7 @@ import { useTheme } from './components/ThemePicker.jsx';
 import OnlineBar from './components/OnlineBar.jsx';
 import { LogoMark, LogoLockup } from './components/Logo.jsx';
 import { useCollab } from '../hooks/useCollab.js';
-import { tr, getLang, setLang, LANGS, LANG_PUBLIC } from '../lib/i18n.js';
+import { tr, getLang, setLang, langChosen, LANGS, LANG_PUBLIC } from '../lib/i18n.js';
 
 // `group` styrer hvor punktet vises: i hovednavigasjonen ('main'), i
 // Innhold-menyen ('content') eller i brukermenyen ('account').
@@ -129,6 +129,37 @@ function Require2fa({ tenant }) {
   );
 }
 
+/**
+ * Språket følger brukeren: er det valgt i denne nettleseren (cookien), lagres det
+ * på brukeren, så e-post og varsler kommer på samme språk. Er det ikke valgt her,
+ * brukes det brukeren har valgt et annet sted (siden lastes på nytt én gang).
+ * Et språk som bare er gjettet fra nettleseren lagres når engelsk er slått på.
+ */
+function syncLang(me) {
+  let saved = me?.prefs?.lang;
+  try {
+    if (typeof me?.prefs === 'string') saved = JSON.parse(me.prefs || '{}').lang;
+  } catch {
+    saved = undefined;
+  }
+  const now = getLang();
+  if (saved === now) return;
+  const savedOk = LANGS.some((l) => l.id === saved);
+  if (langChosen() || (!savedOk && LANG_PUBLIC)) {
+    api.prefs({ lang: now }).catch(() => {});
+    return;
+  }
+  if (!savedOk) return;
+  // Uten cookies ville det blitt omlasting om og om igjen.
+  try {
+    if (sessionStorage.getItem('flatr.langSync')) return;
+    sessionStorage.setItem('flatr.langSync', '1');
+  } catch {
+    return;
+  }
+  setLang(saved, window.location.host.split('.').slice(1).join('.'));
+}
+
 function AdminShell({ context }) {
   const [tab, setTab] = useState(initialTab);
   const [screenCount, setScreenCount] = useState(null);
@@ -155,7 +186,13 @@ function AdminShell({ context }) {
         /* ignore */
       }
     }
-    api.me().then(setMe).catch(() => setMe(null));
+    api
+      .me()
+      .then((m) => {
+        setMe(m);
+        syncLang(m);
+      })
+      .catch(() => setMe(null));
     // Merkevaren brukes av editoren (fargesnarveier, standardskrift).
     api.settings
       .get()

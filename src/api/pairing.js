@@ -36,6 +36,7 @@ import {
   checkLimit
 } from './_shared.js';
 import { createPlaylist } from './playlists.js';
+import { tr } from '../lib/i18n.js';
 
 // Kode-alfabet uten forvekslbare tegn (ingen I, O, 0, 1).
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -320,7 +321,7 @@ async function handleLink(context) {
   if (fresh) {
     const full = await checkLimit(context.env, 'screens');
     if (full) return full;
-    const name = String(fresh.name || '').trim().slice(0, 80) || safeJson(row.client_info, {})?.device_name || 'Ny skjerm';
+    const name = String(fresh.name || '').trim().slice(0, 80) || safeJson(row.client_info, {})?.device_name || tr('Ny skjerm');
     let playlistId = toIntOrNull(fresh.playlist_id);
     if (playlistId && !(await context.env.DB.prepare('SELECT id FROM playlists WHERE id = ?').bind(playlistId).first())) {
       return notFound('Presentasjonen finnes ikke');

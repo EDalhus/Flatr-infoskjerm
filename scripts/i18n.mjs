@@ -1,7 +1,7 @@
 // Verktøy for språk i Flatr (se src/lib/i18n.js).
 //
 //   node scripts/i18n.mjs wrap <filer …>     pakker synlig norsk tekst inn i tr(…)
-//   node scripts/i18n.mjs keys               alle tekstene i tr(…) (JSON på stdout)
+//   node scripts/i18n.mjs keys               alle tekstene som oversettes (JSON på stdout)
 //   node scripts/i18n.mjs missing en         tekster som mangler i src/locales/en.json
 //   node scripts/i18n.mjs leftovers <filer>  norsk tekst som fortsatt står uten tr(…)
 //
@@ -13,6 +13,12 @@
 //   - verdier for label/title/text/hint … i objekter (menyer, valglister)
 // Malstrenger blir tr('… {0} …', [uttrykk]). Kjør to ganger, så tas også
 // strengene inne i uttrykkene. Se over resultatet – det er et hjelpemiddel.
+//
+// keys/missing tar med tr(…) i src/ og server/, og dessuten feilmeldingene fra
+// serveren, som står uten tr() fordi server/index.js oversetter dem på vei ut:
+// error/message i objekter, fail/jsonError/badRequest/notFound(…) og new Error(…)
+// i server/ og src/ (unntatt sidene), med strengene inne i malene. Og verbene i
+// aktivitetsloggen (action: …), som ActivityManager viser med tr().
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -194,7 +200,7 @@ function trKeys(file) {
   return keys;
 }
 
-const sourceFiles = () => {
+const sourceFiles = (dirs = ['src', 'server']) => {
   const out = [];
   const go = (d) => {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
@@ -203,8 +209,60 @@ const sourceFiles = () => {
       else if (/\.(jsx?|mjs)$/.test(e.name)) out.push(p);
     }
   };
-  go(path.join(ROOT, 'src'));
+  for (const d of dirs) go(path.join(ROOT, d));
   return out;
+};
+
+const ERROR_CALLS = new Set(['fail', 'jsonError', 'badRequest', 'notFound']);
+const ERROR_KEYS = new Set(['error', 'message', 'ais_error']);
+const isCode = (s) => /^[A-Z0-9_.:-]+$/.test(s) || /^[a-z][A-Za-z0-9_]*$/.test(s);
+
+/** «Tekst {0} tekst» for en malstreng. */
+const templateKey = (node) => node.quasis.map((x, i) => (x.value.cooked ?? x.value.raw) + (i < node.expressions.length ? `{${i}}` : '')).join('');
+
+/** Feilmeldinger og aktivitetsverb i en fil på serveren (se toppen). */
+function serverMessages(file) {
+  const out = [];
+  const collect = (root) =>
+    walk(root, [], (n, anc) => {
+      if (isTrCall(n)) return false;
+      let text = null;
+      if (n.type === 'StringLiteral') text = n.value.trim();
+      else if (n.type === 'TemplateLiteral' && anc[anc.length - 1]?.type !== 'TaggedTemplateExpression') text = templateKey(n).trim();
+      if (text && !isCode(text) && isDisplay(text.replace(/\{\d+\}/g, '').trim())) out.push(text);
+    });
+  walk(parseFile(fs.readFileSync(file, 'utf8')).program, [], (node) => {
+    const key = node.type === 'ObjectProperty' && !node.computed ? (node.key?.name ?? node.key?.value) : null;
+    if (key && (ERROR_KEYS.has(key) || key === 'action')) {
+      collect(node.value);
+      return false;
+    }
+    // logActivity(env, user, { action: 'publiserte' }): verbet kan være ett ord.
+    if (node.type === 'CallExpression' && node.callee?.name === 'logActivity') {
+      for (const arg of node.arguments) {
+        for (const p of arg.type === 'ObjectExpression' ? arg.properties : []) {
+          if ((p.key?.name ?? p.key?.value) === 'action' && p.value?.type === 'StringLiteral' && LETTER.test(p.value.value)) out.push(p.value.value.trim());
+        }
+      }
+    }
+    if ((node.type === 'CallExpression' && ERROR_CALLS.has(node.callee?.name)) || (node.type === 'NewExpression' && /Error$/.test(node.callee?.name || ''))) {
+      node.arguments.forEach(collect);
+      return false;
+    }
+    // Aktivitetsloggens verb per endepunkt (src/api/activity.js).
+    if (node.type === 'VariableDeclarator' && node.id?.name === 'VERB') {
+      collect(node.init);
+      return false;
+    }
+  });
+  return out;
+}
+
+/** Alt som oversettes: tr(…) i src/ og server/, og feilmeldingene fra serveren. */
+const allKeys = () => {
+  const keys = sourceFiles().flatMap(trKeys);
+  const serverSide = sourceFiles(['server', 'src/api', 'src/lib']).flatMap(serverMessages);
+  return [...new Set([...keys, ...serverSide])].sort((a, b) => a.localeCompare(b, 'nb'));
 };
 
 const [cmd, ...args] = process.argv.slice(2);
@@ -220,7 +278,7 @@ if (cmd === 'wrap') {
   }
   console.log(`${total} tekster pakket inn`);
 } else if (cmd === 'keys' || cmd === 'missing') {
-  const keys = [...new Set(sourceFiles().flatMap(trKeys))].sort((a, b) => a.localeCompare(b, 'nb'));
+  const keys = allKeys();
   if (cmd === 'keys') console.log(JSON.stringify(keys, null, 2));
   else {
     const dictFile = path.join(ROOT, 'src/locales', `${args[0] || 'en'}.json`);

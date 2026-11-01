@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { systemPrompt, toolsFor, TOOL_LABEL, WRITES, makeTools } from './tools.js';
+import { tr } from '../../lib/i18n.js';
 
 // Flatr-appen «Claude AI»: agentløkka mot Claude (Anthropic API) med
 // kundens egen nøkkel. Samtalen lagres i Anthropic-formatet (innholdsblokker),
@@ -57,7 +58,7 @@ export async function expandContext(messages, load) {
   return out;
 }
 
-/** Sjekker en nøkkel før den lagres. Kaster med norsk melding. */
+/** Sjekker en nøkkel før den lagres. Kaster med en melding til brukeren. */
 export async function verifyKey(key) {
   if (!/^sk-ant-[\w-]{20,}$/.test(key)) throw new Error('Det ser ikke ut som en Claude API-nøkkel (den starter med sk-ant-).');
   try {
@@ -72,12 +73,12 @@ export async function verifyKey(key) {
 }
 
 export function errorText(err) {
-  if (err instanceof Anthropic.AuthenticationError) return 'Claude godtok ikke API-nøkkelen. Sjekk den under Flatr Apps → Claude AI.';
-  if (err instanceof Anthropic.PermissionDeniedError) return 'API-nøkkelen har ikke tilgang til modellen.';
-  if (err instanceof Anthropic.RateLimitError) return 'For mange forespørsler mot Claude akkurat nå (eller tom kreditt). Prøv igjen om litt.';
-  if (err instanceof Anthropic.BadRequestError) return `Claude avviste forespørselen: ${err.message}`;
-  if (err instanceof Anthropic.APIError) return `Claude svarte med feil ${err.status ?? ''}. Prøv igjen.`;
-  return err?.message || 'Noe gikk galt';
+  if (err instanceof Anthropic.AuthenticationError) return tr('Claude godtok ikke API-nøkkelen. Sjekk den under Flatr Apps → Claude AI.');
+  if (err instanceof Anthropic.PermissionDeniedError) return tr('API-nøkkelen har ikke tilgang til modellen.');
+  if (err instanceof Anthropic.RateLimitError) return tr('For mange forespørsler mot Claude akkurat nå (eller tom kreditt). Prøv igjen om litt.');
+  if (err instanceof Anthropic.BadRequestError) return tr('Claude avviste forespørselen: {0}', [err.message]);
+  if (err instanceof Anthropic.APIError) return tr('Claude svarte med feil {0}. Prøv igjen.', [err.status ?? '']);
+  return err?.message || tr('Noe gikk galt');
 }
 
 /**

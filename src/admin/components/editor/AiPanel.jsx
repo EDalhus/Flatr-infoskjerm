@@ -11,16 +11,16 @@ import { tr, locale } from '../../../lib/i18n.js';
 const MOD = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
 
 const TOOL_LABEL = {
-  get_presentation: 'Leser presentasjonen',
-  set_presentation: 'Endrer presentasjonen',
-  add_slide: 'Lager lysbilde',
-  update_slide: 'Endrer lysbilde',
-  move_slide: 'Flytter lysbilde',
-  delete_slide: 'Sletter lysbilde',
-  add_elements: 'Legger til elementer',
-  update_elements: 'Endrer elementer',
-  delete_elements: 'Sletter elementer',
-  list_media: 'Ser i biblioteket',
+  get_presentation: tr('Leser presentasjonen'),
+  set_presentation: tr('Endrer presentasjonen'),
+  add_slide: tr('Lager lysbilde'),
+  update_slide: tr('Endrer lysbilde'),
+  move_slide: tr('Flytter lysbilde'),
+  delete_slide: tr('Sletter lysbilde'),
+  add_elements: tr('Legger til elementer'),
+  update_elements: tr('Endrer elementer'),
+  delete_elements: tr('Sletter elementer'),
+  list_media: tr('Ser i biblioteket'),
   list_data: tr('Ser på apper og program')
 };
 

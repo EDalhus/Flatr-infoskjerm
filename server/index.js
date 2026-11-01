@@ -44,6 +44,8 @@ import { healthChecks } from './health.js';
 import { handleBillingRoute, handleBillingWebhook, startBilling } from './billing.js';
 import { stripeEnabled } from './stripe.js';
 import { includedAi } from './aiQuota.js';
+import { withLang, requestLang, translateMessage } from './i18n.js';
+import { tr } from '../src/lib/i18n.js';
 
 const PORT = Number(process.env.PORT || 8787);
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'localhost:8787').toLowerCase();
@@ -416,14 +418,42 @@ async function handlePlatform(request) {
   return ASSETS.fetch(request);
 }
 
+// Det skjermene henter (TV-ene og spilleren i nettleseren) er alltid på norsk.
+const SCREEN_API = /^\/api\/(state|stream|heartbeat|plays|feeds|snapshot|pairing\/(request|status|screenshot))(\/|$)/;
+
 async function app(request) {
   // Én klarert klient-IP for hele appen (Better Auth og egne bremser), se clientIp.js.
   const headers = new Headers(request.headers);
   headers.set('x-flatr-client-ip', trustedClientIp(request.headers));
   request = new Request(request, { headers });
-  const res = await route(request);
+  const pathname = new URL(request.url).pathname;
+  // Språket til den som spør gjelder for alt forespørselen gjør (tr() i koden, e-post), se server/i18n.js.
+  const lang = SCREEN_API.test(apiKey(pathname)) ? 'nb' : requestLang(request);
+  let res = await withLang(lang, () => route(request));
+  if (lang !== 'nb' && res.status >= 400) res = await translateError(res, lang);
   // WebSocket-oppgraderinger håndteres utenfor (server.on('upgrade')).
-  return res.status === 101 ? res : withSecurityHeaders(res, new URL(request.url).pathname);
+  return res.status === 101 ? res : withSecurityHeaders(res, pathname);
+}
+
+/** Feilmeldingen i et JSON-svar («error», eller «message» fra Better Auth) på språket til den som spør. */
+async function translateError(res, lang) {
+  if (!String(res.headers.get('content-type') || '').includes('application/json')) return res;
+  const data = await res
+    .clone()
+    .json()
+    .catch(() => null);
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return res;
+  let changed = false;
+  for (const key of ['error', 'message']) {
+    if (typeof data[key] !== 'string') continue;
+    const text = translateMessage(lang, data[key]);
+    changed ||= text !== data[key];
+    data[key] = text;
+  }
+  if (!changed) return res;
+  const headers = new Headers(res.headers);
+  headers.delete('content-length');
+  return new Response(JSON.stringify(data), { status: res.status, statusText: res.statusText, headers });
 }
 
 async function route(request) {
@@ -437,7 +467,7 @@ async function route(request) {
     if (where.kind === 'tenant') return await handleTenant(request, where.tenant);
     if (where.kind === 'unknown') {
       return new Response(
-        `<!doctype html><meta charset="utf-8"><title>Finnes ikke</title><body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><h1>Denne Flatr-kontoen finnes ikke</h1><p><a href="${ctxBase.origin(null)}">Gå til ${BASE_DOMAIN}</a></p></div>`,
+        `<!doctype html><meta charset="utf-8"><title>${tr('Finnes ikke')}</title><body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><h1>${tr('Denne Flatr-kontoen finnes ikke')}</h1><p><a href="${ctxBase.origin(null)}">${tr('Gå til {0}', [BASE_DOMAIN])}</a></p></div>`,
         { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
       );
     }
