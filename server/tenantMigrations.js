@@ -364,6 +364,20 @@ const MIGRATIONS = [
     voter TEXT NOT NULL,
     PRIMARY KEY (question_id, voter)
   );
+  `,
+  // 21: API-nøkler for kundenes egne systemer (src/api/v1.js). Bare en hash av
+  //     nøkkelen lagres; selve nøkkelen vises én gang når den lages.
+  `
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    prefix TEXT NOT NULL,
+    hash TEXT NOT NULL UNIQUE,
+    created_by TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    last_used_at TEXT,
+    revoked_at TEXT
+  );
   `
 ];
 

@@ -780,6 +780,22 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
           <Textarea rows={3} value={c.text || ''} onChange={(e) => set({ text: e.target.value, rich: null })} />
         </Field>
         <Check label="Krymp teksten så den får plass i boksen" checked={c.autoFit !== false} onChange={(v) => set({ autoFit: v })} />
+        <Field label="Navn for API (valgfritt)" hint="Gi teksten et navn, så kan egne systemer endre den med Flatr API (Konto → API).">
+          <Input
+            value={c.apiName ?? ''}
+            placeholder="f.eks. dagens-tilbud"
+            onChange={(e) =>
+              set({
+                apiName:
+                  e.target.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-]/g, '-')
+                    .replace(/^-+/, '')
+                    .slice(0, 40) || null
+              })
+            }
+          />
+        </Field>
 
         <Field label="Font">
           <Select value={c.font || ''} onChange={(e) => set({ font: e.target.value })}>

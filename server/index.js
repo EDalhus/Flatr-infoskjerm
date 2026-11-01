@@ -33,6 +33,7 @@ import { startSnapshots, requestRefresh } from './snapshots.js';
 import { startMonitor } from './monitor.js';
 import { startNotices } from './notices.js';
 import { queueVideo, resumeVideos, videoSupported } from './video.js';
+import { handleV1 } from '../src/api/v1.js';
 import { afterWrite, beforeWrite } from '../src/api/activity.js';
 import { notifyChange, waitForChange } from './changes.js';
 import { notifier, teamMembers } from './notify.js';
@@ -259,6 +260,12 @@ async function handleTenant(request, tenant) {
     request = new Request(u, { method: request.method, headers: request.headers });
   }
   const url = new URL(request.url);
+  // API for kundenes egne systemer: egen nøkkel (Bearer), ikke innlogging – se src/api/v1.js.
+  if (url.pathname === '/api/v1' || url.pathname.startsWith('/api/v1/')) {
+    const res = await handleV1(request, tenantEnv(tenant, null));
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && res.ok) notifyChange(tenant.slug);
+    return res;
+  }
   if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/') && crossSiteWrite(request)) {
     return jsonError(403, 'Forespørselen kom fra en annen adresse.');
   }

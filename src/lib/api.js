@@ -279,6 +279,12 @@ export const api = {
     update: (id, body) => req(`/apps?id=${encodeURIComponent(id)}`, { method: 'PUT', body }),
     remove: (id) => req(`/apps?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
+  // API-nøkler (Konto → API).
+  keys: {
+    list: () => req('/keys'),
+    create: (name) => req('/keys', { method: 'POST', body: { name } }),
+    remove: (id) => req(`/keys?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
   // Avstemninger (Flatr-appen «Avstemning»).
   polls: {
     list: () => req('/polls'),

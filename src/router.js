@@ -33,6 +33,7 @@ import * as versions from './api/versions.js';
 import * as review from './api/review.js';
 import * as comments from './api/comments.js';
 import * as polls from './api/polls.js';
+import * as apiKeys from './api/apiKeys.js';
 
 export { pairing };
 
@@ -68,6 +69,7 @@ const ROUTES = {
   '/api/review': review,
   '/api/comments': comments,
   '/api/polls': polls,
+  '/api/keys': apiKeys,
   // Åpen: publikum stemmer fra mobilen (/v/<token>).
   '/api/vote': polls.vote
 };
