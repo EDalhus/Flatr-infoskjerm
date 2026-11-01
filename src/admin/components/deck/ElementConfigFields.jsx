@@ -6,6 +6,7 @@ import { MediaField } from '../MediaPicker.jsx';
 import { STOCK_GROUPS } from '../../../lib/stock.js';
 import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api.js';
+import { MODES as ENTUR_MODES } from '../../../lib/entur.js';
 
 const RSS_PRESETS = [
   { label: 'NRK – Toppsaker', url: 'https://www.nrk.no/toppsaker.rss' },
@@ -22,13 +23,13 @@ function AppFields({ c, set }) {
   useEffect(() => {
     api.apps
       .list()
-      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'fixtures', 'stock'].includes(a.kind))))
+      .then((rows) => setApps((rows || []).filter((a) => ['ais', 'custom', 'birthdays', 'menu', 'tides', 'football', 'fixtures', 'stock', 'entur'].includes(a.kind))))
       .catch(() => setApps([]));
   }, []);
   const app = (apps || []).find((a) => a.id === c.appId);
   const isCustom = app?.kind === 'custom';
   const isBirthdays = app?.kind === 'birthdays';
-  const isOther = ['menu', 'tides', 'football', 'fixtures', 'stock'].includes(app?.kind);
+  const isOther = ['menu', 'tides', 'football', 'fixtures', 'stock', 'entur'].includes(app?.kind);
   const fleet = app?.config?.fleet || [];
   const quays = app?.config?.quays || [];
   const picked = new Set((c.mmsi || []).map(String));
@@ -231,6 +232,49 @@ function AppFields({ c, set }) {
             </Field>
           )}
           <Field label="Overskrift (valgfritt)">
+            <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
+          </Field>
+        </>
+      )}
+      {app?.kind === 'entur' && (
+        <>
+          <Field label="Holdeplass" hint={(app.config?.stops || []).length ? null : 'Legg til holdeplasser under Flatr Apps → Avganger.'}>
+            <Select value={c.stopId || ''} onChange={(e) => set({ stopId: e.target.value })}>
+              {(app.config?.stops || []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Transportmidler" hint="Ingen valgt = alle.">
+            <div className="flex flex-wrap gap-1.5">
+              {ENTUR_MODES.map((m) => {
+                const on = (c.modes || []).includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => set({ modes: on ? (c.modes || []).filter((x) => x !== m.id) : [...(c.modes || []), m.id] })}
+                    className={`h-8 rounded-full px-3 text-xs font-semibold transition-colors ${on ? 'bg-ink text-paper' : 'border border-line bg-card text-muted hover:text-ink'}`}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Gangtid (min)" hint="Skjuler avganger folk ikke rekker.">
+              <Input type="number" min={0} max={30} value={c.walkMinutes ?? 0} onChange={(e) => set({ walkMinutes: Math.max(0, Number(e.target.value) || 0) })} />
+            </Field>
+            <Field label="Antall avganger">
+              <Input type="number" min={1} max={20} value={c.max ?? 8} onChange={(e) => set({ max: Number(e.target.value) || undefined })} />
+            </Field>
+          </div>
+          <Check label="Vis plattform og spor" checked={c.showPlatform !== false} onChange={(v) => set({ showPlatform: v })} />
+          <Field label="Overskrift (valgfritt)" hint="Står det tomt, brukes navnet på holdeplassen.">
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
           </Field>
         </>

@@ -53,6 +53,13 @@ const ICONS = {
       <path d="m16 17 5-5-5-5M21 12H9" />
     </>
   ),
+  bus: (
+    <>
+      <rect x="5" y="3.5" width="14" height="14" rx="2.5" />
+      <path d="M5 11h14M8.5 20.5v-3M15.5 20.5v-3" />
+      <path d="M8.5 14.5h.01M15.5 14.5h.01" strokeWidth="2.2" />
+    </>
+  ),
   pin: (
     <>
       <path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" />

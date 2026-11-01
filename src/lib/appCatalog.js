@@ -289,6 +289,27 @@ export const OFFICIAL_APPS = [
     }
   },
   {
+    key: 'entur',
+    name: 'Avganger',
+    tagline: 'Buss, trikk, T-bane, tog og båt fra holdeplassene i nærheten – i sanntid fra Entur.',
+    description:
+      'Velg holdeplassene i nærheten, så viser skjermen de neste avgangene med linjenummer i linjens farge, retning, plattform og hvor mange minutter det er igjen. Tidene kommer i sanntid fra Entur og teller ned mens skjermen står. Legg inn hvor lang tid det tar å gå til holdeplassen, så vises bare avgangene folk rekker.\n\nGratis og uten nøkkel. Dekker all kollektivtrafikk i Norge.',
+    category: 'transport',
+    icon: 'bus',
+    color: '#4338ca',
+    element: 'app',
+    views: ['Avgangstavle i sanntid', 'Bare buss, trikk, T-bane, tog eller båt', 'Bare avganger folk rekker (gangtid)'],
+    guide: {
+      title: 'Slik setter du opp Avganger',
+      intro: 'Avgangene kommer fra Entur, som samler rutetider og sanntid for all kollektivtrafikk i Norge. Det er gratis og krever ingen nøkkel.',
+      steps: [
+        { title: 'Søk opp holdeplassene', body: 'Aktiver Avganger, gå til Oppsett og skriv navnet på holdeplassen, stasjonen eller kaia. Velg den i lista. Du kan legge til opptil seks.' },
+        { title: 'Vis det på skjermene', body: 'Åpne en presentasjon og velg Widgeter → Avganger. Velg holdeplass, hvilke transportmidler som skal vises og hvor mange minutter det tar å gå dit.' }
+      ],
+      troubleshooting: 'Vises ingen avganger? Sjekk at det går noe fra holdeplassen den neste tiden, og at transportmiddelet ikke er valgt bort i elementet.'
+    }
+  },
+  {
     key: 'unsplash',
     name: 'Unsplash bildebank',
     tagline: 'Søk blant millioner av gratis bilder rett fra editoren – og la Claude AI finne bilder til presentasjonene.',

@@ -9,6 +9,7 @@ import { tidesData, footballData, verifyFootballKey, searchFootball } from './da
 import { cleanMenu, weekdayIn } from '../lib/menu.js';
 import { cleanStock } from '../lib/stock.js';
 import { cleanFixturesConfig, fixturesData } from './fixtures.js';
+import { cleanEnturConfig, enturData, searchStops } from './entur.js';
 import { portName } from './ports.js';
 
 // Flatr Apps – aktiverte apper for kunden. En rad = én aktivert app fra
@@ -359,7 +360,9 @@ export async function appData(env, appId) {
           ? (hit?.data?.live ? 10 : 120) * 60_000
           : row.kind === 'fixtures'
             ? 30 * 60_000
-            : DATA_TTL_MS;
+            : row.kind === 'entur'
+              ? 30_000
+              : DATA_TTL_MS;
   if (hit && Date.now() - hit.at < ttl) return hit.data;
   try {
     const data =
@@ -379,7 +382,9 @@ export async function appData(env, appId) {
                   ? await footballData((await readSecrets(env, row)).api_key, safeJson(row.config, {}))
                   : row.kind === 'fixtures'
                     ? await fixturesData(safeJson(row.config, {}), await getTimezone(env))
-                    : {};
+                    : row.kind === 'entur'
+                      ? { ...(await enturData(safeJson(row.config, {}))), tz: await getTimezone(env) }
+                      : {};
     const out = { app: { id: row.id, name: row.name, kind: row.kind }, ...data };
     dataCache.set(key, { at: Date.now(), data: out });
     if (dataCache.size > 300) dataCache.delete(dataCache.keys().next().value);
@@ -402,6 +407,16 @@ export async function onRequestGet(context) {
   if (!id) {
     const { results } = await env.DB.prepare('SELECT * FROM apps ORDER BY name COLLATE NOCASE, id').all();
     return json((results ?? []).map((r) => publicApp(env, r)));
+  }
+  // ?stops=: søk etter holdeplasser hos Entur (Avganger).
+  if (params.has('stops')) {
+    const row = await env.DB.prepare('SELECT kind FROM apps WHERE id = ?').bind(id).first();
+    if (!row || row.kind !== 'entur') return notFound('Appen finnes ikke');
+    try {
+      return json(await searchStops(params.get('stops')));
+    } catch (err) {
+      return json({ error: `Fikk ikke søkt hos Entur (${err.message})` }, { status: 502 });
+    }
   }
   // ?football=team|league&q=: søk i API-Football (fotball-appen).
   if (params.has('football')) {
@@ -500,6 +515,7 @@ export async function onRequestPost(context) {
     if (kind === 'tides') config = cleanTidesConfig({});
     if (kind === 'football') config = cleanFootballConfig({});
     if (kind === 'fixtures') config = { teams: [] };
+    if (kind === 'entur') config = { stops: [] };
   }
 
   const exists = await env.DB.prepare('SELECT id FROM apps WHERE kind = ? AND COALESCE(app_ref, 0) = ?').bind(kind, ref ?? 0).first();
@@ -569,6 +585,8 @@ export async function onRequestPut(context) {
       if (b.config !== undefined) config = cleanTidesConfig({ ...prevConfig, ...b.config });
     } else if (row.kind === 'fixtures') {
       if (b.config !== undefined) config = await cleanFixturesConfig({ ...prevConfig, ...b.config }, prevConfig);
+    } else if (row.kind === 'entur') {
+      if (b.config !== undefined) config = cleanEnturConfig({ ...prevConfig, ...b.config });
     } else if (row.kind === 'football') {
       if (b.config !== undefined) config = cleanFootballConfig({ ...prevConfig, ...b.config });
       if (typeof b.api_key === 'string' && b.api_key.trim()) {

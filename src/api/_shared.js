@@ -505,6 +505,8 @@ export function rendersNatively(e, appKind, features) {
   if (['weather', 'rss', 'calendar'].includes(e.kind)) return features.has('widgets');
   if (e.kind !== 'app' || e.config?.effect === 'rain') return false;
   if (appKind === 'ais') return features.has('app') && ['map', 'cards', 'arrivals'].includes(e.config?.view || 'map');
+  // Avganger (Entur): TV-appen fra 1.2 (11) sier «entur». Eldre får skjermbilder.
+  if (appKind === 'entur') return features.has('entur');
   return features.has('apps') && NATIVE_APP_KINDS.includes(appKind);
 }
 

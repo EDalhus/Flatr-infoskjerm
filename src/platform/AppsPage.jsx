@@ -12,7 +12,7 @@ import { SiteHeader, SiteFooter, SectionHead, AppTile, usePublicApps } from './L
 const THEMES = [
   { id: 'drift', title: 'Drift og logistikk', text: 'Flåten, kaiene og lageret – oppdatert av seg selv.', keys: ['ais', 'stock'] },
   { id: 'vaer', title: 'Vær og sjø', text: 'Fra Yr, Kartverket og MET – ingen nøkler, ingen oppsett.', keys: ['weather', 'tides'] },
-  { id: 'arbeidsplass', title: 'Arbeidsplassen', text: 'Det som gjør skjermen i lunsjrommet verdt å se på.', keys: ['birthdays', 'menu', 'calendar'] },
+  { id: 'arbeidsplass', title: 'Arbeidsplassen', text: 'Det som gjør skjermen i lunsjrommet verdt å se på.', keys: ['birthdays', 'menu', 'calendar', 'entur'] },
   { id: 'nyheter', title: 'Nyheter og sport', text: 'Nyhetene og lagene dere følger med på.', keys: ['rss', 'fixtures', 'football'] },
   { id: 'arrangement', title: 'Arrangementer og styring', text: 'Program, tidsstyring og skjermer folk kan trykke på.', keys: ['events', 'timetable', 'touch'] },
   { id: 'innhold', title: 'Innhold og AI', text: 'Lag presentasjoner raskere, med bilder som passer.', keys: ['claude', 'cursor', 'unsplash'] }
