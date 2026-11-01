@@ -28,7 +28,7 @@ const OUT_ANIM = {
 // IDLE_MS uten berøring går skjermen tilbake til første lysbilde og fortsetter.
 const IDLE_MS = 45_000;
 
-export default function DeckPlayer({ deck, ctx }) {
+export default function DeckPlayer({ deck, ctx, onAdvance }) {
   const now = ctx.now;
   const visible = deck.filter((s) => s.enabled !== 0 && isWithinDaypart(s, now));
   const key = visible.map((s) => s.id).join(',');
@@ -57,6 +57,8 @@ export default function DeckPlayer({ deck, ctx }) {
   const curSlide = slides[index % Math.max(1, count)];
   useEffect(() => {
     if (!curSlide) return undefined;
+    // Venter en ny versjon av Flatr, lastes skjermen inn på nytt nå, mens lysbildet byttes.
+    onAdvance?.();
     shown.current = { slide: curSlide, at: Date.now() };
     return () => {
       const s = shown.current;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { alertColors, alertHeading, displayOf, FLASH_MS } from '../../lib/alerts.js';
+import { alertColors, alertHeading, displayOf, isLive, FLASH_MS } from '../../lib/alerts.js';
+import { serverNow } from '../../lib/deckClock.js';
 
 // Bare meldinger som startet nylig blinker over hele skjermen – ellers ville
 // hver omlasting av siden vist en gammel melding over hele skjermen igjen.
@@ -12,10 +13,12 @@ const FRESH_MS = 5 * 60_000;
  *  - banner: stripe øverst på skjermen
  * Fargen følger alvorligheten, eller nivået for farevarsler fra MET.
  */
-export default function AlertOverlay({ alerts }) {
+export default function AlertOverlay({ alerts: sent }) {
   const firstSeen = useRef(new Map()); // id -> da skjermen så meldingen første gang
   const [, rerender] = useState(0);
   const now = Date.now();
+  // Uten nett får ikke skjermen beskjed når en melding er over, så sluttiden sjekkes her også.
+  const alerts = sent.filter((a) => isLive(a, serverNow()));
 
   for (const a of alerts) if (!firstSeen.current.has(a.id)) firstSeen.current.set(a.id, now);
 

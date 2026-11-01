@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { BASE_SIZE } from '../lib/deck.js';
@@ -9,10 +9,14 @@ import { useHeartbeat } from '../hooks/useHeartbeat.js';
 import { useFitScale } from '../hooks/useFitScale.js';
 import { setServerTime } from '../lib/deckClock.js';
 import { startPlayLog } from './playLog.js';
+import { startOffline, rememberState } from './offline.js';
 import DeckPlayer from './DeckPlayer.jsx';
 import AlertOverlay from './components/AlertOverlay.jsx';
 
 const EMPTY = { screen: null, deck: [], categories: [], schedule: [], sponsors: [], alerts: [] };
+
+// Ny versjon av Flatr: last inn på nytt ved neste lysbildebytte, eller senest etter 15 min.
+const RELOAD_FALLBACK_MS = 15 * 60_000;
 
 export default function Viewer() {
   // /display/:screenId = en kanal. /preview/:playlistId = forhåndsvisning av
@@ -31,8 +35,31 @@ export default function Viewer() {
   // Visningsloggen (rapporter) gjelder bare ekte skjermer, ikke forhåndsvisning.
   useEffect(() => (preview || playlistId ? undefined : startPlayLog(screenId)), [preview, playlistId, screenId]);
 
+  // Ekte skjermer tåler nettbrudd og oppdaterer seg selv når Flatr får en ny versjon.
+  const isScreen = !preview && !playlistId && !!screenId;
+  const reloadPending = useRef(false);
+  const slideCount = useRef(0);
+  useEffect(() => {
+    if (!isScreen) return undefined;
+    let fallback = null;
+    const stop = startOffline(() => {
+      // Med ett lysbilde kommer det aldri et bytte å skjule omlastingen i.
+      if (slideCount.current < 2) return window.location.reload();
+      reloadPending.current = true;
+      fallback ??= setTimeout(() => window.location.reload(), RELOAD_FALLBACK_MS);
+    });
+    return () => {
+      stop();
+      clearTimeout(fallback);
+    };
+  }, [isScreen]);
+  const onAdvance = useCallback(() => {
+    if (reloadPending.current) window.location.reload();
+  }, []);
+
   const [state, setState] = useState(EMPTY);
   const [loaded, setLoaded] = useState(false);
+  slideCount.current = state.deck.length;
 
   useEffect(() => {
     let alive = true;
@@ -43,19 +70,26 @@ export default function Viewer() {
           setServerTime(data.serverTime);
           setState(data);
           setLoaded(true);
+          if (isScreen) rememberState(api.stateUrl(target), data);
         }
       })
-      .catch(() => setLoaded(true));
+      // Uten nett og uten lagret innhold: vent på strømmen i stedet for å si
+      // at skjermen ikke finnes.
+      .catch((err) => err.status >= 400 && err.status < 500 && setLoaded(true));
     return () => {
       alive = false;
     };
-  }, [target]);
+  }, [target, isScreen]);
 
-  const onData = useCallback((data) => {
-    setServerTime(data?.serverTime);
-    setState(data);
-    setLoaded(true);
-  }, []);
+  const onData = useCallback(
+    (data) => {
+      setServerTime(data?.serverTime);
+      setState(data);
+      setLoaded(true);
+      if (isScreen) rememberState(api.stateUrl(target), data);
+    },
+    [target, isScreen]
+  );
 
   const connected = useSSE(api.streamUrl(target), { snapshot: onData, update: onData });
 
@@ -113,7 +147,7 @@ export default function Viewer() {
             </p>
           </div>
         ) : (
-          <DeckPlayer deck={onlySlide ? state.deck.filter((s) => String(s.id) === onlySlide) : state.deck} ctx={ctx} />
+          <DeckPlayer deck={onlySlide ? state.deck.filter((s) => String(s.id) === onlySlide) : state.deck} ctx={ctx} onAdvance={onAdvance} />
         )}
       </div>
 

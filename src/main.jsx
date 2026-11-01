@@ -1,17 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import './index.css';
-import Viewer from './viewer/Viewer.jsx';
-import WidgetView from './viewer/WidgetView.jsx';
-import Admin from './admin/Admin.jsx';
-import Schedule from './public/Schedule.jsx';
-import Landing from './platform/Landing.jsx';
-import AppsPage from './platform/AppsPage.jsx';
-import SuperAdmin from './platform/SuperAdmin.jsx';
-import { Privacy, Terms } from './platform/Legal.jsx';
-import HelpAppleTv from './platform/HelpAppleTv.jsx';
-import { Signup, PlatformLogin, PlatformAdminRedirect, ForgotPassword, ResetPassword, InvitePage } from './platform/AuthPages.jsx';
+
+// Hver del lastes først når den trengs: en skjerm henter bare spilleren, ikke
+// admin og forsiden, og starter raskere på trege smart-TV-er.
+const named = (load, name) => lazy(() => load().then((m) => ({ default: m[name] })));
+const legal = () => import('./platform/Legal.jsx');
+const authPages = () => import('./platform/AuthPages.jsx');
+const Viewer = lazy(() => import('./viewer/Viewer.jsx'));
+const WidgetView = lazy(() => import('./viewer/WidgetView.jsx'));
+const Admin = lazy(() => import('./admin/Admin.jsx'));
+const Schedule = lazy(() => import('./public/Schedule.jsx'));
+const Landing = lazy(() => import('./platform/Landing.jsx'));
+const AppsPage = lazy(() => import('./platform/AppsPage.jsx'));
+const SuperAdmin = lazy(() => import('./platform/SuperAdmin.jsx'));
+const HelpAppleTv = lazy(() => import('./platform/HelpAppleTv.jsx'));
+const Privacy = named(legal, 'Privacy');
+const Terms = named(legal, 'Terms');
+const Signup = named(authPages, 'Signup');
+const PlatformLogin = named(authPages, 'PlatformLogin');
+const PlatformAdminRedirect = named(authPages, 'PlatformAdminRedirect');
+const ForgotPassword = named(authPages, 'ForgotPassword');
+const ResetPassword = named(authPages, 'ResetPassword');
+const InvitePage = named(authPages, 'InvitePage');
 
 const NotFound = () => (
   <div className="flex h-full items-center justify-center p-8 text-center text-muted">
@@ -64,6 +76,7 @@ const appRouter = (ctx) =>
 // Skjermvisning og offentlig program trenger ikke plattform-konteksten.
 const isPublicPath = (p) =>
   p.startsWith('/display/') || p.startsWith('/preview/') || p.startsWith('/widget/') || p === '/s' || p.startsWith('/s/');
+const isScreenPath = (p) => p.startsWith('/display/') || p.startsWith('/preview/') || p.startsWith('/widget/');
 
 function App() {
   const [router, setRouter] = useState(() => {
@@ -89,9 +102,28 @@ function App() {
       });
   }, [router]);
 
-  if (!router) return <div className="h-full bg-paper" />;
-  return <RouterProvider router={router} />;
+  // Skjermer er svarte mens spilleren lastes, alt annet har vanlig bakgrunn.
+  const blank = <div className={`h-full ${isScreenPath(window.location.pathname) ? 'bg-black' : 'bg-paper'}`} />;
+  if (!router) return blank;
+  return (
+    <Suspense fallback={blank}>
+      <RouterProvider router={router} />
+    </Suspense>
+  );
 }
+
+// Etter en ny versjon av Flatr finnes ikke de gamle filene lenger: en side som er
+// åpen fra før, lastes inn på nytt (høyst hvert 30. sekund, så den ikke går i ring).
+window.addEventListener('vite:preloadError', (event) => {
+  try {
+    if (Date.now() - (Number(sessionStorage.getItem('flatr.reloadedAt')) || 0) < 30_000) return;
+    sessionStorage.setItem('flatr.reloadedAt', String(Date.now()));
+  } catch {
+    return;
+  }
+  event.preventDefault();
+  window.location.reload();
+});
 
 // Henvisningsprogrammet: flatr.no/?ref=<kode> huskes til registreringen.
 try {

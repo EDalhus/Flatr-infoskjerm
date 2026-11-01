@@ -10,12 +10,19 @@ const url = () => `/api/plays?screen=${encodeURIComponent(screenId)}`;
 
 function flush(beacon = false) {
   if (!screenId || !queue.length) return;
-  const body = JSON.stringify({ items: queue.splice(0, 2000) });
+  const items = queue.splice(0, 2000);
+  const body = JSON.stringify({ items });
   if (beacon && navigator.sendBeacon) {
     navigator.sendBeacon(url(), new Blob([body], { type: 'application/json' }));
     return;
   }
-  fetch(url(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+  // Uten nett: legg dem tilbake og send neste gang, så nettbrudd ikke gir hull i rapportene.
+  const keep = () => {
+    queue = items.concat(queue).slice(-5000);
+  };
+  fetch(url(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60_000 })
+    .then((r) => r.status >= 500 && keep())
+    .catch(keep);
 }
 
 export function startPlayLog(id) {

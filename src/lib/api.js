@@ -330,5 +330,6 @@ export const api = {
     req(`/heartbeat?screen=${encodeURIComponent(screenId)}`, { method: 'POST' }),
   // `target` er en kanal-id, eller { playlist: id } for forhåndsvisning av en spilleliste.
   getState: (target) => req(`/state${viewerQuery(target)}`),
+  stateUrl: (target) => `${BASE}/state${viewerQuery(target)}`,
   streamUrl: (target) => `${BASE}/stream${viewerQuery(target)}`
 };
