@@ -1,0 +1,13 @@
+{
+  "name": "Flatr – legg ut på skjermene",
+  "short_name": "Flatr",
+  "start_url": "/mobil",
+  "scope": "/mobil",
+  "display": "standalone",
+  "background_color": "#0b1110",
+  "theme_color": "#027353",
+  "icons": [
+    { "src": "/flatr-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/flatr-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

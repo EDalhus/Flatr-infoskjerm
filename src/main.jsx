@@ -11,6 +11,7 @@ const authPages = () => import('./platform/AuthPages.jsx');
 const Viewer = lazy(() => import('./viewer/Viewer.jsx'));
 const WidgetView = lazy(() => import('./viewer/WidgetView.jsx'));
 const Admin = lazy(() => import('./admin/Admin.jsx'));
+const MobilePost = lazy(() => import('./admin/MobilePost.jsx'));
 const Schedule = lazy(() => import('./public/Schedule.jsx'));
 const Vote = lazy(() => import('./public/Vote.jsx'));
 const Landing = lazy(() => import('./platform/Landing.jsx'));
@@ -64,6 +65,8 @@ const appRouter = (ctx) =>
   createBrowserRouter([
     { path: '/', element: <Navigate to="/admin" replace /> },
     { path: '/admin', element: <Admin context={ctx} /> },
+    // Legg ut fra mobilen (kan legges på hjemskjermen som en app).
+    { path: '/mobil', element: <MobilePost /> },
     { path: '/invite', element: <InvitePage baseDomain={ctx?.base_domain} /> },
     { path: '/forgot-password', element: <ForgotPassword /> },
     { path: '/reset-password', element: <ResetPassword /> },

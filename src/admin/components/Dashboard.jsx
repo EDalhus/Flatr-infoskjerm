@@ -13,6 +13,7 @@ import AlertComposer from './AlertComposer.jsx';
 import { alertColors, alertHeading } from '../../lib/alerts.js';
 import { screenState, StatusPill, showing } from './screenStatus.jsx';
 import { timeAgo } from './pairingHelpers.js';
+import qrcode from 'qrcode-generator';
 
 const OPEN_SCREEN_KEY = 'flatr.screens.open';
 const WIZARD_SKIP_KEY = 'flatr.onboarding.skipped';
@@ -439,6 +440,8 @@ export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
           </section>
         )}
 
+        {running && <MobileCard />}
+
         {!running && (
           <p className="text-center text-sm text-muted">
             Ingen skjerm viser noe ennå ·{' '}
@@ -449,5 +452,35 @@ export default function Dashboard({ onChange, onNavigate, me, theme, tenant }) {
         )}
       </div>
     </>
+  );
+}
+
+/** Snarvei til «Legg ut fra mobilen»: QR-kode til /mobil (på PC) eller en knapp (på mobilen). */
+function MobileCard() {
+  const url = `${window.location.origin}/mobil`;
+  const qr = useMemo(() => {
+    try {
+      const q = qrcode(0, 'M');
+      q.addData(url);
+      q.make();
+      return q.createDataURL(4, 1);
+    } catch {
+      return '';
+    }
+  }, [url]);
+  return (
+    <section className="flex items-center gap-4 rounded-2xl border border-line bg-card p-4 shadow-card">
+      {qr && <img src={qr} alt="" className="hidden h-24 w-24 shrink-0 rounded-lg bg-white p-1 sm:block" style={{ imageRendering: 'pixelated' }} />}
+      <div className="min-w-0 flex-1">
+        <h2 className="m-0 text-sm font-bold text-ink">Legg ut fra mobilen</h2>
+        <p className="m-0 mt-1 text-sm text-muted">
+          Ta et bilde eller skriv en beskjed og legg det rett ut på skjermene. Skann koden med telefonen, og legg siden på hjemskjermen, så har du den
+          som en app.
+        </p>
+      </div>
+      <a href="/mobil" className="shrink-0 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-onbrand sm:hidden">
+        Åpne
+      </a>
+    </section>
   );
 }
