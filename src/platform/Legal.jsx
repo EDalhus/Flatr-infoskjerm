@@ -96,14 +96,20 @@ export function Privacy() {
       <h2>Hvor lenge vi lagrer</h2>
       <ul>
         <li>Konto og innhold lagres så lenge kontoen finnes. Slettede ting ligger i «Nylig slettet» i 30 dager.</li>
-        <li>Når en konto avsluttes, slettes innholdet innen 30 dager, og fra sikkerhetskopier innen 14 dager etter det.</li>
+        <li>
+          Sletter en eier organisasjonen (Eksport og sletting i Flatr), forsvinner innholdet med en gang og fra sikkerhetskopiene
+          innen tre uker. Avslutter vi en konto, slettes innholdet innen 30 dager, og fra sikkerhetskopiene innen tre uker etter det.
+        </li>
+        <li>Sletter du kontoen din (Konto og sikkerhet i Flatr), fjernes innloggingen og medlemskapene dine med en gang.</li>
         <li>Innloggingsøkter utløper etter 30 dager, engangslenker etter 30 minutter.</li>
       </ul>
 
       <h2>Dine rettigheter</h2>
       <p>
         Du kan be om innsyn i, retting av og sletting av dine opplysninger, og om å få dem utlevert (dataportabilitet).
-        Du kan også protestere mot behandling som bygger på berettiget interesse. Kontakt {CONTACT}. Mener du at vi
+        Mye kan du gjøre selv i Flatr: eiere kan laste ned alt innholdet som en ZIP-fil og slette organisasjonen under
+        Eksport og sletting, og alle kan slette sin egen konto under Konto og sikkerhet. Du kan også protestere mot
+        behandling som bygger på berettiget interesse. Kontakt {CONTACT}. Mener du at vi
         behandler opplysninger i strid med regelverket, kan du klage til Datatilsynet (datatilsynet.no).
       </p>
 
@@ -158,8 +164,8 @@ export function Terms() {
 
       <h2>Avslutning</h2>
       <p>
-        Du kan når som helst be om at kontoen slettes ved å kontakte {CONTACT}. Vi kan avslutte betaen eller en konto
-        med rimelig varsel.
+        Du kan når som helst slette organisasjonen (eiere) eller kontoen din selv i Flatr, eller be oss om det ved å
+        kontakte {CONTACT}. Vi kan avslutte betaen eller en konto med rimelig varsel.
       </p>
 
       <h2>Personvern</h2>

@@ -49,6 +49,20 @@ for dir in data/tenants/*/; do
   fi
 done
 
+# Slettede organisasjoner: filene beholdes like lenge som databasekopiene
+# (KEEP_DAYS etter slettingen), så fjernes de – også utenfor serveren (sync).
+for dir in "$OUT/media"/*/; do
+  slug=$(basename "$dir")
+  [ "$slug" = "_platform" ] && continue
+  if [ -d "data/tenants/$slug" ]; then
+    rm -f "$dir.slettet"
+  elif [ ! -e "$dir.slettet" ]; then
+    touch "$dir.slettet"
+  elif [ -n "$(find "$dir.slettet" -mtime +"$KEEP_DAYS")" ]; then
+    rm -rf "$dir"
+  fi
+done
+
 # Plattformens egne filer: app-ikoner (Flatr Apps) og bildene i malmarkedet.
 for sub in app-icons market; do
   if [ -d "data/$sub" ]; then

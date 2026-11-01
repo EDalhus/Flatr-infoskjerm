@@ -25,6 +25,7 @@ import { userColorPalette } from '../src/api/_access.js';
 import { handlePlatformRoute, handleTenantAuthRoute } from './auth.js';
 import { handleApexDevice, claimFromHub, syncRoutes } from './devices.js';
 import { handleImportRoute } from './imports.js';
+import { handleExportRoute } from './export.js';
 import { handleSuperadminRoute } from './superadmin.js';
 import { handleMarketRoute, serveMarketFile } from './market.js';
 import { handleAppMarketRoute, customAppFor, canInstallCustom, countInstall, runCustomApp, publicCatalog } from './appMarket.js';
@@ -322,6 +323,7 @@ async function handleTenant(request, tenant) {
 
   const env = tenantEnv(tenant, user);
   if (key === '/api/import') return handleImportRoute(request, ctx, env);
+  if (key === '/api/export') return handleExportRoute(request, ctx, env);
   if (key === '/api/market' || key === '/api/market/install') return handleMarketRoute(request, ctx, env);
   if (key === '/api/app-market' || key.startsWith('/api/app-market/')) return handleAppMarketRoute(request, { ...ctx, tenant });
 

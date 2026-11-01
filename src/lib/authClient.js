@@ -55,5 +55,7 @@ export const authClient = {
   confirmTwoFactor: (code) => call('/two-factor/verify-totp', { code }),
   disableTwoFactor: (password) => call('/two-factor/disable', { password }),
   generateBackupCodes: (password) => call('/two-factor/generate-backup-codes', { password }),
-  revokeOtherSessions: () => call('/revoke-other-sessions', {})
+  revokeOtherSessions: () => call('/revoke-other-sessions', {}),
+  // Innloggingsmåtene (credential = passord, google, microsoft).
+  accounts: () => call('/list-accounts', null, 'GET')
 };

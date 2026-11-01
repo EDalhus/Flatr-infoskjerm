@@ -322,6 +322,13 @@ export const api = {
     get: () => req('/plan'),
     request: (extra, message) => req('/plan/request', { method: 'POST', body: { extra, message } })
   },
+  // Eksport og sletting. Eksporten er en vanlig lenke (/api/export), så nettleseren laster ned.
+  org: {
+    remove: (confirm, password) => req('/org', { method: 'DELETE', body: { confirm, password } })
+  },
+  account: {
+    remove: (confirm, password) => req('/account', { method: 'DELETE', body: { confirm, password } })
+  },
   // platform = true: flatr.no/invite (nye lenker), ellers kundens adresse (eldre lenker).
   invite: {
     get: (token, platform) => req(`${platform ? '/platform' : ''}/invite?token=${encodeURIComponent(token)}`),

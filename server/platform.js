@@ -6,7 +6,7 @@
 //   data/tenants/<slug>/media/
 // API-modulene i src/api/ får dermed «sin» env.DB og ser aldri andre kunder.
 
-import { mkdirSync, readFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { D1Database } from './d1.js';
@@ -113,6 +113,11 @@ for (const sql of [
      id_hash TEXT PRIMARY KEY,
      email TEXT NOT NULL,
      expires_at TEXT NOT NULL
+   )`,
+  // Adressene til slettede organisasjoner (se deleteTenant og slugProblem).
+  `CREATE TABLE IF NOT EXISTS retired_slugs (
+     slug TEXT PRIMARY KEY,
+     retired_at TEXT NOT NULL
    )`
 ]) {
   try {
@@ -209,6 +214,8 @@ const RESERVED = new Set(
    panel portal display screen tv flatr root system ns ns1 ns2 mx email webmail`.split(/\s+/)
 );
 
+const SLUG_QUARANTINE_MS = 30 * 24 * 3600_000;
+
 /** Returnerer null hvis gyldig og ledig, ellers en norsk feilmelding. */
 export function slugProblem(slug) {
   if (!/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(slug)) {
@@ -219,12 +226,18 @@ export function slugProblem(slug) {
   if (platformDb.prepare('SELECT 1 FROM tenants WHERE slug = ?').bind(slug).firstSync()) {
     return 'Subdomenet er allerede tatt.';
   }
+  // En slettet organisasjons adresse kan stå i nettlesere, QR-koder og innebygde
+  // widgeter en stund – den gis ikke til noen andre med en gang.
+  const retired = platformDb.prepare('SELECT retired_at FROM retired_slugs WHERE slug = ?').bind(slug).firstSync();
+  if (retired && Date.now() - Date.parse(retired.retired_at) < SLUG_QUARANTINE_MS) {
+    return 'Subdomenet ble brukt nylig og er ikke ledig ennå. Velg et annet.';
+  }
   return null;
 }
 
 /* -------------------------------- kunder ------------------------------- */
 
-const tenantDir = (slug) => path.join(DATA_DIR, 'tenants', slug);
+export const tenantDir = (slug) => path.join(DATA_DIR, 'tenants', slug);
 const envCache = new Map(); // slug -> { DB, MEDIA }
 
 export function getTenantBySlug(slug) {
@@ -303,6 +316,35 @@ export function createTenant({ slug, name, ownerEmail, ownerName }) {
     d.exec('ROLLBACK');
     throw err;
   }
+}
+
+/**
+ * Sletter en organisasjon for godt: databasen og alle filene, medlemskap,
+ * invitasjoner, økter og TV-koblinger (følger med tenants-raden). Maler og
+ * apper den har delt med andre, trekkes tilbake – filene til malene blir
+ * liggende, siden andre kan ha tatt dem i bruk (se server/market.js).
+ */
+export function deleteTenant(tenant) {
+  const open = envCache.get(tenant.slug);
+  envCache.delete(tenant.slug);
+  try {
+    open?.DB.close();
+  } catch {
+    /* allerede lukket */
+  }
+  const d = platformDb.db;
+  d.exec('BEGIN');
+  try {
+    platformDb.prepare('UPDATE market_items SET hidden = 1, tenant_id = NULL, user_id = NULL WHERE tenant_id = ?').bind(tenant.id).runSync();
+    platformDb.prepare('UPDATE custom_apps SET hidden = 1, created_by = NULL WHERE tenant_id = ?').bind(tenant.id).runSync();
+    platformDb.prepare('DELETE FROM tenants WHERE id = ?').bind(tenant.id).runSync();
+    platformDb.prepare('INSERT OR REPLACE INTO retired_slugs (slug, retired_at) VALUES (?, ?)').bind(tenant.slug, nowIso()).runSync();
+    d.exec('COMMIT');
+  } catch (err) {
+    d.exec('ROLLBACK');
+    throw err;
+  }
+  rmSync(tenantDir(tenant.slug), { recursive: true, force: true });
 }
 
 /* --------------------------- brukere/medlemmer -------------------------- */

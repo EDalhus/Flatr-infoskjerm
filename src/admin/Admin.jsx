@@ -21,6 +21,7 @@ import TeamManager from './components/TeamManager.jsx';
 import AppsManager from './components/AppsManager.jsx';
 import AccountManager, { TwoFactorCard } from './components/AccountManager.jsx';
 import ApiManager from './components/ApiManager.jsx';
+import DataManager from './components/DataManager.jsx';
 import Login from './Login.jsx';
 import { useTheme } from './components/ThemePicker.jsx';
 import OnlineBar from './components/OnlineBar.jsx';
@@ -47,7 +48,8 @@ const NAV = [
   { id: 'team', label: 'Team', icon: 'users', group: 'account', Component: TeamManager, tenantOnly: true },
   { id: 'activity', label: 'Aktivitet', icon: 'clock', group: 'account', Component: ActivityManager, tenantOnly: true },
   { id: 'api', label: 'API', icon: 'link', group: 'account', Component: ApiManager, tenantOnly: true },
-  { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager }
+  { id: 'trash', label: 'Nylig slettet', icon: 'trash', group: 'account', Component: RecentlyDeletedManager },
+  { id: 'data', label: 'Eksport og sletting', icon: 'download', group: 'account', Component: DataManager, tenantOnly: true }
 ];
 
 // Gamle adresser som er slått sammen med andre sider.

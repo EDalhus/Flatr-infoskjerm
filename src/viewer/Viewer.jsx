@@ -115,6 +115,18 @@ export default function Viewer() {
 
   const connected = useSSE(api.streamUrl(target), { snapshot: onData, update: onData });
 
+  // Er organisasjonen (eller skjermen) slettet, svarer serveren 404 i stedet for
+  // strømmen. Da lastes siden på nytt, så skjermen ikke viser gammelt innhold for
+  // alltid. Uten nett gir sjekken ikke 404, og innholdet blir stående.
+  const hasContent = state !== EMPTY;
+  useEffect(() => {
+    if (!isScreen || connected || !hasContent) return undefined;
+    const t = setTimeout(() => {
+      api.getState(target).catch((err) => err.status === 404 && window.location.reload());
+    }, 20_000);
+    return () => clearTimeout(t);
+  }, [connected, hasContent, isScreen, target]);
+
   const orientation = state.screen?.orientation === 'portrait' ? 'portrait' : 'landscape';
   const base = BASE_SIZE[orientation];
   // Fjernstyrt rotasjon (grader) for fysisk montering – styres fra admin.

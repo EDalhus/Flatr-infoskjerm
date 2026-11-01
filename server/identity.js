@@ -195,6 +195,47 @@ export function hasPassword(email) {
   return !!platformDb.prepare(`SELECT 1 FROM auth_account WHERE userId = ? AND providerId = 'credential' AND password IS NOT NULL`).bind(u.id).firstSync();
 }
 
+/**
+ * Bekrefter passordet før noe som ikke kan angres (slette organisasjonen eller
+ * kontoen). Brukere uten passord (bare Google/Microsoft) slipper.
+ */
+export async function passwordOk(email, password) {
+  const u = findAuthUser(email);
+  const row =
+    u && platformDb.prepare(`SELECT password FROM auth_account WHERE userId = ? AND providerId = 'credential' AND password IS NOT NULL`).bind(u.id).firstSync();
+  if (!row) return true;
+  if (typeof password !== 'string' || !password || password.length > 128) return false;
+  const ctx = await auth.$context;
+  return ctx.password.verify({ hash: row.password, password });
+}
+
+/**
+ * Sletter en brukerkonto: innloggingen (passord, tofaktor, koblinger til
+ * Google/Microsoft og alle økter) og Flatr-brukeren med medlemskapene. Det
+ * brukeren har laget, blir værende i organisasjonene.
+ */
+export function deleteAccount(email) {
+  const e = normEmail(email);
+  const u = findAuthUser(e);
+  const d = platformDb.db;
+  d.exec('BEGIN');
+  try {
+    if (u) {
+      // Lenker for nytt passord o.l. (økter, passord og tofaktor følger med brukeren).
+      platformDb.prepare('DELETE FROM auth_verification WHERE value = ?').bind(u.id).runSync();
+      platformDb.prepare('DELETE FROM auth_user WHERE id = ?').bind(u.id).runSync();
+    }
+    platformDb.prepare('DELETE FROM login_tokens WHERE email = ?').bind(e).runSync();
+    platformDb.prepare('UPDATE custom_apps SET created_by = NULL WHERE created_by = ?').bind(e).runSync();
+    platformDb.prepare('UPDATE market_items SET user_id = NULL WHERE user_id = (SELECT id FROM users WHERE email = ?)').bind(e).runSync();
+    platformDb.prepare('DELETE FROM users WHERE email = ?').bind(e).runSync();
+    d.exec('COMMIT');
+  } catch (err) {
+    d.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 /** Setter passord for en bruker (invitasjon godtatt). Lager innloggingskontoen om den mangler. */
 export async function setPassword(email, password) {
   const ctx = await auth.$context;

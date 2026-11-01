@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import qrcode from 'qrcode-generator';
 import { authClient } from '../../lib/authClient.js';
+import { api } from '../../lib/api.js';
 import { Icon, Field, Input, Button, Card, PageHeader, ErrorText } from './ui.jsx';
+import { ConfirmDelete } from './DataManager.jsx';
 
 // Konto og sikkerhet: navn, passord, tofaktor (TOTP) og innloggede enheter.
 // Alt går via Better Auth (/api/auth/*); kontoen gjelder alle organisasjonene.
@@ -283,6 +285,19 @@ function SessionsCard() {
   );
 }
 
+function DeleteAccountCard({ email }) {
+  return (
+    <Card title="Slett kontoen">
+      <p className="m-0 mb-4 text-sm leading-relaxed text-muted">
+        Sletter Flatr-kontoen din for godt: innloggingen, tofaktor og medlemskapet i alle organisasjonene du er med i. Det du har laget, blir værende hos
+        organisasjonene. Er du eneste eier av en organisasjon, må du først gi eierrollen til en annen under Team eller slette organisasjonen under Eksport og
+        sletting.
+      </p>
+      <ConfirmDelete expected={email} label="Skriv e-postadressen din for å bekrefte" button="Slett kontoen min" onDelete={api.account.remove} />
+    </Card>
+  );
+}
+
 export default function AccountManager() {
   const [session, setSession] = useState(undefined);
   const load = () =>
@@ -317,6 +332,7 @@ export default function AccountManager() {
             <PasswordCard />
             <TwoFactorCard enabled={!!user.twoFactorEnabled} onChange={load} />
             <SessionsCard />
+            <DeleteAccountCard email={user.email} />
           </>
         )}
       </div>

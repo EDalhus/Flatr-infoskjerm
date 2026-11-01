@@ -14,6 +14,8 @@
 //   GET  /api/invite?token=           – hvem invitasjonen gjelder
 //   POST /api/invite/accept           – { token, name, password } -> passord satt, innlogget
 //   GET/POST/PUT/DELETE /api/team     – medlemmer (endring krever rollen owner)
+//   DELETE /api/org                   – { confirm: navnet, password } slett organisasjonen (eier)
+//   DELETE /api/account               – { confirm: e-posten, password } slett din egen konto
 
 import {
   getTenantById,
@@ -34,12 +36,13 @@ import {
   referralCode,
   referralStats,
   applyReferral,
+  deleteTenant,
   REFERRAL_MAX
 } from './platform.js';
 import { sendMail, buttonMail, escapeHtml } from './mail.js';
 import { usage } from '../src/api/_shared.js';
 import { userColorPalette } from '../src/api/_access.js';
-import { auth, authSession, ensureAuthUser, hasPassword, setPassword, onEmailVerified } from './identity.js';
+import { auth, authSession, ensureAuthUser, hasPassword, setPassword, onEmailVerified, passwordOk, deleteAccount } from './identity.js';
 
 const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), {
@@ -375,6 +378,8 @@ export async function handleTenantAuthRoute(request, ctx) {
   }
 
   if (p === '/api/team') return handleTeam(request, ctx);
+  if (p === '/api/org' && request.method === 'DELETE') return deleteOrg(request, ctx);
+  if (p === '/api/account' && request.method === 'DELETE') return deleteOwnAccount(request, ctx);
 
   // Henvisningsprogrammet: lenken og hvor mange ekstra skjermer den har gitt.
   if (p === '/api/referral' && request.method === 'GET') {
@@ -394,6 +399,99 @@ export async function handleTenantAuthRoute(request, ctx) {
   }
 
   return null;
+}
+
+/* ------------------------------- sletting ------------------------------- */
+
+const andList = (names) => new Intl.ListFormat('nb', { type: 'conjunction' }).format(names.map((n) => `«${n}»`));
+const nowText = () => new Date().toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', dateStyle: 'long', timeStyle: 'short' });
+
+/** Navnet og passordet (hvis brukeren har et) må stemme før noe slettes for godt. */
+async function confirmDanger(b, expected, email, what) {
+  if (String(b.confirm ?? '').trim().toLowerCase() !== String(expected).trim().toLowerCase()) {
+    return json({ error: `Skriv ${what} for å bekrefte.`, field: 'confirm' }, 400);
+  }
+  if (limited(`danger:${email}`, 5, 900_000)) return json({ error: 'For mange forsøk. Prøv igjen om et kvarter.' }, 429);
+  if (!(await passwordOk(email, b.password))) return json({ error: 'Feil passord.', field: 'password' }, 403);
+  return null;
+}
+
+/** Eksport og sletting → «Slett organisasjonen»: alt innhold, for godt. Bare eiere. */
+async function deleteOrg(request, ctx) {
+  const { tenant, user } = ctx;
+  if (!user) return json({ error: 'Ikke innlogget' }, 401);
+  if (user.role !== 'owner') return json({ error: 'Bare eiere kan slette organisasjonen.' }, 403);
+  const b = (await readJson(request)) || {};
+  const denied = await confirmDanger(b, tenant.name, user.email, `navnet på organisasjonen («${tenant.name}»)`);
+  if (denied) return denied;
+
+  const owners = listMembers(tenant.id)
+    .filter((m) => m.role === 'owner')
+    .map((m) => m.email);
+  deleteTenant(tenant);
+  console.log(`[org] ${tenant.slug} er slettet av ${user.email}`);
+  const when = nowText();
+  for (const to of owners) {
+    sendMail({
+      to,
+      replyTo: supportInbox()[0],
+      subject: `${tenant.name} er slettet fra Flatr`,
+      ...buttonMail({
+        heading: `${tenant.name} er slettet`,
+        intro: `${user.name || user.email} slettet organisasjonen ${when}. Presentasjonene, skjermene, biblioteket og alt annet innhold er fjernet, og ${ctx.origin(tenant.slug)} virker ikke lenger.`,
+        button: 'Gå til Flatr',
+        url: ctx.origin(null),
+        outro: 'Var det ikke meningen? Svar på denne e-posten så fort som mulig.'
+      })
+    }).catch(() => {});
+  }
+  // Med i andre organisasjoner: velg en av dem. Ellers til forsiden.
+  return json({ ok: true, redirect: tenantsForEmail(user.email).length ? `${ctx.origin(null)}/admin` : ctx.origin(null) });
+}
+
+/** Konto og sikkerhet → «Slett kontoen». En organisasjon skal aldri stå uten eier. */
+async function deleteOwnAccount(request, ctx) {
+  const s = await authSession(request);
+  if (!s?.user) return json({ error: 'Ikke innlogget' }, 401);
+  const email = normEmail(s.user.email);
+  const b = (await readJson(request)) || {};
+  const denied = await confirmDanger(b, email, email, 'e-postadressen din');
+  if (denied) return denied;
+
+  const sole = platformDb
+    .prepare(
+      `SELECT t.name FROM memberships m
+         JOIN users u ON u.id = m.user_id
+         JOIN tenants t ON t.id = m.tenant_id
+        WHERE u.email = ? AND m.role = 'owner'
+          AND (SELECT COUNT(*) FROM memberships o WHERE o.tenant_id = m.tenant_id AND o.role = 'owner') = 1
+        ORDER BY t.name`
+    )
+    .bind(email)
+    .allSync()
+    .results.map((r) => r.name);
+  if (sole.length) {
+    return json(
+      {
+        error: `Du er eneste eier av ${andList(sole)}. Gi eierrollen til en annen under Team, eller slett organisasjonen under Eksport og sletting først.`,
+        code: 'sole_owner'
+      },
+      409
+    );
+  }
+
+  deleteAccount(email);
+  sendMail({
+    to: email,
+    subject: 'Flatr-kontoen din er slettet',
+    ...buttonMail({
+      heading: 'Kontoen din er slettet',
+      intro: `Flatr-kontoen for ${email} ble slettet ${nowText()}. Du er logget ut overalt og er ikke lenger med i noen organisasjoner. Det du har laget, blir værende hos organisasjonene.`,
+      button: 'Gå til Flatr',
+      url: ctx.origin(null)
+    })
+  }).catch(() => {});
+  return json({ ok: true, redirect: ctx.origin(null) });
 }
 
 /* --------------------------------- team --------------------------------- */
