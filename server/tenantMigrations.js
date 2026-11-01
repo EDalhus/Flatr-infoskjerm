@@ -319,6 +319,14 @@ const MIGRATIONS = [
   //     lysbildene mens de byttes. Vanlige lysbilder har layer = NULL.
   `
   ALTER TABLE deck_slides ADD COLUMN layer TEXT;
+  `,
+  // 19: Videoer komprimeres etter opplasting (server/video.js): status
+  //     ('queued' | 'processing' | NULL), opprinnelig størrelse, og rev som
+  //     økes når fila byttes, så adressen /m/<id>v<rev>.mp4 blir ny.
+  `
+  ALTER TABLE media ADD COLUMN rev INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE media ADD COLUMN status TEXT;
+  ALTER TABLE media ADD COLUMN original_size INTEGER;
   `
 ];
 

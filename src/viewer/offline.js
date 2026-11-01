@@ -6,7 +6,7 @@
 const DATA = 'flatr-data';
 const CHECK_MS = 30 * 60_000;
 
-const MEDIA_RE = /\/m\/\d+\.[a-z0-9]+|\/api\/media\?id=\d+&raw=1/g;
+const MEDIA_RE = /\/m\/\d+(?:v\d+)?\.[a-z0-9]+|\/api\/media\?id=\d+&raw=1/g;
 
 let active = false;
 let lastVersion = null;

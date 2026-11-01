@@ -32,6 +32,7 @@ import { serveAppIcon } from './appIcons.js';
 import { startSnapshots, requestRefresh } from './snapshots.js';
 import { startMonitor } from './monitor.js';
 import { startNotices } from './notices.js';
+import { queueVideo, resumeVideos, videoSupported } from './video.js';
 import { afterWrite, beforeWrite } from '../src/api/activity.js';
 import { notifyChange, waitForChange } from './changes.js';
 import { notifier, teamMembers } from './notify.js';
@@ -78,6 +79,8 @@ function tenantEnv(tenant, user) {
     LIMITS: tenantLimits(tenant),
     // TV-er venter på skjermbilder av widgeter – be om dem med en gang.
     REQUEST_SNAPSHOTS: () => process.env.CONVERTER_URL && requestRefresh(tenant.slug),
+    // Videoer komprimeres etter opplasting (bare når ffmpeg finnes).
+    VIDEO_QUEUE: videoSupported ? (id) => queueVideo(tenant.slug, id) : null,
     // Skjermbilde av en side (AI-assistenten ser lysbildene den lager). Bare med konverter.
     SCREENSHOT: process.env.CONVERTER_URL ? screenshotUrl : null,
     // Varsler (godkjenning, kommentarer) og teamet (@-omtaler).
@@ -243,7 +246,8 @@ const QUIET_WRITES = /^\/api\/(heartbeat|plays|mcp|comments|prefs|ai|agents|acti
 
 async function handleTenant(request, tenant) {
   // Mediefiler på en adresse Cloudflare mellomlagrer (se cdnMediaUrls i src/api/_shared.js).
-  const cdn = /^\/m\/(\d+)\.[a-z0-9]+$/.exec(new URL(request.url).pathname);
+  // /m/<id>.<endelse> eller /m/<id>v<rev>.<endelse> (ny fil etter videokomprimering).
+  const cdn = /^\/m\/(\d+)(?:v\d+)?\.[a-z0-9]+$/.exec(new URL(request.url).pathname);
   if (cdn && ['GET', 'HEAD'].includes(request.method)) {
     const u = new URL(request.url);
     u.pathname = '/api/media';
@@ -460,6 +464,7 @@ if (process.env.CONVERTER_URL) startSnapshots();
 // Visningslogg og offline-varsel for parede skjermer.
 startMonitor();
 startNotices();
+resumeVideos().catch((err) => console.error('[video] oppstart:', err.message));
 
 server.listen(PORT, () => {
   console.log(`Flatr kjører på :${PORT}  (${PROTOCOL}://${BASE_DOMAIN}, kunder på *.${BASE_DOMAIN})`);

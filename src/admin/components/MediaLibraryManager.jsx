@@ -70,7 +70,10 @@ function Tile({ m, selected, selecting, onOpen, onToggle }) {
         <span className="truncate text-sm font-semibold text-ink" title={m.name}>
           {m.name}
         </span>
-        <span className="text-xs text-muted">{fmtBytes(m.size)}</span>
+        <span className="text-xs text-muted">
+          {fmtBytes(m.size)}
+          {m.status ? <span className="font-semibold text-brand"> · Komprimeres …</span> : m.original_size > m.size ? ` · var ${fmtBytes(m.original_size)}` : ''}
+        </span>
       </div>
     </div>
   );
@@ -214,7 +217,14 @@ function Drawer({ id, folders, onClose, onChanged, onDeleted, onNavigate }) {
               <dt className="text-muted">Type</dt>
               <dd className="m-0 text-ink">{m.content_type || '–'}</dd>
               <dt className="text-muted">Størrelse</dt>
-              <dd className="m-0 text-ink">{fmtBytes(m.size)}</dd>
+              <dd className="m-0 text-ink">
+                {fmtBytes(m.size)}
+                {m.status
+                  ? ' · komprimeres nå'
+                  : m.original_size > m.size
+                    ? ` · komprimert fra ${fmtBytes(m.original_size)}`
+                    : ''}
+              </dd>
               <dt className="text-muted">Dimensjoner</dt>
               <dd className="m-0 text-ink">{dims ? `${dims[0]} × ${dims[1]}` : '–'}</dd>
               <dt className="text-muted">Lastet opp</dt>
@@ -339,6 +349,15 @@ export default function MediaLibraryManager({ onNavigate }) {
   useEffect(() => {
     load();
   }, []);
+
+  // Videoer komprimeres i bakgrunnen etter opplasting: hent lista igjen til de er ferdige.
+  const busy = (items || []).some((m) => m.status);
+  useEffect(() => {
+    if (!busy) return undefined;
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy]);
 
   const folders = useMemo(() => {
     const set = new Set(extraFolders);

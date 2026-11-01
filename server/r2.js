@@ -4,7 +4,7 @@
 // get(key) -> { body }, delete(key). Content-Type lagres i en sidecar-fil.
 
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, rm, stat, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, rm, stat, writeFile, readFile, rename } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
@@ -19,6 +19,22 @@ export class DiskBucket {
     const full = path.join(this.root, safe);
     if (!full.startsWith(this.root + path.sep)) throw new Error('ugyldig nøkkel');
     return full;
+  }
+
+  /** Fila bak en nøkkel på disk (til ffmpeg, se server/video.js). */
+  localPath(key) {
+    return this.#file(key);
+  }
+
+  /** Flytter en ferdig fil inn under en ny nøkkel (samme disk). */
+  async putFile(key, src, opts = {}) {
+    const file = this.#file(key);
+    await mkdir(path.dirname(file), { recursive: true });
+    await rename(src, file);
+    const meta = { contentType: opts.httpMetadata?.contentType || 'application/octet-stream' };
+    await writeFile(`${file}.meta.json`, JSON.stringify(meta));
+    const { size } = await stat(file);
+    return { key, size, httpMetadata: meta };
   }
 
   async put(key, body, opts = {}) {

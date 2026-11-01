@@ -167,10 +167,13 @@ export async function onRequestPost(context) {
   });
   const size = put?.size ?? toIntOrNull(context.request.headers.get('content-length'));
 
+  // Videoer komprimeres i bakgrunnen på egen server (server/video.js).
+  const video = /^video\//i.test(type) && !!context.env.VIDEO_QUEUE;
   const row = await context.env.DB
-    .prepare('INSERT INTO media (name, folder, r2_key, content_type, size) VALUES (?, ?, ?, ?, ?) RETURNING *')
-    .bind(name, folder, key, type, size)
+    .prepare('INSERT INTO media (name, folder, r2_key, content_type, size, status) VALUES (?, ?, ?, ?, ?, ?) RETURNING *')
+    .bind(name, folder, key, type, size, video ? 'queued' : null)
     .first();
+  if (video) context.env.VIDEO_QUEUE(row.id);
   return json(row, { status: 201 });
 }
 

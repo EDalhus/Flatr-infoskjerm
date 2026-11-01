@@ -407,11 +407,15 @@ async function cdnMediaUrls(env, state) {
   const text = JSON.stringify({ deck: state.deck, overlay: state.overlay, sponsors: state.sponsors });
   const ids = [...new Set([...text.matchAll(re)].map((m) => Number(m[1])))];
   if (!ids.length) return;
-  const { results } = await env.DB.prepare(`SELECT id, content_type FROM media WHERE id IN (${ids.map(() => '?').join(',')})`)
+  const { results } = await env.DB.prepare(`SELECT id, content_type, rev FROM media WHERE id IN (${ids.map(() => '?').join(',')})`)
     .bind(...ids)
-    .all();
-  const ext = Object.fromEntries((results ?? []).map((r) => [r.id, CDN_EXT[String(r.content_type || '').toLowerCase()] || 'bin']));
-  const next = JSON.parse(text.replace(re, (m, id) => (ext[id] ? `/m/${id}.${ext[id]}` : m)));
+    .all()
+    .catch(() => env.DB.prepare(`SELECT id, content_type FROM media WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all());
+  // Ny fil bak samme id (komprimert video) får ny adresse: /m/<id>v<rev>.mp4.
+  const file = Object.fromEntries(
+    (results ?? []).map((r) => [r.id, `${r.id}${r.rev ? `v${r.rev}` : ''}.${CDN_EXT[String(r.content_type || '').toLowerCase()] || 'bin'}`])
+  );
+  const next = JSON.parse(text.replace(re, (m, id) => (file[id] ? `/m/${file[id]}` : m)));
   state.deck = next.deck;
   state.overlay = next.overlay;
   state.sponsors = next.sponsors;

@@ -26,7 +26,7 @@ const MAX_FILE = 300 * 1024 * 1024; // større filer spilles bare fra nettet
 const NET_TIMEOUT_MS = 8000;
 
 const isMedia = (url) =>
-  /^\/m\/\d+\.[a-z0-9]+$/.test(url.pathname) || (url.pathname === '/api/media' && url.searchParams.get('raw') === '1');
+  /^\/m\/\d+(?:v\d+)?\.[a-z0-9]+$/.test(url.pathname) || (url.pathname === '/api/media' && url.searchParams.get('raw') === '1');
 
 const withTimeout = (promise, ms) =>
   Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('tidsavbrudd')), ms))]);
