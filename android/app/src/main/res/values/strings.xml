@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Flatr</string>
+    <string name="offline">Ingen forbindelse til Flatr.\nPrøver igjen om litt …</string>
+    <string name="autostart_title">Start Flatr når TV-en slås på</string>
+    <string name="autostart_text">For at skjermen skal komme tilbake av seg selv etter strømbrudd, må Flatr få lov til å «vises over andre apper».\n\nVelg Flatr i lista som kommer opp, slå det på, og trykk Tilbake.</string>
+    <string name="autostart_open">Åpne innstillingen</string>
+    <string name="autostart_skip">Ikke nå</string>
+</resources>

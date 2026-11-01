@@ -10,6 +10,7 @@ import { useFitScale } from '../hooks/useFitScale.js';
 import { setServerTime } from '../lib/deckClock.js';
 import { startPlayLog } from './playLog.js';
 import { startOffline, rememberState } from './offline.js';
+import { startDevice } from './device.js';
 import DeckPlayer from './DeckPlayer.jsx';
 import SlideCanvas from './SlideCanvas.jsx';
 import AlertOverlay from './components/AlertOverlay.jsx';
@@ -58,6 +59,25 @@ export default function Viewer() {
   const onAdvance = useCallback(() => {
     if (reloadPending.current) window.location.reload();
   }, []);
+
+  // Koblet til med kode (flatr.no/tv, Android TV): meld fra som en TV, og vis
+  // navnet på skjermen når noen trykker «Identifiser» i admin.
+  const [identify, setIdentify] = useState(null);
+  useEffect(() => {
+    if (!isScreen) return undefined;
+    let hide = null;
+    const stop = startDevice(screenId, {
+      onIdentify: ({ label, seconds }) => {
+        setIdentify(label || 'Denne skjermen');
+        clearTimeout(hide);
+        hide = setTimeout(() => setIdentify(null), Math.min(60, Number(seconds) || 10) * 1000);
+      }
+    });
+    return () => {
+      stop();
+      clearTimeout(hide);
+    };
+  }, [isScreen, screenId]);
 
   const [state, setState] = useState(EMPTY);
   const [loaded, setLoaded] = useState(false);
@@ -162,6 +182,13 @@ export default function Viewer() {
       </div>
 
       <AlertOverlay alerts={state.alerts} />
+
+      {identify && (
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/80 p-[6vmin] text-center text-white">
+          <div className="text-[3vmin] font-semibold uppercase tracking-[0.3em] text-[#7ee2b8]">Denne skjermen</div>
+          <div className="mt-[2vmin] max-w-full break-words text-[10vmin] font-black leading-tight">{identify}</div>
+        </div>
+      )}
 
       {!preview && (
         <div

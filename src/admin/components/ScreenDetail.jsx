@@ -64,6 +64,10 @@ function Row({ label, value, sub, pct, mono }) {
 // flatr.no fra kundens adresse (dalhus.flatr.no -> flatr.no).
 const platformHost = () => location.host.split('.').slice(1).join('.');
 
+/** Hva slags spiller som er koblet til, ut fra det den melder om seg selv. */
+const deviceKind = (ci) =>
+  ci.tvos_version ? 'Apple TV' : /android/i.test(ci.app_version || '') ? 'Android TV' : ci.player_version === 'web' ? 'Nettleser' : 'TV';
+
 /** Det Apple TV-en faktisk viser (skjermbilde fra appen), med knapp for et ferskt bilde. */
 function TvScreenshot({ device, screenId, orientation }) {
   const [version, setVersion] = useState(device.screenshot_at || '');
@@ -314,7 +318,7 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
           <HoursEditor value={s.hours} onSave={(hours) => onPatch({ hours }, 'Åpningstidene er lagret.')} />
         </Card>
 
-        <Card title="Apple TV">
+        <Card title={d ? deviceKind(ci) : 'TV'}>
           {d && !pairing ? (
             <>
               <Row label="Navn på TV-en" value={ci.device_name} />
@@ -341,12 +345,14 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
                   Koble fra TV-en
                 </Button>
               </div>
-              <p className="m-0 mt-3 text-xs text-muted">
-                Starter ikke Flatr av seg selv etter strømbrudd?{' '}
-                <a href={`${location.protocol}//${platformHost()}/hjelp/apple-tv`} target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">
-                  Lås Apple TV til Flatr
-                </a>
-              </p>
+              {ci.tvos_version && (
+                <p className="m-0 mt-3 text-xs text-muted">
+                  Starter ikke Flatr av seg selv etter strømbrudd?{' '}
+                  <a href={`${location.protocol}//${platformHost()}/hjelp/apple-tv`} target="_blank" rel="noreferrer" className="font-semibold text-brand hover:underline">
+                    Lås Apple TV til Flatr
+                  </a>
+                </p>
+              )}
             </>
           ) : pairing ? (
             <PairTv
@@ -359,9 +365,11 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
             />
           ) : (
             <>
-              <p className="m-0 mb-3 text-sm text-muted">Ingen Apple TV er koblet til. Skjermen kan fortsatt vises i en nettleser.</p>
+              <p className="m-0 mb-3 text-sm text-muted">
+                Ingen TV er koblet til. Åpne Flatr-appen på Apple TV eller Android TV, eller flatr.no/tv i en nettleser, og tast koden den viser.
+              </p>
               <Button variant="outline" size="sm" onClick={() => setPairing(true)}>
-                Koble til en Apple TV
+                Koble til en TV
               </Button>
             </>
           )}
@@ -375,7 +383,7 @@ export default function ScreenDetail({ screen: s, playlists, onClose, onCommand,
         <section className="flex items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger-tint/40 p-4">
           <div className="min-w-0">
             <div className="text-sm font-bold text-ink">Slett skjermen</div>
-            <div className="text-xs text-muted">Presentasjonen beholdes. En Apple TV som er koblet til viser en ny kode.</div>
+            <div className="text-xs text-muted">Presentasjonen beholdes. En TV som er koblet til viser en ny kode.</div>
           </div>
           <button type="button" onClick={onDelete} className="h-10 shrink-0 rounded-xl bg-danger-tint px-4 text-sm font-semibold text-danger hover:bg-danger-hover">
             Slett

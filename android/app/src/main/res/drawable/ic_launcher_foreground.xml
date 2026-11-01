@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Flatr-merket (tre stolper) i hvitt, midt i den trygge sonen på 66 av 108 dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="33"
+        android:translateY="31"
+        android:scaleX="1.4"
+        android:scaleY="1.4">
+        <group android:translateX="-11" android:translateY="-8.5">
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M15.25,8.5h17.5a4.25,4.25 0,0 1,0 8.5h-17.5a4.25,4.25 0,0 1,0 -8.5z" />
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M15.25,20h8.5a4.25,4.25 0,0 1,0 8.5h-8.5a4.25,4.25 0,0 1,0 -8.5z" />
+            <group
+                android:pivotX="16.25"
+                android:pivotY="35.75"
+                android:rotation="-11">
+                <path
+                    android:fillColor="#FFFFFF"
+                    android:pathData="M15.25,31.5h2a4.25,4.25 0,0 1,0 8.5h-2a4.25,4.25 0,0 1,0 -8.5z" />
+            </group>
+        </group>
+    </group>
+</vector>

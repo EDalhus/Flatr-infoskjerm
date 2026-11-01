@@ -1,5 +1,6 @@
-// Legg til en skjerm: enten en Apple TV (tast koden den viser) eller en
-// nettleser/smart-TV (åpne en lenke). Brukes på Skjermer og i oppstartsveiviseren.
+// Legg til en skjerm: enten en TV med kode (Apple TV, Android TV eller en nettleser
+// på flatr.no/tv – tast koden den viser) eller en lenke til en nettleser.
+// Brukes på Skjermer og i oppstartsveiviseren.
 
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
@@ -124,8 +125,8 @@ export function AddScreenForm({ playlists = [], playlistId, initialCode = '', on
         value={mode}
         onChange={setMode}
         options={[
-          { value: 'tv', label: 'Apple TV' },
-          { value: 'browser', label: 'Nettleser / smart-TV' }
+          { value: 'tv', label: 'TV med kode' },
+          { value: 'browser', label: 'Lenke til nettleser' }
         ]}
         className="w-fit"
       />
@@ -135,7 +136,8 @@ export function AddScreenForm({ playlists = [], playlistId, initialCode = '', on
           <span className="text-xs font-semibold text-muted">Koden som står på TV-en</span>
           <CodeInput value={code} onChange={setCode} inputRef={codeRef} />
           <span className="text-xs text-muted">
-            Åpne Flatr-appen på Apple TV-en. Du kan også skanne QR-koden med mobilen, så fylles koden ut av seg selv.
+            Åpne Flatr-appen på Apple TV eller Android TV, eller gå til flatr.no/tv i nettleseren på skjermen. Du kan også skanne QR-koden med
+            mobilen, så fylles koden ut av seg selv.
           </span>
         </div>
       ) : (

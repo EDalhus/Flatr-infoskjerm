@@ -88,8 +88,12 @@ export async function handleApexDevice(request, { tenantEnv, origin }) {
     if (res.status === 404) {
       // Opphevet hos kunden – glem ruten så TV-en kan pares på nytt.
       platformDb.prepare('DELETE FROM device_routes WHERE device_id = ?').bind(status[1]).runSync();
+      return res;
     }
-    return res;
+    // Nettlesere og Android TV-appen (flatr.no/tv) viser skjermen på kundens adresse.
+    const body = await res.json().catch(() => null);
+    if (body?.status !== 'paired') return Response.json(body, { status: res.status });
+    return Response.json({ ...body, display_origin: origin(tenant.slug) }, { status: res.status, headers: { 'Cache-Control': 'no-store' } });
   }
 
   // Skjermbilde fra en paret TV -> kundens lagring (token sjekkes i pairing.js).

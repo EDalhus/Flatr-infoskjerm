@@ -337,7 +337,7 @@ export default function ScreensManager({ onChange, onNavigate }) {
             ) : (
               <>
                 <h2 className="m-0 mb-1 text-xl font-bold text-ink">Legg til en skjerm</h2>
-                <p className="m-0 mb-5 text-sm text-muted">Koble til en Apple TV med koden den viser, eller lag en lenke for en nettleser.</p>
+                <p className="m-0 mb-5 text-sm text-muted">Koble til en TV med koden den viser (Apple TV, Android TV eller flatr.no/tv i en nettleser), eller lag en lenke.</p>
                 <AddScreenForm
                   key={formKey}
                   playlists={playlists}

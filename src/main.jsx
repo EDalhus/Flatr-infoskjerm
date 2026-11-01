@@ -16,6 +16,7 @@ const Landing = lazy(() => import('./platform/Landing.jsx'));
 const AppsPage = lazy(() => import('./platform/AppsPage.jsx'));
 const SuperAdmin = lazy(() => import('./platform/SuperAdmin.jsx'));
 const HelpAppleTv = lazy(() => import('./platform/HelpAppleTv.jsx'));
+const TvPair = lazy(() => import('./platform/TvPair.jsx'));
 const Privacy = named(legal, 'Privacy');
 const Terms = named(legal, 'Terms');
 const Signup = named(authPages, 'Signup');
@@ -52,6 +53,8 @@ const platformRouter = (ctx) =>
     { path: '/personvern', element: <Privacy /> },
     { path: '/vilkar', element: <Terms /> },
     { path: '/hjelp/apple-tv', element: <HelpAppleTv /> },
+    // Koble en nettleser eller Android TV til en skjerm med kode.
+    { path: '/tv', element: <TvPair /> },
     { path: '*', element: <NotFound /> }
   ]);
 
