@@ -10,6 +10,7 @@ import { authClient } from '../lib/authClient.js';
 import { SEVERITIES, DISPLAYS } from '../lib/alerts.js';
 import { Button, ErrorText, Field, Icon, Input, Select, Textarea } from '../admin/components/ui.jsx';
 import { LogoLockup } from '../admin/components/Logo.jsx';
+import { tr } from '../lib/i18n.js';
 
 const call = async (path, opts = {}) => {
   const res = await fetch(`/api/platform/groups${path}`, {
@@ -37,7 +38,7 @@ function Shell({ children }) {
         <Link to="/gruppe">
           <LogoLockup className="h-6 w-auto text-ink" />
         </Link>
-        <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-xs font-bold text-brand">Gruppe</span>
+        <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-xs font-bold text-brand">{tr('Gruppe')}</span>
         <Button
           variant="outline"
           size="sm"
@@ -47,7 +48,7 @@ function Shell({ children }) {
             window.location.reload();
           }}
         >
-          Logg ut
+          {tr('Logg ut')}
         </Button>
       </header>
       <main className="mx-auto max-w-6xl space-y-6 px-6 py-8">{children}</main>
@@ -69,11 +70,11 @@ function GroupAlert({ group, onDone }) {
     e.preventDefault();
     setError('');
     setNotice('');
-    if (!confirm(`Sende hastemeldingen til alle skjermene hos ${group.members.length} organisasjoner?`)) return;
+    if (!confirm(tr('Sende hastemeldingen til alle skjermene hos {0} organisasjoner?', [group.members.length]))) return;
     setBusy(true);
     try {
       const r = await call(`/${group.id}/alert`, { method: 'POST', body: { title, message, severity, display, duration_minutes: Number(minutes) || null } });
-      setNotice(`Sendt til ${r.sent} av ${r.of} organisasjoner.`);
+      setNotice(tr('Sendt til {0} av {1} organisasjoner.', [r.sent, r.of]));
       setTitle('');
       setMessage('');
       onDone();
@@ -87,34 +88,34 @@ function GroupAlert({ group, onDone }) {
     setError('');
     try {
       const r = await call(`/${group.id}/alert`, { method: 'DELETE' });
-      setNotice(r.ended ? `Avsluttet hos ${r.ended === 1 ? 'én organisasjon' : `${r.ended} organisasjoner`}.` : 'Ingen hastemeldinger fra gruppen vises nå.');
+      setNotice(r.ended ? tr('Avsluttet hos {0}.', [r.ended === 1 ? tr('én organisasjon') : tr('{0} organisasjoner', [r.ended])]) : tr('Ingen hastemeldinger fra gruppen vises nå.'));
     } catch (err) {
       setError(err.message);
     }
   };
   return (
     <form onSubmit={send} className="space-y-4 rounded-2xl border border-line bg-card p-5">
-      <h2 className="m-0 text-base font-bold">Hastemelding til alle</h2>
+      <h2 className="m-0 text-base font-bold">{tr('Hastemelding til alle')}</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Tittel (valgfri)">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="F.eks. «Stengt i dag»" />
+        <Field label={tr('Tittel (valgfri)')}>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder={tr('F.eks. «Stengt i dag»')} />
         </Field>
-        <Field label="Hvor lenge">
+        <Field label={tr('Hvor lenge')}>
           <Select value={minutes} onChange={(e) => setMinutes(e.target.value)}>
-            <option value={30}>30 minutter</option>
-            <option value={60}>1 time</option>
-            <option value={180}>3 timer</option>
-            <option value={480}>8 timer</option>
-            <option value={1440}>1 døgn</option>
-            <option value="">Til den avsluttes</option>
+            <option value={30}>{tr('30 minutter')}</option>
+            <option value={60}>{tr('1 time')}</option>
+            <option value={180}>{tr('3 timer')}</option>
+            <option value={480}>{tr('8 timer')}</option>
+            <option value={1440}>{tr('1 døgn')}</option>
+            <option value="">{tr('Til den avsluttes')}</option>
           </Select>
         </Field>
       </div>
-      <Field label="Melding">
+      <Field label={tr('Melding')}>
         <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} maxLength={500} required />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Alvorlighet">
+        <Field label={tr('Alvorlighet')}>
           <Select value={severity} onChange={(e) => setSeverity(e.target.value)}>
             {SEVERITIES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -123,7 +124,7 @@ function GroupAlert({ group, onDone }) {
             ))}
           </Select>
         </Field>
-        <Field label="Visning">
+        <Field label={tr('Visning')}>
           <Select value={display} onChange={(e) => setDisplay(e.target.value)}>
             {DISPLAYS.map((d) => (
               <option key={d.value} value={d.value}>
@@ -138,10 +139,10 @@ function GroupAlert({ group, onDone }) {
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={busy || !message.trim()}>
           <Icon name="megaphone" className="h-4 w-4" />
-          {busy ? 'Sender …' : 'Send til alle'}
+          {busy ? tr('Sender …') : tr('Send til alle')}
         </Button>
         <Button type="button" variant="outline" onClick={end}>
-          Avslutt gruppens hastemeldinger
+          {tr('Avslutt gruppens hastemeldinger')}
         </Button>
       </div>
     </form>
@@ -172,11 +173,11 @@ function SharePresentation({ group }) {
     e.preventDefault();
     setError('');
     setNotice('');
-    if (!confirm(`Kopiere presentasjonen til de ${group.members.length - 1} andre organisasjonene? Den legges til som en ny presentasjon hos hver av dem.`)) return;
+    if (!confirm(tr('Kopiere presentasjonen til de {0} andre organisasjonene? Den legges til som en ny presentasjon hos hver av dem.', [group.members.length - 1]))) return;
     setBusy(true);
     try {
       const r = await call(`/${group.id}/share`, { method: 'POST', body: { tenant_id: Number(tenant), playlist_id: Number(playlist), name } });
-      setNotice(`Kopiert til ${r.copied} organisasjoner. De finner den under Presentasjoner.`);
+      setNotice(tr('Kopiert til {0} organisasjoner. De finner den under Presentasjoner.', [r.copied]));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -185,10 +186,10 @@ function SharePresentation({ group }) {
   };
   return (
     <form onSubmit={share} className="space-y-4 rounded-2xl border border-line bg-card p-5">
-      <h2 className="m-0 text-base font-bold">Del en presentasjon</h2>
-      <p className="m-0 text-sm text-muted">Lag den hos én organisasjon, og kopier den til alle de andre – med bilder. Hver av dem kan endre sin kopi.</p>
+      <h2 className="m-0 text-base font-bold">{tr('Del en presentasjon')}</h2>
+      <p className="m-0 text-sm text-muted">{tr('Lag den hos én organisasjon, og kopier den til alle de andre – med bilder. Hver av dem kan endre sin kopi.')}</p>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Fra">
+        <Field label={tr('Fra')}>
           <Select value={tenant} onChange={(e) => setTenant(e.target.value)}>
             {group.members.map((m) => (
               <option key={m.id} value={m.id}>
@@ -197,7 +198,7 @@ function SharePresentation({ group }) {
             ))}
           </Select>
         </Field>
-        <Field label="Presentasjon">
+        <Field label={tr('Presentasjon')}>
           <Select value={playlist} onChange={(e) => setPlaylist(e.target.value)} disabled={!playlists.length}>
             {playlists.map((p) => (
               <option key={p.id} value={p.id}>
@@ -206,15 +207,15 @@ function SharePresentation({ group }) {
             ))}
           </Select>
         </Field>
-        <Field label="Navn hos de andre (valgfritt)">
-          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Samme navn" />
+        <Field label={tr('Navn hos de andre (valgfritt)')}>
+          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={tr('Samme navn')} />
         </Field>
       </div>
       <ErrorText>{error}</ErrorText>
       {notice && <p className="m-0 text-sm font-semibold text-ok">{notice}</p>}
       <Button type="submit" disabled={busy || !playlist || group.members.length < 2}>
         <Icon name="copy" className="h-4 w-4" />
-        {busy ? 'Kopierer …' : 'Kopier til alle'}
+        {busy ? tr('Kopierer …') : tr('Kopier til alle')}
       </Button>
     </form>
   );
@@ -235,7 +236,7 @@ function Overview({ id }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
   useEffect(() => {
-    if (group) document.title = `${group.name} – Flatr`;
+    if (group) document.title = tr('{0} – Flatr', [group.name]);
   }, [group]);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -243,24 +244,24 @@ function Overview({ id }) {
   }, [group, query]);
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (!group) return <p className="text-sm text-muted">Henter gruppen …</p>;
+  if (!group) return <p className="text-sm text-muted">{tr('Henter gruppen …')}</p>;
   const offline = group.members.flatMap((m) => m.screens.filter((s) => !s.online).map((s) => ({ ...s, org: m.name })));
   return (
     <>
       <div>
         <h1 className="page-title m-0">{group.name}</h1>
         <p className="m-0 mt-1 text-sm text-muted">
-          {group.members.length} organisasjoner
-          {group.plan ? ` · ${group.plan.name}${group.max_screens ? ` med ${group.max_screens} skjermer i avtalen` : ''}` : ''}
+          {group.members.length} {tr('organisasjoner')}
+          {group.plan ? ` · ${tr(group.plan.name)}${group.max_screens ? tr(' med {0} skjermer i avtalen', [group.max_screens]) : ''}` : ''}
         </p>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-4">
         {[
-          ['Organisasjoner', group.members.length],
-          ['Skjermer', group.max_screens ? `${group.screens.total} av ${group.max_screens}` : group.screens.total],
-          ['På nett nå', group.screens.online],
-          ['Frakoblet', group.screens.total - group.screens.online]
+          [tr('Organisasjoner'), group.members.length],
+          [tr('Skjermer'), group.max_screens ? tr('{0} av {1}', [group.screens.total, group.max_screens]) : group.screens.total],
+          [tr('På nett nå'), group.screens.online],
+          [tr('Frakoblet'), group.screens.total - group.screens.online]
         ].map(([label, value]) => (
           <div key={label} className="rounded-2xl border border-line bg-card p-4">
             <div className="text-xs font-semibold text-muted">{label}</div>
@@ -271,8 +272,8 @@ function Overview({ id }) {
 
       {offline.length > 0 && (
         <p className="m-0 rounded-xl bg-warn-tint px-4 py-3 text-sm text-ink">
-          Frakoblet: {offline.slice(0, 6).map((s) => `${s.name} (${s.org})`).join(', ')}
-          {offline.length > 6 ? ` og ${offline.length - 6} til` : ''}.
+          {tr('Frakoblet:')} {offline.slice(0, 6).map((s) => `${s.name} (${s.org})`).join(', ')}
+          {offline.length > 6 ? tr(' og {0} til', [offline.length - 6]) : ''}.
         </p>
       )}
 
@@ -283,8 +284,8 @@ function Overview({ id }) {
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="m-0 text-lg font-bold">Organisasjonene</h2>
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Søk organisasjon eller skjerm …" className="max-w-xs" />
+          <h2 className="m-0 text-lg font-bold">{tr('Organisasjonene')}</h2>
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr('Søk organisasjon eller skjerm …')} className="max-w-xs" />
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {shown.map((m) => (
@@ -293,20 +294,20 @@ function Overview({ id }) {
                 <div className="min-w-0">
                   <div className="truncate font-semibold">{m.name}</div>
                   <div className="text-xs text-muted">
-                    {m.screens.length} {m.screens.length === 1 ? 'skjerm' : 'skjermer'} · {m.screens.filter((s) => s.online).length} på nett
+                    {m.screens.length} {m.screens.length === 1 ? 'skjerm' : 'skjermer'} · {m.screens.filter((s) => s.online).length} {tr('på nett')}
                   </div>
                 </div>
                 <a href={m.url} target="_blank" rel="noreferrer" className="shrink-0 text-sm font-semibold text-brand hover:underline">
-                  Åpne →
+                  {tr('Åpne →')}
                 </a>
               </div>
               {m.screens.length > 0 && (
                 <ul className="m-0 mt-3 list-none space-y-1.5 p-0 text-sm">
                   {m.screens.map((s) => (
                     <li key={s.id} className="flex items-center gap-2">
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${s.online ? 'bg-ok' : 'bg-line'}`} aria-label={s.online ? 'På nett' : 'Frakoblet'} />
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${s.online ? 'bg-ok' : 'bg-line'}`} aria-label={s.online ? tr('På nett') : tr('Frakoblet')} />
                       <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                      <span className="shrink-0 text-xs text-muted">{s.online ? s.playlist || 'ingen presentasjon' : ago(s.last_seen)}</span>
+                      <span className="shrink-0 text-xs text-muted">{s.online ? s.playlist || tr('ingen presentasjon') : ago(s.last_seen)}</span>
                     </li>
                   ))}
                 </ul>
@@ -323,7 +324,7 @@ export default function GroupPage() {
   const { id } = useParams();
   const [groups, setGroups] = useState(undefined);
   useEffect(() => {
-    document.title = 'Gruppe – Flatr';
+    document.title = tr('Gruppe – Flatr');
     call('')
       .then(setGroups)
       .catch((err) => setGroups(err.status === 401 ? null : []));
@@ -332,7 +333,7 @@ export default function GroupPage() {
   if (groups === undefined) return <div className="h-full bg-paper" />;
   if (groups === null)
     return (
-      <AuthShell title="Logg inn" subtitle="Oversikten for kjeder, kommuner og kretser.">
+      <AuthShell title={tr('Logg inn')} subtitle={tr('Oversikten for kjeder, kommuner og kretser.')}>
         <LoginForm onDone={() => window.location.reload()} />
       </AuthShell>
     );
@@ -342,18 +343,18 @@ export default function GroupPage() {
         <Overview id={id} />
       ) : (
         <>
-          <h1 className="page-title m-0">Gruppene dine</h1>
+          <h1 className="page-title m-0">{tr('Gruppene dine')}</h1>
           {groups.length ? (
             <div className="grid gap-3 sm:grid-cols-2">
               {groups.map((g) => (
                 <Link key={g.id} to={`/gruppe/${g.id}`} className="rounded-2xl border border-line bg-card p-5 text-ink no-underline hover:border-brand">
                   <div className="font-semibold">{g.name}</div>
-                  <div className="text-sm text-muted">{g.members} organisasjoner</div>
+                  <div className="text-sm text-muted">{g.members} {tr('organisasjoner')}</div>
                 </Link>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted">Du er ikke administrator for noen grupper. Kjeder, kommuner og kretser kan få en samlet oversikt – ta kontakt med oss.</p>
+            <p className="text-sm text-muted">{tr('Du er ikke administrator for noen grupper. Kjeder, kommuner og kretser kan få en samlet oversikt – ta kontakt med oss.')}</p>
           )}
         </>
       )}

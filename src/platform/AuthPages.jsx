@@ -7,6 +7,8 @@ import { authClient } from '../lib/authClient.js';
 import LoginForm, { SocialButtons } from './LoginForm.jsx';
 import { LogoLockup } from '../admin/components/Logo.jsx';
 import { Button, ErrorText, Field, Icon, Input } from '../admin/components/ui.jsx';
+import { tr } from '../lib/i18n.js';
+import LangSwitch from './LangSwitch.jsx';
 
 /** Felles ramme: sentrert kort med logo. */
 export function AuthShell({ title, subtitle, children, footer }) {
@@ -24,11 +26,12 @@ export function AuthShell({ title, subtitle, children, footer }) {
         {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
         <div className="mt-6 flex justify-center gap-4 text-xs text-muted">
           <a href="/personvern" className="hover:text-ink">
-            Personvern
+            {tr('Personvern')}
           </a>
           <a href="/vilkar" className="hover:text-ink">
-            Vilkår
+            {tr('Vilkår')}
           </a>
+          <LangSwitch />
         </div>
       </div>
     </div>
@@ -43,12 +46,12 @@ export function CheckEmail({ email, children, onBack }) {
         <Icon name="check" className="h-7 w-7" />
       </div>
       <p className="text-sm leading-relaxed text-muted">
-        Vi har sendt en e-post til <span className="font-semibold text-ink">{email}</span>. {children}
+        {tr('Vi har sendt en e-post til')} <span className="font-semibold text-ink">{email}</span>. {children}
       </p>
-      <p className="mt-4 text-xs text-muted">Finner du den ikke? Sjekk søppelpost-mappen.</p>
+      <p className="mt-4 text-xs text-muted">{tr('Finner du den ikke? Sjekk søppelpost-mappen.')}</p>
       {onBack && (
         <button type="button" onClick={onBack} className="mt-6 text-sm font-semibold text-brand hover:underline">
-          Bruk en annen e-postadresse
+          {tr('Bruk en annen e-postadresse')}
         </button>
       )}
     </div>
@@ -56,9 +59,9 @@ export function CheckEmail({ email, children, onBack }) {
 }
 
 const SIGNUP_ERRORS = {
-  expired: 'Bekreftelseslenken er utløpt eller allerede brukt. Fyll inn skjemaet på nytt.',
-  taken: 'Subdomenet ble tatt før kontoen ble bekreftet. Velg et annet.',
-  failed: 'Noe gikk galt da kontoen skulle opprettes. Prøv igjen.'
+  expired: tr('Bekreftelseslenken er utløpt eller allerede brukt. Fyll inn skjemaet på nytt.'),
+  taken: tr('Subdomenet ble tatt før kontoen ble bekreftet. Velg et annet.'),
+  failed: tr('Noe gikk galt da kontoen skulle opprettes. Prøv igjen.')
 };
 
 // «Øvre Kafé & Bakeri» -> «ovre-kafe-bakeri»
@@ -103,7 +106,7 @@ export function Signup({ baseDomain }) {
   const checkSeq = useRef(0);
 
   useEffect(() => {
-    document.title = 'Opprett konto – Flatr';
+    document.title = tr('Opprett konto – Flatr');
     api.platform.me().then((r) => setMe(r.user)).catch(() => setMe(null));
   }, []);
 
@@ -146,9 +149,9 @@ export function Signup({ baseDomain }) {
 
   if (sent) {
     return (
-      <AuthShell title="Sjekk e-posten din">
+      <AuthShell title={tr('Sjekk e-posten din')}>
         <CheckEmail email={email} onBack={() => setSent(false)}>
-          Klikk på lenken for å bekrefte adressen – da opprettes <span className="font-semibold text-ink">{slug}.{baseDomain}</span> og du er logget inn.
+          {tr('Klikk på lenken for å bekrefte adressen – da opprettes')} <span className="font-semibold text-ink">{slug}.{baseDomain}</span> {tr('og du er logget inn.')}
         </CheckEmail>
       </AuthShell>
     );
@@ -156,19 +159,19 @@ export function Signup({ baseDomain }) {
 
   return (
     <AuthShell
-      title={me ? 'Ny organisasjon' : 'Opprett en Flatr-konto'}
-      subtitle={me ? `Du er logget inn som ${me.email} og blir eier av den nye organisasjonen.` : 'Du får din egen adresse der du styrer alle skjermene dine.'}
+      title={me ? tr('Ny organisasjon') : tr('Opprett en Flatr-konto')}
+      subtitle={me ? tr('Du er logget inn som {0} og blir eier av den nye organisasjonen.', [me.email]) : tr('Du får din egen adresse der du styrer alle skjermene dine.')}
       footer={
         me ? null : (
           <>
-            Har du allerede konto?{' '}
+            {tr('Har du allerede konto?')}{' '}
             <Link to="/login" className="font-semibold text-brand hover:underline">
-              Logg inn
+              {tr('Logg inn')}
             </Link>
             <span className="mt-1 block text-xs">
-              Vil du lage en ny organisasjon med kontoen din?{' '}
+              {tr('Vil du lage en ny organisasjon med kontoen din?')}{' '}
               <Link to="/login?next=%2Fsignup" className="font-semibold text-brand hover:underline">
-                Logg inn først
+                {tr('Logg inn først')}
               </Link>
             </span>
           </>
@@ -182,24 +185,24 @@ export function Signup({ baseDomain }) {
         </div>
       )}
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Organisasjon">
+        <Field label={tr('Organisasjon')}>
           <Input
             value={org}
             onChange={(e) => setOrg(e.target.value)}
-            placeholder="Firmanavn AS"
+            placeholder={tr('Firmanavn AS')}
             required
             autoFocus
           />
         </Field>
         <Field
-          label="Din adresse"
+          label={tr('Din adresse')}
           hint={
             slugState && !slugState.available ? (
               <span className="text-danger">{slugState.reason}</span>
             ) : slugState?.available ? (
-              <span className="text-brand">Ledig!</span>
+              <span className="text-brand">{tr('Ledig!')}</span>
             ) : (
-              'Små bokstaver, tall og bindestrek. Kan være en forkortelse av navnet.'
+              tr('Små bokstaver, tall og bindestrek. Kan være en forkortelse av navnet.')
             )
           }
         >
@@ -222,13 +225,13 @@ export function Signup({ baseDomain }) {
         </Field>
         {me === null && (
           <>
-            <Field label="Ditt navn">
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kari Nordmann" autoComplete="name" />
+            <Field label={tr('Ditt navn')}>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('Kari Nordmann')} autoComplete="name" />
             </Field>
-            <Field label="Jobb-e-post">
+            <Field label={tr('Jobb-e-post')}>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kari@firmanavn.no" autoComplete="username" required />
             </Field>
-            <Field label="Passord" hint="Minst 10 tegn. En setning du husker er både sterk og lett å huske.">
+            <Field label={tr('Passord')} hint={tr('Minst 10 tegn. En setning du husker er både sterk og lett å huske.')}>
               <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={10} required />
             </Field>
           </>
@@ -242,13 +245,13 @@ export function Signup({ baseDomain }) {
             className="mt-0.5 h-4 w-4 shrink-0"
           />
           <span>
-            Jeg godtar{' '}
+            {tr('Jeg godtar')}{' '}
             <Link to="/vilkar" target="_blank" className="font-semibold text-brand hover:underline">
-              vilkårene
+              {tr('vilkårene')}
             </Link>{' '}
-            og har lest{' '}
+            {tr('og har lest')}{' '}
             <Link to="/personvern" target="_blank" className="font-semibold text-brand hover:underline">
-              personvernerklæringen
+              {tr('personvernerklæringen')}
             </Link>
             .
           </span>
@@ -257,14 +260,14 @@ export function Signup({ baseDomain }) {
         {exists && (
           <p className="m-0 text-sm">
             <Link to={`/login?next=${encodeURIComponent('/signup')}`} className="font-semibold text-brand hover:underline">
-              Logg inn og opprett organisasjonen →
+              {tr('Logg inn og opprett organisasjonen →')}
             </Link>
           </p>
         )}
         <Button type="submit" className="w-full py-3" disabled={busy || !accept || slugState?.available === false || me === undefined}>
-          {busy ? 'Oppretter …' : me ? 'Opprett organisasjon' : 'Opprett konto'}
+          {busy ? tr('Oppretter …') : me ? tr('Opprett organisasjon') : tr('Opprett konto')}
         </Button>
-        {!me && <p className="text-center text-xs text-muted">Vi sender deg en lenke for å bekrefte e-postadressen.</p>}
+        {!me && <p className="text-center text-xs text-muted">{tr('Vi sender deg en lenke for å bekrefte e-postadressen.')}</p>}
       </form>
     </AuthShell>
   );
@@ -297,7 +300,7 @@ export function PlatformLogin({ baseDomain }) {
   const [me, setMe] = useState(null);
 
   useEffect(() => {
-    document.title = 'Logg inn – Flatr';
+    document.title = tr('Logg inn – Flatr');
     // Allerede innlogget: rett til valg av organisasjon.
     api.platform.me().then(choose).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -314,7 +317,7 @@ export function PlatformLogin({ baseDomain }) {
 
   if (orgs && orgs.length !== 1) {
     return (
-      <AuthShell title={orgs.length ? 'Velg organisasjon' : 'Ingen organisasjoner ennå'} subtitle={`Logget inn som ${me?.email}.`}>
+      <AuthShell title={orgs.length ? tr('Velg organisasjon') : tr('Ingen organisasjoner ennå')} subtitle={tr('Logget inn som {0}.', [me?.email])}>
         <div className="grid gap-2">
           {orgs.map((o) => (
             <a key={o.slug} href={o.url} className="flex items-center justify-between rounded-xl border border-line px-4 py-3 hover:bg-zone">
@@ -326,10 +329,10 @@ export function PlatformLogin({ baseDomain }) {
             </a>
           ))}
           <Link to="/signup" className="mt-2 text-center text-sm font-semibold text-brand hover:underline">
-            + Opprett en ny organisasjon
+            {tr('+ Opprett en ny organisasjon')}
           </Link>
           <button type="button" className="mt-1 text-sm text-muted hover:text-ink" onClick={() => authClient.signOut().then(() => window.location.reload())}>
-            Logg ut
+            {tr('Logg ut')}
           </button>
         </div>
       </AuthShell>
@@ -338,19 +341,19 @@ export function PlatformLogin({ baseDomain }) {
 
   return (
     <AuthShell
-      title="Logg inn"
+      title={tr('Logg inn')}
       subtitle={
         params.get('verified')
-          ? 'E-postadressen er bekreftet. Logg inn for å fortsette.'
+          ? tr('E-postadressen er bekreftet. Logg inn for å fortsette.')
           : nextHost && nextHost !== window.location.host
-            ? `Logg inn for å fortsette til ${nextHost}.`
-            : 'Én innlogging for alle organisasjonene dine.'
+            ? tr('Logg inn for å fortsette til {0}.', [nextHost])
+            : tr('Én innlogging for alle organisasjonene dine.')
       }
       footer={
         <>
-          Ny hos oss?{' '}
+          {tr('Ny hos oss?')}{' '}
           <Link to="/signup" className="font-semibold text-brand hover:underline">
-            Opprett konto
+            {tr('Opprett konto')}
           </Link>
         </>
       }
@@ -369,7 +372,7 @@ export function ForgotPassword() {
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    document.title = 'Glemt passord – Flatr';
+    document.title = tr('Glemt passord – Flatr');
   }, []);
 
   const submit = async (e) => {
@@ -388,26 +391,26 @@ export function ForgotPassword() {
 
   return (
     <AuthShell
-      title={sent ? 'Sjekk e-posten din' : 'Sett passord'}
-      subtitle={sent ? null : 'Har du glemt passordet, eller logger du inn for første gang etter at Flatr fikk passord? Vi sender deg en lenke.'}
+      title={sent ? tr('Sjekk e-posten din') : tr('Sett passord')}
+      subtitle={sent ? null : tr('Har du glemt passordet, eller logger du inn for første gang etter at Flatr fikk passord? Vi sender deg en lenke.')}
       footer={
         <a href="/login" className="font-semibold text-brand hover:underline">
-          Tilbake til innlogging
+          {tr('Tilbake til innlogging')}
         </a>
       }
     >
       {sent ? (
         <CheckEmail email={email} onBack={() => setSent(false)}>
-          Har adressen en Flatr-konto, finner du en lenke for å velge passord. Den virker i én time.
+          {tr('Har adressen en Flatr-konto, finner du en lenke for å velge passord. Den virker i én time.')}
         </CheckEmail>
       ) : (
         <form onSubmit={submit} className="space-y-4">
-          <Field label="E-post">
+          <Field label={tr('E-post')}>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required autoFocus />
           </Field>
           <ErrorText>{error}</ErrorText>
           <Button type="submit" className="w-full py-3" disabled={busy}>
-            {busy ? 'Sender …' : 'Send lenke'}
+            {busy ? tr('Sender …') : tr('Send lenke')}
           </Button>
         </form>
       )}
@@ -421,10 +424,10 @@ function NewPasswordFields({ value, setValue, again, setAgain, username }) {
     <>
       {/* Passordbehandlere lagrer passordet på e-postadressen (skjult felt). */}
       {username && <input type="email" name="username" autoComplete="username" value={username} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />}
-      <Field label="Nytt passord" hint="Minst 10 tegn. En setning du husker er både sterk og lett å huske.">
+      <Field label={tr('Nytt passord')} hint={tr('Minst 10 tegn. En setning du husker er både sterk og lett å huske.')}>
         <Input type="password" value={value} onChange={(e) => setValue(e.target.value)} autoComplete="new-password" minLength={10} required autoFocus />
       </Field>
-      <Field label="Gjenta passordet">
+      <Field label={tr('Gjenta passordet')}>
         <Input type="password" value={again} onChange={(e) => setAgain(e.target.value)} autoComplete="new-password" required />
       </Field>
     </>
@@ -438,16 +441,16 @@ export function ResetPassword() {
   const [pw, setPw] = useState('');
   const [again, setAgain] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(params.get('error') ? 'Lenken er utløpt eller allerede brukt. Be om en ny.' : '');
+  const [error, setError] = useState(params.get('error') ? tr('Lenken er utløpt eller allerede brukt. Be om en ny.') : '');
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    document.title = 'Nytt passord – Flatr';
+    document.title = tr('Nytt passord – Flatr');
   }, []);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (pw !== again) return setError('Passordene er ikke like.');
+    if (pw !== again) return setError(tr('Passordene er ikke like.'));
     setError('');
     setBusy(true);
     try {
@@ -461,19 +464,19 @@ export function ResetPassword() {
   };
 
   return (
-    <AuthShell title={done ? 'Passordet er lagret' : 'Velg nytt passord'}>
+    <AuthShell title={done ? tr('Passordet er lagret') : tr('Velg nytt passord')}>
       {done ? (
         <div className="space-y-4 text-center">
-          <p className="text-sm text-muted">Du er logget ut overalt. Logg inn med det nye passordet.</p>
+          <p className="text-sm text-muted">{tr('Du er logget ut overalt. Logg inn med det nye passordet.')}</p>
           <a href="/login" className="inline-block font-semibold text-brand hover:underline">
-            Logg inn →
+            {tr('Logg inn →')}
           </a>
         </div>
       ) : !token ? (
         <div className="space-y-4">
-          <ErrorText>{error || 'Lenken mangler. Be om en ny.'}</ErrorText>
+          <ErrorText>{error || tr('Lenken mangler. Be om en ny.')}</ErrorText>
           <a href="/forgot-password" className="font-semibold text-brand hover:underline">
-            Send ny lenke
+            {tr('Send ny lenke')}
           </a>
         </div>
       ) : (
@@ -481,7 +484,7 @@ export function ResetPassword() {
           <NewPasswordFields value={pw} setValue={setPw} again={again} setAgain={setAgain} />
           <ErrorText>{error}</ErrorText>
           <Button type="submit" className="w-full py-3" disabled={busy}>
-            {busy ? 'Lagrer …' : 'Lagre passord'}
+            {busy ? tr('Lagrer …') : tr('Lagre passord')}
           </Button>
         </form>
       )}
@@ -513,7 +516,7 @@ function InviteForm({ token, platform }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    document.title = 'Invitasjon – Flatr';
+    document.title = tr('Invitasjon – Flatr');
     api.invite
       .get(token, platform)
       .then((r) => {
@@ -525,7 +528,7 @@ function InviteForm({ token, platform }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (invite.needs_password && pw !== again) return setError('Passordene er ikke like.');
+    if (invite.needs_password && pw !== again) return setError(tr('Passordene er ikke like.'));
     setError('');
     setBusy(true);
     try {
@@ -540,38 +543,38 @@ function InviteForm({ token, platform }) {
 
   if (!invite) {
     return (
-      <AuthShell title="Invitasjon">
+      <AuthShell title={tr('Invitasjon')}>
         {error ? (
           <div className="space-y-4">
             <ErrorText>{error}</ErrorText>
             <a href="/admin" className="font-semibold text-brand hover:underline">
-              Gå til innlogging
+              {tr('Gå til innlogging')}
             </a>
           </div>
         ) : (
-          <p className="text-sm text-muted">Henter invitasjonen …</p>
+          <p className="text-sm text-muted">{tr('Henter invitasjonen …')}</p>
         )}
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell title={`Bli med i ${invite.org}`} subtitle={`Du er invitert som ${invite.email}.`}>
+    <AuthShell title={tr('Bli med i {0}', [invite.org])} subtitle={tr('Du er invitert som {0}.', [invite.email])}>
       <form onSubmit={submit} className="space-y-4">
         {invite.needs_password ? (
           <>
-            <Field label="Ditt navn">
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kari Nordmann" autoComplete="name" required />
+            <Field label={tr('Ditt navn')}>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('Kari Nordmann')} autoComplete="name" required />
             </Field>
             <input type="email" value={invite.email} readOnly hidden autoComplete="username" />
             <NewPasswordFields value={pw} setValue={setPw} again={again} setAgain={setAgain} username={invite.email} />
           </>
         ) : (
-          <p className="m-0 text-sm text-muted">Du har allerede en Flatr-konto. Logg inn med passordet ditt for å komme inn.</p>
+          <p className="m-0 text-sm text-muted">{tr('Du har allerede en Flatr-konto. Logg inn med passordet ditt for å komme inn.')}</p>
         )}
         <ErrorText>{error}</ErrorText>
         <Button type="submit" className="w-full py-3" disabled={busy}>
-          {busy ? 'Lagrer …' : invite.needs_password ? 'Bli med' : 'Gå til innlogging'}
+          {busy ? tr('Lagrer …') : invite.needs_password ? tr('Bli med') : tr('Gå til innlogging')}
         </Button>
       </form>
     </AuthShell>
@@ -631,11 +634,11 @@ export function PlatformAdminRedirect({ baseDomain }) {
 
   if (orgs?.length > 1 || (orgs && groups.length)) {
     return (
-      <AuthShell title={code ? 'Koble til en TV' : 'Velg organisasjon'} subtitle={code ? `Hvilken organisasjon skal skjermen med koden ${code} høre til?` : null}>
+      <AuthShell title={code ? tr('Koble til en TV') : tr('Velg organisasjon')} subtitle={code ? tr('Hvilken organisasjon skal skjermen med koden {0} høre til?', [code]) : null}>
         <div className="grid gap-2">
           {groups.map((g) => (
             <Link key={`g${g.id}`} to={`/gruppe/${g.id}`} className="flex items-center justify-between rounded-xl border border-brand/40 bg-brand-tint px-4 py-3 hover:bg-zone">
-              <span className="font-semibold text-ink">{g.name}: alle organisasjoner</span>
+              <span className="font-semibold text-ink">{g.name}{tr(': alle organisasjoner')}</span>
               <Icon name="chevron" className="h-4 w-4 text-muted" />
             </Link>
           ))}
@@ -652,17 +655,17 @@ export function PlatformAdminRedirect({ baseDomain }) {
 
   return (
     <AuthShell
-      title={code ? 'Koble til en TV' : 'Gå til din Flatr'}
+      title={code ? tr('Koble til en TV') : tr('Gå til din Flatr')}
       subtitle={
         code
-          ? `Hvilken konto skal skjermen med koden ${code} høre til?`
-          : 'Skriv inn adressen til kontoen din.'
+          ? tr('Hvilken konto skal skjermen med koden {0} høre til?', [code])
+          : tr('Skriv inn adressen til kontoen din.')
       }
       footer={
         <>
-          Husker du ikke adressen?{' '}
+          {tr('Husker du ikke adressen?')}{' '}
           <Link to="/login" className="font-semibold text-brand hover:underline">
-            Logg inn med e-post
+            {tr('Logg inn med e-post')}
           </Link>
         </>
       }
@@ -682,7 +685,7 @@ export function PlatformAdminRedirect({ baseDomain }) {
           </span>
         </div>
         <Button type="submit" className="w-full py-3" disabled={!slug}>
-          Fortsett
+          {tr('Fortsett')}
         </Button>
       </form>
     </AuthShell>

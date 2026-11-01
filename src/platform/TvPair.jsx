@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import qrcode from 'qrcode-generator';
 import { LogoLockup } from '../admin/components/Logo.jsx';
+import { tr } from '../lib/i18n.js';
 
 const KEY = 'flatr.tv'; // { device_id } i denne nettleseren
 
@@ -47,7 +48,7 @@ export default function TvPair() {
   const [offline, setOffline] = useState(false);
 
   useEffect(() => {
-    document.title = 'Koble til Flatr';
+    document.title = tr('Koble til Flatr');
     document.documentElement.style.background = '#0b1110';
     let alive = true;
     let timer = null;
@@ -101,7 +102,7 @@ export default function TvPair() {
           body: JSON.stringify(clientInfo())
         });
         const body = await res.json();
-        if (!res.ok) throw new Error(body?.error || 'Feil');
+        if (!res.ok) throw new Error(body?.error || tr('Feil'));
         if (!alive) return;
         write({ device_id: body.device_id });
         setOffline(false);
@@ -139,25 +140,25 @@ export default function TvPair() {
       {pairing ? (
         <div className="mt-[6vmin] flex flex-wrap items-center justify-center gap-[7vmin]">
           <div className="text-center">
-            <div className="text-[2.6vmin] font-semibold uppercase tracking-[0.25em] text-[#7ee2b8]">Koden til denne skjermen</div>
+            <div className="text-[2.6vmin] font-semibold uppercase tracking-[0.25em] text-[#7ee2b8]">{tr('Koden til denne skjermen')}</div>
             <div className="mt-[1.5vmin] font-mono text-[13vmin] font-bold leading-none tracking-[0.08em]">{pairing.code_display}</div>
             <ol className="m-0 mt-[4vmin] list-none space-y-[1.2vmin] p-0 text-left text-[2.8vmin] text-white/80">
-              <li>1. Logg inn i Flatr på PC-en eller mobilen</li>
-              <li>2. Gå til Skjermer og trykk «Legg til skjerm»</li>
-              <li>3. Tast inn koden over</li>
+              <li>{tr('1. Logg inn i Flatr på PC-en eller mobilen')}</li>
+              <li>{tr('2. Gå til Skjermer og trykk «Legg til skjerm»')}</li>
+              <li>{tr('3. Tast inn koden over')}</li>
             </ol>
           </div>
           {qr && (
             <div className="text-center">
               <img src={qr} alt="" className="h-[34vmin] w-[34vmin] rounded-[2vmin] bg-white p-[1.2vmin]" style={{ imageRendering: 'pixelated' }} />
-              <div className="mt-[1.5vmin] text-[2.4vmin] text-white/70">Eller skann med mobilen</div>
+              <div className="mt-[1.5vmin] text-[2.4vmin] text-white/70">{tr('Eller skann med mobilen')}</div>
             </div>
           )}
         </div>
       ) : (
-        <div className="mt-[6vmin] text-[3vmin] text-white/70">{offline ? 'Ingen forbindelse – prøver igjen …' : 'Henter kode …'}</div>
+        <div className="mt-[6vmin] text-[3vmin] text-white/70">{offline ? tr('Ingen forbindelse – prøver igjen …') : tr('Henter kode …')}</div>
       )}
-      {pairing && offline && <div className="mt-[4vmin] text-[2.4vmin] text-[#fbbf24]">Ingen forbindelse – prøver igjen …</div>}
+      {pairing && offline && <div className="mt-[4vmin] text-[2.4vmin] text-[#fbbf24]">{tr('Ingen forbindelse – prøver igjen …')}</div>}
     </div>
   );
 }

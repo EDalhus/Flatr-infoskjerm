@@ -6,16 +6,17 @@ import { Icon } from '../admin/components/ui.jsx';
 import { OFFICIAL_APPS } from '../lib/appCatalog.js';
 import AppIcon from '../admin/components/apps/AppIcon.jsx';
 import { SiteHeader, SiteFooter, SectionHead, AppTile, usePublicApps } from './Landing.jsx';
+import { tr } from '../lib/i18n.js';
 
 // De offisielle appene gruppert etter hva kunden vil oppnå. Nye apper som ikke
 // står her, havner under «Mer» av seg selv.
 const THEMES = [
-  { id: 'drift', title: 'Drift og logistikk', text: 'Flåten, kaiene og lageret – oppdatert av seg selv.', keys: ['ais', 'stock', 'sheet'] },
-  { id: 'vaer', title: 'Vær og sjø', text: 'Fra Yr, Kartverket og MET – ingen nøkler, ingen oppsett.', keys: ['weather', 'tides'] },
-  { id: 'arbeidsplass', title: 'Arbeidsplassen', text: 'Det som gjør skjermen i lunsjrommet verdt å se på.', keys: ['birthdays', 'menu', 'calendar', 'entur'] },
-  { id: 'nyheter', title: 'Nyheter og sport', text: 'Nyhetene og lagene dere følger med på.', keys: ['rss', 'fixtures', 'football'] },
-  { id: 'arrangement', title: 'Arrangementer og styring', text: 'Program, tidsstyring og skjermer folk kan trykke på.', keys: ['events', 'timetable', 'touch', 'poll'] },
-  { id: 'innhold', title: 'Innhold og AI', text: 'Lag presentasjoner raskere, med bilder som passer.', keys: ['claude', 'cursor', 'unsplash'] }
+  { id: 'drift', title: tr('Drift og logistikk'), text: tr('Flåten, kaiene og lageret – oppdatert av seg selv.'), keys: ['ais', 'stock', 'sheet'] },
+  { id: 'vaer', title: tr('Vær og sjø'), text: tr('Fra Yr, Kartverket og MET – ingen nøkler, ingen oppsett.'), keys: ['weather', 'tides'] },
+  { id: 'arbeidsplass', title: tr('Arbeidsplassen'), text: tr('Det som gjør skjermen i lunsjrommet verdt å se på.'), keys: ['birthdays', 'menu', 'calendar', 'entur'] },
+  { id: 'nyheter', title: tr('Nyheter og sport'), text: tr('Nyhetene og lagene dere følger med på.'), keys: ['rss', 'fixtures', 'football'] },
+  { id: 'arrangement', title: tr('Arrangementer og styring'), text: tr('Program, tidsstyring og skjermer folk kan trykke på.'), keys: ['events', 'timetable', 'touch', 'poll'] },
+  { id: 'innhold', title: tr('Innhold og AI'), text: tr('Lag presentasjoner raskere, med bilder som passer.'), keys: ['claude', 'cursor', 'unsplash'] }
 ];
 
 function themed() {
@@ -24,7 +25,7 @@ function themed() {
   const rest = OFFICIAL_APPS.filter((a) => !used.has(a.key));
   return [
     ...THEMES.map((t) => ({ ...t, apps: t.keys.map((k) => byKey[k]).filter(Boolean) })),
-    ...(rest.length ? [{ id: 'mer', title: 'Mer', text: 'Flere apper fra Flatr.', apps: rest }] : [])
+    ...(rest.length ? [{ id: 'mer', title: tr('Mer'), text: tr('Flere apper fra Flatr.'), apps: rest }] : [])
   ].filter((t) => t.apps.length);
 }
 
@@ -40,7 +41,7 @@ function OfficialAppCard({ app, image }) {
       {app.requires && (
         <p className="m-0 mt-2 inline-flex items-center gap-1.5 text-xs text-muted">
           <Icon name="lock" className="h-3 w-3" />
-          Trenger {app.requires}
+          {tr('Trenger')} {app.requires}
         </p>
       )}
       {/* Punktlistene står nederst, så de flukter i rutenettet. */}
@@ -60,10 +61,10 @@ function OfficialAppCard({ app, image }) {
 }
 
 const BUILDER_STEPS = [
-  { icon: 'link', title: 'Koble til et API', text: 'Lim inn adressen til et hvilket som helst JSON-API over https. Nøkler lagres kryptert.' },
-  { icon: 'search', title: 'Velg feltene', text: 'Test API-et og plukk feltene du vil vise – navn, tall, bilder eller posisjoner.' },
-  { icon: 'layers', title: 'Velg visning', text: 'Stort tall, liste, kort, tabell eller kart. Forhåndsvisningen oppdateres mens du jobber.' },
-  { icon: 'share', title: 'Del den', text: 'Bruk appen selv, eller send den til godkjenning så andre Flatr-kunder kan aktivere den.' }
+  { icon: 'link', title: tr('Koble til et API'), text: tr('Lim inn adressen til et hvilket som helst JSON-API over https. Nøkler lagres kryptert.') },
+  { icon: 'search', title: tr('Velg feltene'), text: tr('Test API-et og plukk feltene du vil vise – navn, tall, bilder eller posisjoner.') },
+  { icon: 'layers', title: tr('Velg visning'), text: tr('Stort tall, liste, kort, tabell eller kart. Forhåndsvisningen oppdateres mens du jobber.') },
+  { icon: 'share', title: tr('Del den'), text: tr('Bruk appen selv, eller send den til godkjenning så andre Flatr-kunder kan aktivere den.') }
 ];
 
 export default function AppsPage() {
@@ -71,7 +72,7 @@ export default function AppsPage() {
   const groups = themed();
 
   useEffect(() => {
-    document.title = 'Flatr Apps – live data på infoskjermene';
+    document.title = tr('Flatr Apps – live data på infoskjermene');
     document.documentElement.dataset.theme = 'presis';
   }, []);
 
@@ -89,15 +90,15 @@ export default function AppsPage() {
             Flatr <span className="text-brand">Apps</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted">
-            Gjør skjermene levende med data som oppdaterer seg selv – fra båtene i flåten til været ute og bursdagene på jobben.
+            {tr('Gjør skjermene levende med data som oppdaterer seg selv – fra båtene i flåten til været ute og bursdagene på jobben.')}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link to="/signup" className="inline-flex items-center gap-2 rounded-md bg-brand px-5 py-3 font-semibold text-onbrand transition hover:bg-brand-dark">
-              Prøv gratis
+              {tr('Prøv gratis')}
               <Icon name="chevron" className="h-4 w-4" />
             </Link>
             <a href="#bygg" className="inline-flex items-center rounded-md border border-line bg-card px-5 py-3 font-semibold hover:bg-hair">
-              Lag din egen app
+              {tr('Lag din egen app')}
             </a>
           </div>
         </div>
@@ -105,8 +106,8 @@ export default function AppsPage() {
 
       <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <SectionHead kicker="Offisielle apper" title="Klare til bruk" text="Laget og vedlikeholdt av Flatr. Aktiver dem med ett klikk og legg dem på et lysbilde." />
-          <nav aria-label="Temaer" className="mt-8 flex flex-wrap gap-2">
+          <SectionHead kicker={tr('Offisielle apper')} title={tr('Klare til bruk')} text={tr('Laget og vedlikeholdt av Flatr. Aktiver dem med ett klikk og legg dem på et lysbilde.')} />
+          <nav aria-label={tr('Temaer')} className="mt-8 flex flex-wrap gap-2">
             {groups.map((t) => (
               <a key={t.id} href={`#${t.id}`} className="rounded-full border border-line bg-card px-3.5 py-1.5 text-sm font-medium text-muted transition-colors hover:border-brand/40 hover:text-ink">
                 {t.title}
@@ -134,9 +135,9 @@ export default function AppsPage() {
       <section id="bygg" className="scroll-mt-20 border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <SectionHead
-            kicker="Appbyggeren"
-            title="Lag din egen app – uten kode"
-            text="Har dere data i et system med API – salgstall, kø, temperatur, bookinger? Koble det til skjermene på noen minutter."
+            kicker={tr('Appbyggeren')}
+            title={tr('Lag din egen app – uten kode')}
+            text={tr('Har dere data i et system med API – salgstall, kø, temperatur, bookinger? Koble det til skjermene på noen minutter.')}
           />
           <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
             {BUILDER_STEPS.map((s, i) => (
@@ -145,7 +146,7 @@ export default function AppsPage() {
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-tint text-brand">
                     <Icon name={s.icon} className="h-5 w-5" />
                   </span>
-                  <span className="text-xs font-semibold text-muted">Steg {i + 1}</span>
+                  <span className="text-xs font-semibold text-muted">{tr('Steg')} {i + 1}</span>
                 </div>
                 <h3 className="font-semibold">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{s.text}</p>
@@ -158,7 +159,7 @@ export default function AppsPage() {
       {community.length > 0 && (
         <section className="border-t border-line">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <SectionHead kicker="Fra fellesskapet" title="Apper laget av andre Flatr-kunder" text="Godkjent av Flatr før de blir tilgjengelige. Hver kunde bruker sine egne innstillinger og nøkler." />
+            <SectionHead kicker={tr('Fra fellesskapet')} title={tr('Apper laget av andre Flatr-kunder')} text={tr('Godkjent av Flatr før de blir tilgjengelige. Hver kunde bruker sine egne innstillinger og nøkler.')} />
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {community.map((a) => (
                 <AppTile key={a.id} app={a} image={a.image} publisher={a.author || 'Ukjent'} verified={false} />
@@ -170,10 +171,10 @@ export default function AppsPage() {
 
       <section className="px-4 pb-20 pt-4 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 rounded-2xl bg-brand px-6 py-14 text-center text-onbrand sm:px-12">
-          <h2 className="text-3xl font-bold tracking-tight">Klar til å prøve?</h2>
-          <p className="max-w-lg opacity-80">Alle appene er med i gratisplanen – 0 kr i måneden, ingen kort.</p>
+          <h2 className="text-3xl font-bold tracking-tight">{tr('Klar til å prøve?')}</h2>
+          <p className="max-w-lg opacity-80">{tr('Alle appene er med i gratisplanen – 0 kr i måneden, ingen kort.')}</p>
           <Link to="/signup" className="rounded-md bg-paper px-6 py-3 font-semibold text-ink transition hover:bg-card">
-            Kom i gang gratis
+            {tr('Kom i gang gratis')}
           </Link>
         </div>
       </section>

@@ -7,84 +7,86 @@ import { Icon } from '../admin/components/ui.jsx';
 import AppIcon from '../admin/components/apps/AppIcon.jsx';
 import { OFFICIAL_APPS, CATEGORY_LABEL } from '../lib/appCatalog.js';
 import { PLANS, STORAGE_ADDONS, kr } from '../lib/pricing.js';
+import { tr } from '../lib/i18n.js';
+import LangSwitch from './LangSwitch.jsx';
 
 const FEATURES = [
   {
     icon: 'layers',
-    title: 'Fritt lerret',
-    text: 'Dra inn tekst, bilder, video, klokke og program akkurat der du vil. Start fra en mal, eller importer PowerPoint og PDF.'
+    title: tr('Fritt lerret'),
+    text: tr('Dra inn tekst, bilder, video, klokke og program akkurat der du vil. Start fra en mal, eller importer PowerPoint og PDF.')
   },
   {
     icon: 'sparkle',
     title: 'Flatr Apps',
-    text: 'Live data på skjermene: skipstrafikk fra AIS, bursdager, vær, nyheter og kalender – eller ditt eget API uten kode.',
+    text: tr('Live data på skjermene: skipstrafikk fra AIS, bursdager, vær, nyheter og kalender – eller ditt eget API uten kode.'),
     href: '/apps'
   },
   {
     icon: 'clock',
-    title: 'Tidsplan',
-    text: 'Bestem hva som vises når – lunsjmeny før tolv, program om kvelden. Overstyr med ett klikk når noe skjer.'
+    title: tr('Tidsplan'),
+    text: tr('Bestem hva som vises når – lunsjmeny før tolv, program om kvelden. Overstyr med ett klikk når noe skjer.')
   },
   {
     icon: 'monitor',
-    title: 'Apple TV eller nettleser',
-    text: 'Par en Apple TV med en kode, eller bruk en nettleser. Se hva som vises, og få beskjed hvis en skjerm går offline.'
+    title: tr('Apple TV eller nettleser'),
+    text: tr('Par en Apple TV med en kode, eller bruk en nettleser. Se hva som vises, og få beskjed hvis en skjerm går offline.')
   },
   {
     icon: 'megaphone',
-    title: 'Live-varsler',
-    text: 'Send en beskjed til alle skjermene – eller bare én – på sekunder. Perfekt når planene endrer seg.'
+    title: tr('Live-varsler'),
+    text: tr('Send en beskjed til alle skjermene – eller bare én – på sekunder. Perfekt når planene endrer seg.')
   },
   {
     icon: 'users',
-    title: 'Jobb sammen, trygt',
-    text: 'Inviter kollegaer som eiere eller redaktører og rediger samtidig. Passord og tofaktor holder kontoen sikker.'
+    title: tr('Jobb sammen, trygt'),
+    text: tr('Inviter kollegaer som eiere eller redaktører og rediger samtidig. Passord og tofaktor holder kontoen sikker.')
   }
 ];
 
 const FREE_PLAN = [
-  '1 skjerm',
-  '5 GB lagring til bilder',
-  'Flatr Apps, live-varsler og program',
-  'Inviter kollegaene dine',
-  'Egen adresse på flatr.no'
+  tr('1 skjerm'),
+  tr('5 GB lagring til bilder'),
+  tr('Flatr Apps, live-varsler og program'),
+  tr('Inviter kollegaene dine'),
+  tr('Egen adresse på flatr.no')
 ];
 
-const PRO_PLAN = ['Så mange skjermer du vil', 'Video på skjermene', '20 GB lagring', 'Alt i gratisplanen', 'Prioritert hjelp'];
+const PRO_PLAN = [tr('Så mange skjermer du vil'), tr('Video på skjermene'), tr('20 GB lagring'), tr('Alt i gratisplanen'), tr('Prioritert hjelp')];
 
-const CLUB_PLAN = ['Alt i Pro', '15 GB lagring', 'For lag, foreninger og korps i Frivillighetsregisteret'];
+const CLUB_PLAN = [tr('Alt i Pro'), tr('15 GB lagring'), tr('For lag, foreninger og korps i Frivillighetsregisteret')];
 
 const FAQ = [
   {
-    q: 'Trenger du flere skjermer?',
-    a: 'Ta kontakt, så finner vi en løsning. Mens Flatr er i beta gir vi gjerne en eller to skjermer ekstra – gratis.',
+    q: tr('Trenger du flere skjermer?'),
+    a: tr('Ta kontakt, så finner vi en løsning. Mens Flatr er i beta gir vi gjerne en eller to skjermer ekstra – gratis.'),
     contact: true
   },
   {
-    q: 'Hva koster Flatr?',
+    q: tr('Hva koster Flatr?'),
     // Svaret avhenger av om betaling er slått på (se priceAnswer).
     a: null,
     price: true
   },
   {
-    q: 'Hva slags skjerm trenger jeg?',
-    a: 'En Apple TV med Flatr-appen, eller hvilken som helst skjerm med en nettleser – smart-TV, PC eller nettbrett.'
+    q: tr('Hva slags skjerm trenger jeg?'),
+    a: tr('En Apple TV med Flatr-appen, eller hvilken som helst skjerm med en nettleser – smart-TV, PC eller nettbrett.')
   },
   {
-    q: 'Hva er Flatr Apps?',
-    a: 'Apper som viser data på skjermene: skipstrafikk (NAIS), bursdager, vær, nyheter og kalender. Du aktiverer de du vil ha, og kan lage dine egne fra et hvilket som helst JSON-API – uten kode.'
+    q: tr('Hva er Flatr Apps?'),
+    a: tr('Apper som viser data på skjermene: skipstrafikk (NAIS), bursdager, vær, nyheter og kalender. Du aktiverer de du vil ha, og kan lage dine egne fra et hvilket som helst JSON-API – uten kode.')
   },
   {
-    q: 'Kan flere jobbe med skjermene?',
-    a: 'Ja. Inviter kollegaene dine som eiere eller redaktører, så kan dere redigere samtidig og se endringene live.'
+    q: tr('Kan flere jobbe med skjermene?'),
+    a: tr('Ja. Inviter kollegaene dine som eiere eller redaktører, så kan dere redigere samtidig og se endringene live.')
   },
   {
-    q: 'Hvor trygg er kontoen min?',
-    a: 'Passord lagres kryptert, gjentatte feil forsøk blokkeres, og du kan slå på tofaktor-innlogging med en kode fra mobilen.'
+    q: tr('Hvor trygg er kontoen min?'),
+    a: tr('Passord lagres kryptert, gjentatte feil forsøk blokkeres, og du kan slå på tofaktor-innlogging med en kode fra mobilen.')
   },
   {
-    q: 'Hvorfor er ikke video med i gratisversjonen?',
-    a: 'Video krever mye mer lagring og båndbredde enn bilder. Det kommer i de betalte planene.'
+    q: tr('Hvorfor er ikke video med i gratisversjonen?'),
+    a: tr('Video krever mye mer lagring og båndbredde enn bilder. Det kommer i de betalte planene.')
   }
 ];
 
@@ -95,24 +97,24 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-paper/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link to="/" aria-label="Flatr – forsiden">
+        <Link to="/" aria-label={tr('Flatr – forsiden')}>
           <LogoLockup className="h-6 w-auto text-ink" />
         </Link>
         <nav className="flex items-center gap-1 text-sm font-medium sm:gap-2">
           <a href={anchor('funksjoner')} className="hidden rounded-md px-3 py-2 text-muted hover:text-ink sm:block">
-            Funksjoner
+            {tr('Funksjoner')}
           </a>
           <Link to="/apps" className="hidden rounded-md px-3 py-2 text-muted hover:text-ink sm:block">
             Apps
           </Link>
           <a href={anchor('priser')} className="hidden rounded-md px-3 py-2 text-muted hover:text-ink sm:block">
-            Priser
+            {tr('Priser')}
           </a>
           <Link to="/login" className="rounded-md px-3 py-2 text-muted hover:text-ink">
-            Logg inn
+            {tr('Logg inn')}
           </Link>
           <Link to="/signup" className="rounded-md bg-brand px-4 py-2 font-semibold text-onbrand transition hover:bg-brand-dark">
-            Kom i gang
+            {tr('Kom i gang')}
           </Link>
         </nav>
       </div>
@@ -128,23 +130,24 @@ export function SiteFooter() {
         <div className="flex items-center gap-2">
           <LogoMarkSquare className="h-6 w-6" />
           <span>© {new Date().getFullYear()} Flatr</span>
+          <LangSwitch className="ml-3" />
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2">
           <Link to="/apps" className="hover:text-ink">
             Apps
           </Link>
           <a href="/#priser" className="hover:text-ink">
-            Priser
+            {tr('Priser')}
           </a>
           <Link to="/personvern" className="hover:text-ink">
-            Personvern
+            {tr('Personvern')}
           </Link>
           {/* Kjører hos Cloudflare, adskilt fra serveren (se status/). */}
           <a href="https://status.flatr.no" className="hover:text-ink">
-            Driftsstatus
+            {tr('Driftsstatus')}
           </a>
           <Link to="/login" className="hover:text-ink">
-            Logg inn
+            {tr('Logg inn')}
           </Link>
         </div>
       </div>
@@ -152,16 +155,16 @@ export function SiteFooter() {
   );
 }
 
-const PRO_PRICE = `${kr(PLANS.pro.tiers[0][1])} per skjerm i måneden (${kr(PLANS.pro.tiers[1][1])} fra skjerm nr. ${PLANS.pro.tiers[0][0] + 1})`;
+const PRO_PRICE = tr('{0} per skjerm i måneden ({1} fra skjerm nr. {2})', [kr(PLANS.pro.tiers[0][1]), kr(PLANS.pro.tiers[1][1]), PLANS.pro.tiers[0][0] + 1]);
 const priceAnswer = (billing) =>
   billing
-    ? `Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro koster ${PRO_PRICE}, og lag og foreninger i Frivillighetsregisteret får halv pris. Du oppgraderer selv under Abonnement i Flatr, betaler med kort eller faktura, og kan si opp når som helst.`
-    : `Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro kommer snart: ${PRO_PRICE}, og halv pris for lag og frivillige. Alle funksjoner bortsett fra video er med i gratisplanen – du betaler bare for skjermene. Du velger selv om du vil oppgradere.`;
+    ? tr('Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro koster {0}, og lag og foreninger i Frivillighetsregisteret får halv pris. Du oppgraderer selv under Abonnement i Flatr, betaler med kort eller faktura, og kan si opp når som helst.', [PRO_PRICE])
+    : tr('Gratisplanen koster 0 kr i måneden og krever ikke kort. Pro kommer snart: {0}, og halv pris for lag og frivillige. Alle funksjoner bortsett fra video er med i gratisplanen – du betaler bare for skjermene. Du velger selv om du vil oppgradere.', [PRO_PRICE]);
 
 export default function Landing({ billing = false }) {
   const [contactOpen, setContactOpen] = useState(false);
   useEffect(() => {
-    document.title = 'Flatr – infoskjermer som bare virker';
+    document.title = tr('Flatr – infoskjermer som bare virker');
     const root = document.documentElement;
     const prev = root.dataset.theme;
     root.dataset.theme = 'presis';
@@ -194,24 +197,24 @@ export default function Landing({ billing = false }) {
         />
         <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-16 text-center sm:px-6 sm:pt-24">
           <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
-            Infoskjermer som <span className="text-brand">bare virker</span>.
+            {tr('Infoskjermer som')} <span className="text-brand">{tr('bare virker')}</span>.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted">
-            Lag innholdet én gang og vis det på alle skjermene dine – med live data fra appene du trenger. Endringer vises med en gang.
+            {tr('Lag innholdet én gang og vis det på alle skjermene dine – med live data fra appene du trenger. Endringer vises med en gang.')}
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Link
               to="/signup"
               className="inline-flex items-center gap-2 rounded-md bg-brand px-5 py-3 font-semibold text-onbrand transition hover:bg-brand-dark"
             >
-              Opprett gratis konto
+              {tr('Opprett gratis konto')}
               <Icon name="chevron" className="h-4 w-4" />
             </Link>
             <a
               href="#funksjoner"
               className="inline-flex items-center rounded-md border border-line bg-card px-5 py-3 font-semibold hover:bg-hair"
             >
-              Se funksjonene
+              {tr('Se funksjonene')}
             </a>
           </div>
 
@@ -224,9 +227,9 @@ export default function Landing({ billing = false }) {
       <section id="funksjoner" className="scroll-mt-20 border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <SectionHead
-            kicker="Funksjoner"
-            title="Alt du trenger, ingenting du ikke trenger"
-            text="Laget for arrangementer, idrettslag, kulturhus og bedrifter som vil ha skjermer som er enkle å holde oppdatert."
+            kicker={tr('Funksjoner')}
+            title={tr('Alt du trenger, ingenting du ikke trenger')}
+            text={tr('Laget for arrangementer, idrettslag, kulturhus og bedrifter som vil ha skjermer som er enkle å holde oppdatert.')}
           />
           <div className="mt-12 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => {
@@ -261,64 +264,63 @@ export default function Landing({ billing = false }) {
       <section id="priser" className="scroll-mt-20 border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <SectionHead
-            kicker="Priser"
-            title="Start gratis, voks når du trenger det"
-            text="Ingen kort, ingen binding. Gratisplanen holder for de fleste små lag, arrangementer og bedrifter."
+            kicker={tr('Priser')}
+            title={tr('Start gratis, voks når du trenger det')}
+            text={tr('Ingen kort, ingen binding. Gratisplanen holder for de fleste små lag, arrangementer og bedrifter.')}
             center
           />
           <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-3">
             <div className="flex flex-col rounded-xl border border-brand/40 bg-card p-7">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Gratis</h3>
+                <h3 className="font-semibold">{tr('Gratis')}</h3>
                 <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-medium text-brand">
-                  Tilgjengelig nå
+                  {tr('Tilgjengelig nå')}
                 </span>
               </div>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight">0 kr</span>
-                <span className="text-sm text-muted">/ per mnd</span>
+                <span className="text-4xl font-bold tracking-tight">{tr('0 kr')}</span>
+                <span className="text-sm text-muted">{tr('/ per mnd')}</span>
               </div>
               <PlanList items={FREE_PLAN} />
               <Link
                 to="/signup"
                 className="mt-8 rounded-md bg-brand px-5 py-3 text-center font-semibold text-onbrand transition hover:bg-brand-dark"
               >
-                Opprett gratis konto
+                {tr('Opprett gratis konto')}
               </Link>
             </div>
 
             <PaidPlan
               name={PLANS.pro.name}
               price={kr(PLANS.pro.tiers[0][1])}
-              note={`${kr(PLANS.pro.tiers[1][1])} per skjerm fra skjerm nr. ${PLANS.pro.tiers[0][0] + 1}`}
+              note={tr('{0} per skjerm fra skjerm nr. {1}', [kr(PLANS.pro.tiers[1][1]), PLANS.pro.tiers[0][0] + 1])}
               items={PRO_PLAN}
               available={billing}
             />
-            <PaidPlan name={PLANS.club.name} price={kr(PLANS.club.tiers[0][1])} note="Halv pris for frivilligheten" items={CLUB_PLAN} available={billing} />
+            <PaidPlan name={tr(PLANS.club.name)} price={kr(PLANS.club.tiers[0][1])} note={tr('Halv pris for frivilligheten')} items={CLUB_PLAN} available={billing} />
           </div>
 
           <div className="mx-auto mt-4 grid max-w-5xl gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
             <div className="rounded-xl border border-line bg-card p-6 text-sm">
-              <h3 className="m-0 font-semibold">Trenger du mer lagring?</h3>
-              <p className="mt-1 text-muted">Legg til ekstra lagring på Pro eller Lag og frivillige.</p>
+              <h3 className="m-0 font-semibold">{tr('Trenger du mer lagring?')}</h3>
+              <p className="mt-1 text-muted">{tr('Legg til ekstra lagring på Pro eller Lag og frivillige.')}</p>
               <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 tabular-nums">
                 {STORAGE_ADDONS.map(([gb, price]) => (
                   <div key={gb} className="contents">
                     <dt className="text-muted">+{gb} GB</dt>
-                    <dd className="m-0 text-right font-medium">{kr(price)} / mnd</dd>
+                    <dd className="m-0 text-right font-medium">{kr(price)} {tr('/ mnd')}</dd>
                   </div>
                 ))}
               </dl>
             </div>
             <div className="flex flex-col justify-center rounded-xl border border-dashed border-line px-6 py-5 text-sm text-muted">
               <p className="m-0">
-                Alle funksjoner er med i alle planer, bortsett fra video – du betaler bare for skjermene. Betal årlig og få to måneder
-                gratis. Alle priser er eks. mva.
+                {tr('Alle funksjoner er med i alle planer, bortsett fra video – du betaler bare for skjermene. Betal årlig og få to måneder gratis. Alle priser er eks. mva.')}
               </p>
               <p className="mt-3">
-                Trenger du flere skjermer nå? Ta kontakt – i betaperioden får du gjerne en eller to til, gratis.{' '}
+                {tr('Trenger du flere skjermer nå? Ta kontakt – i betaperioden får du gjerne en eller to til, gratis.')}{' '}
                 <button type="button" onClick={() => setContactOpen(true)} className="font-semibold text-brand hover:underline">
-                  Ta kontakt →
+                  {tr('Ta kontakt →')}
                 </button>
               </p>
             </div>
@@ -328,7 +330,7 @@ export default function Landing({ billing = false }) {
 
       <section className="border-t border-line">
         <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
-          <SectionHead kicker="Spørsmål og svar" title="Lurer du på noe?" center />
+          <SectionHead kicker={tr('Spørsmål og svar')} title={tr('Lurer du på noe?')} center />
           <div className="mt-10 divide-y divide-line rounded-xl border border-line bg-card">
             {FAQ.map((f) => (
               <details key={f.q} className="group px-6 py-5">
@@ -339,7 +341,7 @@ export default function Landing({ billing = false }) {
                 <p className="mt-3 text-sm leading-relaxed text-muted">{f.price ? priceAnswer(billing) : f.a}</p>
                 {f.contact && (
                   <button type="button" onClick={() => setContactOpen(true)} className="mt-3 text-sm font-semibold text-brand hover:underline">
-                    Ta kontakt →
+                    {tr('Ta kontakt →')}
                   </button>
                 )}
               </details>
@@ -350,15 +352,15 @@ export default function Landing({ billing = false }) {
 
       <section className="px-4 pb-20 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 rounded-2xl bg-brand px-6 py-14 text-center text-onbrand sm:px-12">
-          <h2 className="text-3xl font-bold tracking-tight">Klar til å sette skjermene i arbeid?</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{tr('Klar til å sette skjermene i arbeid?')}</h2>
           <p className="max-w-lg opacity-80">
-            Opprett en konto og få din egen Flatr-adresse med en gang. Du kan invitere kollegaene dine etterpå.
+            {tr('Opprett en konto og få din egen Flatr-adresse med en gang. Du kan invitere kollegaene dine etterpå.')}
           </p>
           <Link
             to="/signup"
             className="rounded-md bg-paper px-6 py-3 font-semibold text-ink transition hover:bg-card"
           >
-            Kom i gang gratis
+            {tr('Kom i gang gratis')}
           </Link>
         </div>
       </section>
@@ -393,7 +395,7 @@ export function ContactDialog({ onClose, subject = 'Jeg trenger flere skjermer' 
         body: JSON.stringify({ ...f, message: f.message || subject })
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || 'Kunne ikke sende. Prøv igjen.');
+      if (!res.ok) throw new Error(data?.error || tr('Kunne ikke sende. Prøv igjen.'));
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -405,39 +407,39 @@ export function ContactDialog({ onClose, subject = 'Jeg trenger flere skjermer' 
   const input = 'w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-brand';
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label="Ta kontakt" className="w-full max-w-md rounded-2xl border border-line bg-card p-6 text-left">
+      <div role="dialog" aria-modal="true" aria-label={tr('Ta kontakt')} className="w-full max-w-md rounded-2xl border border-line bg-card p-6 text-left">
         {sent ? (
           <div className="text-center">
             <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-brand-tint text-brand">
               <Icon name="check" className="h-6 w-6" />
             </div>
-            <h2 className="m-0 text-lg font-bold">Takk! Vi har fått meldingen</h2>
-            <p className="m-0 mt-2 text-sm text-muted">Vi svarer deg på e-post så fort vi kan.</p>
+            <h2 className="m-0 text-lg font-bold">{tr('Takk! Vi har fått meldingen')}</h2>
+            <p className="m-0 mt-2 text-sm text-muted">{tr('Vi svarer deg på e-post så fort vi kan.')}</p>
             <button type="button" onClick={onClose} className="mt-5 rounded-md bg-brand px-5 py-2.5 font-semibold text-onbrand hover:bg-brand-dark">
-              Lukk
+              {tr('Lukk')}
             </button>
           </div>
         ) : (
           <form onSubmit={send} className="grid gap-3">
             <div>
-              <h2 className="m-0 text-lg font-bold">Ta kontakt</h2>
-              <p className="m-0 mt-1 text-sm text-muted">Trenger du flere skjermer, eller lurer du på noe? Vi svarer på e-post.</p>
+              <h2 className="m-0 text-lg font-bold">{tr('Ta kontakt')}</h2>
+              <p className="m-0 mt-1 text-sm text-muted">{tr('Trenger du flere skjermer, eller lurer du på noe? Vi svarer på e-post.')}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <input className={input} placeholder="Navn" value={f.name} onChange={set('name')} autoComplete="name" />
-              <input className={input} placeholder="Organisasjon" value={f.org} onChange={set('org')} autoComplete="organization" />
+              <input className={input} placeholder={tr('Navn')} value={f.name} onChange={set('name')} autoComplete="name" />
+              <input className={input} placeholder={tr('Organisasjon')} value={f.org} onChange={set('org')} autoComplete="organization" />
             </div>
-            <input className={input} type="email" required placeholder="E-post" value={f.email} onChange={set('email')} autoComplete="email" />
-            <textarea className={`${input} min-h-[110px]`} placeholder={`${subject} – f.eks. hvor mange og hva de skal brukes til`} value={f.message} onChange={set('message')} maxLength={3000} />
+            <input className={input} type="email" required placeholder={tr('E-post')} value={f.email} onChange={set('email')} autoComplete="email" />
+            <textarea className={`${input} min-h-[110px]`} placeholder={tr('{0} – f.eks. hvor mange og hva de skal brukes til', [subject])} value={f.message} onChange={set('message')} maxLength={3000} />
             {/* Skjult felt som bare roboter fyller ut */}
             <input type="text" tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} className="hidden" aria-hidden="true" />
             {error && <p className="m-0 text-sm text-danger">{error}</p>}
             <div className="mt-1 flex justify-end gap-2">
               <button type="button" onClick={onClose} className="rounded-md px-4 py-2.5 text-sm font-semibold text-muted hover:text-ink">
-                Avbryt
+                {tr('Avbryt')}
               </button>
               <button type="submit" disabled={busy} className="rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-onbrand hover:bg-brand-dark disabled:opacity-50">
-                {busy ? 'Sender …' : 'Send'}
+                {busy ? tr('Sender …') : tr('Send')}
               </button>
             </div>
           </form>
@@ -464,14 +466,14 @@ function PaidPlan({ name, price, note, items, available }) {
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold">{name}</h3>
         {available ? (
-          <span className="shrink-0 rounded-full bg-brand-tint px-2.5 py-1 text-xs font-medium text-brand">Tilgjengelig nå</span>
+          <span className="shrink-0 rounded-full bg-brand-tint px-2.5 py-1 text-xs font-medium text-brand">{tr('Tilgjengelig nå')}</span>
         ) : (
-          <span className="shrink-0 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted">Kommer snart</span>
+          <span className="shrink-0 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted">{tr('Kommer snart')}</span>
         )}
       </div>
       <div className="mt-4 flex items-baseline gap-1">
         <span className="text-4xl font-bold tracking-tight">{price}</span>
-        <span className="text-sm text-muted">/ skjerm / mnd</span>
+        <span className="text-sm text-muted">{tr('/ skjerm / mnd')}</span>
       </div>
       <p className="mt-1 text-xs text-muted">{note}</p>
       <PlanList items={items} />
@@ -480,7 +482,7 @@ function PaidPlan({ name, price, note, items, available }) {
           to="/signup"
           className="mt-8 rounded-md border border-line px-5 py-3 text-center font-semibold text-ink transition hover:border-brand hover:text-brand"
         >
-          Start gratis, oppgrader i Flatr
+          {tr('Start gratis, oppgrader i Flatr')}
         </Link>
       )}
     </div>
@@ -509,7 +511,7 @@ function DashboardMock() {
         <span className="h-2.5 w-2.5 rounded-full bg-line" />
         <span className="h-2.5 w-2.5 rounded-full bg-line" />
         <span className="h-2.5 w-2.5 rounded-full bg-line" />
-        <span className="ml-3 truncate font-mono text-xs text-muted">dittlag.flatr.no</span>
+        <span className="ml-3 truncate font-mono text-xs text-muted">{tr('dittlag.flatr.no')}</span>
       </div>
       <div className="flex">
         <aside className="hidden w-14 shrink-0 flex-col items-center gap-2 border-r border-line py-4 sm:flex">
@@ -525,35 +527,35 @@ function DashboardMock() {
         <div className="min-w-0 flex-1 bg-paper p-5 sm:p-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs text-muted">God morgen</p>
-              <p className="mt-1 text-lg font-semibold">Skjermene dine</p>
+              <p className="text-xs text-muted">{tr('God morgen')}</p>
+              <p className="mt-1 text-lg font-semibold">{tr('Skjermene dine')}</p>
             </div>
             <div className="flex gap-2">
               <span className="hidden items-center gap-2 rounded-md border border-line bg-card px-3 py-2 text-xs font-semibold sm:inline-flex">
                 <Icon name="megaphone" className="h-3.5 w-3.5" />
-                Send et varsel
+                {tr('Send et varsel')}
               </span>
               <span className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-onbrand">
                 <Icon name="plus" className="h-3.5 w-3.5" />
-                Koble til ny skjerm
+                {tr('Koble til ny skjerm')}
               </span>
             </div>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-lg bg-brand p-4 text-onbrand">
-              <p className="text-xs font-semibold">Online akkurat nå</p>
+              <p className="text-xs font-semibold">{tr('Online akkurat nå')}</p>
               <p className="mt-1 text-3xl font-bold">3</p>
-              <p className="mt-1 text-xs opacity-80">Alle skjermene er på</p>
+              <p className="mt-1 text-xs opacity-80">{tr('Alle skjermene er på')}</p>
             </div>
             <div className="rounded-lg border border-line bg-card p-4">
-              <p className="text-xs font-semibold">Presentasjoner</p>
+              <p className="text-xs font-semibold">{tr('Presentasjoner')}</p>
               <p className="mt-1 text-3xl font-bold">2</p>
-              <p className="mt-1 text-xs text-muted">Klare til visning</p>
+              <p className="mt-1 text-xs text-muted">{tr('Klare til visning')}</p>
             </div>
             <div className="rounded-lg border border-line bg-card p-4">
-              <p className="text-xs font-semibold">Aktive varsler</p>
+              <p className="text-xs font-semibold">{tr('Aktive varsler')}</p>
               <p className="mt-1 text-3xl font-bold">1</p>
-              <p className="mt-1 text-xs text-muted">Vises på 3 skjermer</p>
+              <p className="mt-1 text-xs text-muted">{tr('Vises på 3 skjermer')}</p>
             </div>
           </div>
           <div className="mt-3 hidden gap-3 sm:grid sm:grid-cols-3">
@@ -607,7 +609,7 @@ export function AppTile({ app, image, publisher = 'Flatr', verified = true, tagl
                 <Icon name="check" className="h-2 w-2" />
               </span>
             )}
-            <span>· {CATEGORY_LABEL[app.category] || 'Annet'}</span>
+            <span>· {CATEGORY_LABEL[app.category] || tr('Annet')}</span>
           </div>
         </div>
       </div>
@@ -624,11 +626,11 @@ function AppsTeaser() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionHead
             kicker="Flatr Apps"
-            title="Live data på skjermene"
-            text="Aktiver appene du trenger – eller koble til ditt eget API på noen minutter, helt uten kode."
+            title={tr('Live data på skjermene')}
+            text={tr('Aktiver appene du trenger – eller koble til ditt eget API på noen minutter, helt uten kode.')}
           />
           <Link to="/apps" className="inline-flex items-center gap-1.5 font-semibold text-brand hover:underline">
-            Se alle apper
+            {tr('Se alle apper')}
             <Icon name="chevron" className="h-4 w-4" />
           </Link>
         </div>

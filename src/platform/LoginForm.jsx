@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { authClient } from '../lib/authClient.js';
 import { Button, ErrorText, Field, Input } from '../admin/components/ui.jsx';
+import { tr } from '../lib/i18n.js';
 
 const LOGOS = {
   google: (
@@ -39,7 +40,7 @@ export function SocialButtons({ callbackURL, divider = 'eller med e-post' }) {
   // Better Auth sender tilbake hit med ?error= når innloggingen stoppes,
   // f.eks. fordi kontoen har tofaktor (da må e-post, passord og kode brukes).
   const [error, setError] = useState(() =>
-    new URLSearchParams(window.location.search).get('error') ? 'Innloggingen ble ikke fullført. Har du tofaktor på kontoen, logg inn med e-post, passord og kode.' : ''
+    new URLSearchParams(window.location.search).get('error') ? tr('Innloggingen ble ikke fullført. Har du tofaktor på kontoen, logg inn med e-post, passord og kode.') : ''
   );
   useEffect(() => {
     loadProviders().then(setProviders);
@@ -65,7 +66,7 @@ export function SocialButtons({ callbackURL, divider = 'eller med e-post' }) {
           className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-line bg-card text-sm font-semibold text-ink transition-colors hover:bg-zone disabled:opacity-60"
         >
           {LOGOS[p]}
-          {busy === p ? 'Sender deg videre …' : `Fortsett med ${LABEL[p]}`}
+          {busy === p ? tr('Sender deg videre …') : tr('Fortsett med {0}', [LABEL[p]])}
         </button>
       ))}
       <ErrorText>{error}</ErrorText>
@@ -127,10 +128,10 @@ export default function LoginForm({ onDone, defaultEmail = '' }) {
       <form onSubmit={submitCode} className="space-y-4">
         <p className="m-0 text-sm text-muted">
           {step === 'backup'
-            ? 'Skriv inn en av reservekodene du fikk da du slo på tofaktor. Hver kode kan bare brukes én gang.'
-            : 'Skriv inn den 6-sifrede koden fra autentiseringsappen din.'}
+            ? tr('Skriv inn en av reservekodene du fikk da du slo på tofaktor. Hver kode kan bare brukes én gang.')
+            : tr('Skriv inn den 6-sifrede koden fra autentiseringsappen din.')}
         </p>
-        <Field label={step === 'backup' ? 'Reservekode' : 'Kode'}>
+        <Field label={step === 'backup' ? tr('Reservekode') : tr('Kode')}>
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value)}
@@ -144,19 +145,19 @@ export default function LoginForm({ onDone, defaultEmail = '' }) {
         {step === 'code' && (
           <label className="flex items-center gap-2 text-sm text-muted">
             <input type="checkbox" checked={trust} onChange={(e) => setTrust(e.target.checked)} className="h-4 w-4 rounded border-line text-brand" />
-            Husk denne enheten i 30 dager
+            {tr('Husk denne enheten i 30 dager')}
           </label>
         )}
         <ErrorText>{error}</ErrorText>
         <Button type="submit" className="w-full py-3" disabled={busy}>
-          {busy ? 'Sjekker …' : 'Logg inn'}
+          {busy ? tr('Sjekker …') : tr('Logg inn')}
         </Button>
         <div className="flex justify-between text-sm">
           <button type="button" className="font-semibold text-brand hover:underline" onClick={() => (setStep(step === 'backup' ? 'code' : 'backup'), setError(''), setCode(''))}>
-            {step === 'backup' ? 'Bruk kode fra appen' : 'Bruk en reservekode'}
+            {step === 'backup' ? tr('Bruk kode fra appen') : tr('Bruk en reservekode')}
           </button>
           <button type="button" className="text-muted hover:text-ink" onClick={() => (setStep('password'), setError(''))}>
-            Tilbake
+            {tr('Tilbake')}
           </button>
         </div>
       </form>
@@ -168,19 +169,19 @@ export default function LoginForm({ onDone, defaultEmail = '' }) {
       {/* Kundens /admin kommer tilbake hit; på flatr.no til /login (velg organisasjon). */}
       {/* Tilbake til samme side (flatr.no/login?next=…), så man kommer dit man skulle. */}
       <SocialButtons callbackURL={window.location.pathname.startsWith('/admin') || window.location.pathname === '/login' ? window.location.href : `${window.location.origin}/login`} />
-      <Field label="E-post">
+      <Field label={tr('E-post')}>
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" placeholder="deg@firma.no" required autoFocus={!defaultEmail} />
       </Field>
-      <Field label="Passord">
+      <Field label={tr('Passord')}>
         <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required autoFocus={!!defaultEmail} />
       </Field>
       <ErrorText>{error}</ErrorText>
       <Button type="submit" className="w-full py-3" disabled={busy}>
-        {busy ? 'Logger inn …' : 'Logg inn'}
+        {busy ? tr('Logger inn …') : tr('Logg inn')}
       </Button>
       <div className="text-center text-sm">
         <a href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`} className="font-semibold text-brand hover:underline">
-          Glemt passord – eller første gang?
+          {tr('Glemt passord – eller første gang?')}
         </a>
       </div>
     </form>

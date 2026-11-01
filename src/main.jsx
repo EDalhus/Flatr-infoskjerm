@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import './index.css';
+import { initLang } from './lib/i18n.js';
 
 // Hver del lastes først når den trengs: en skjerm henter bare spilleren, ikke
 // admin og forsiden, og starter raskere på trege smart-TV-er.
@@ -148,8 +149,11 @@ try {
   /* privat modus e.l. */
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+// Språket og oversettelsene må være klare før sidene lastes. Skjermene viser alltid norsk.
+(isScreenPath(window.location.pathname) ? Promise.resolve() : initLang()).finally(() =>
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  )
 );
