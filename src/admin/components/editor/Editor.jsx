@@ -980,9 +980,9 @@ export default function Editor({ playlistId, onBack, onChange, me }) {
               onLive={(patches) => change(patches, false)}
               onCommit={(patches) => change(patches, 'now')}
               onCursor={collab.sendCursor}
-              onTextLive={(id, text) => {
+              onTextLive={(id, patch) => {
                 const found = findEl(id);
-                if (found) change([{ id, patch: { config: { ...found.el.config, text } } }], false);
+                if (found) change([{ id, patch: { config: { ...found.el.config, ...patch } } }], false);
               }}
               onTextCommit={() => flush()}
               onLockedClick={(p) => say(`${p.name} jobber med dette elementet akkurat nå`)}

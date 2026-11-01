@@ -15,6 +15,8 @@ import ElementView from '../../../viewer/ElementView.jsx';
 import DynamicBackground from '../../../viewer/DynamicBackground.jsx';
 import SlideCanvas from '../../../viewer/SlideCanvas.jsx';
 import { bestSnap, snapCandidates, resizeBox, bbox, intersects, clamp, round } from './geometry.js';
+import { activeRich, plainToRich, richToHtml, domToRich, richToPlain, hasFormatting, toggleInline, keepSelection } from '../../../lib/richText.js';
+import { useBrand } from '../../brandStore.js';
 
 const PAD = 40;
 const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -42,27 +44,58 @@ function useSize(ref) {
   return size;
 }
 
+/**
+ * Redigering av tekst rett på lerretet. Formatering (fet, kursiv, farge, lister)
+ * gjøres med verktøylinjen over boksen eller ⌘B/⌘I/⌘U, og leses tilbake som
+ * blokker (src/lib/richText.js). Innholdet settes én gang; deretter eier
+ * nettleseren det til redigeringen er ferdig.
+ */
 function TextEditor({ el, onChange, onDone }) {
   const ref = useRef(null);
   const c = el.config || {};
   useEffect(() => {
-    const t = ref.current;
-    if (!t) return;
-    t.focus();
-    t.select();
+    const div = ref.current;
+    if (!div) return;
+    div.innerHTML = richToHtml(activeRich(c) || plainToRich(c.text));
+    document.execCommand('styleWithCSS', false, false);
+    div.focus();
+    const range = document.createRange();
+    range.selectNodeContents(div);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const emit = () => {
+    const rich = domToRich(ref.current);
+    onChange({ text: richToPlain(rich), rich: hasFormatting(rich) ? rich : null });
+  };
   return (
-    <textarea
+    <div
       ref={ref}
-      value={c.text ?? ''}
-      onChange={(e) => onChange(e.target.value)}
+      data-text-editor
+      contentEditable
+      suppressContentEditableWarning
+      onInput={emit}
       onBlur={onDone}
+      onPaste={(e) => {
+        // Bare ren tekst inn – ikke farger og skrift fra andre programmer.
+        e.preventDefault();
+        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+      }}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) e.currentTarget.blur();
+        if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) return e.currentTarget.blur();
+        // ⌘B/⌘I/⌘U: vår egen av/på (se toggleInline), ikke nettleserens.
+        const tag = (e.metaKey || e.ctrlKey) && { b: 'b', i: 'i', u: 'u' }[e.key.toLowerCase()];
+        if (tag) {
+          e.preventDefault();
+          toggleInline(e.currentTarget, tag);
+        }
       }}
-      className="pointer-events-auto h-full w-full resize-none overflow-hidden border-0 bg-transparent p-0 outline-none"
+      className="pointer-events-auto h-full w-full overflow-hidden whitespace-pre-wrap break-words outline-none [&_b]:[font-weight:var(--bold)] [&_li]:pl-[0.15em] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-[1.6em] [&_ul]:m-0 [&_ul]:list-disc [&_ul]:pl-[1.3em]"
       style={{
+        '--bold': Math.min(900, (c.weight ?? 700) + 300),
         fontFamily: c.font || 'inherit',
         fontSize: c.size ?? 64,
         fontWeight: c.weight ?? 700,
@@ -73,6 +106,54 @@ function TextEditor({ el, onChange, onDone }) {
         caretColor: c.color || '#ffffff'
       }}
     />
+  );
+}
+
+const SWATCHES = ['#ffffff', '#111111', '#facc15', '#f97316', '#ef4444', '#22c55e', '#38bdf8', '#a855f7'];
+
+/** Verktøylinjen over teksten som redigeres. Knappene tar ikke fokus fra teksten. */
+function TextToolbar({ style }) {
+  const editor = () => document.querySelector('[data-text-editor]');
+  const toggle = (tag) => (e) => {
+    e.preventDefault();
+    if (editor()) toggleInline(editor(), tag);
+  };
+  const brand = useBrand();
+  const colors = [...new Set([brand?.colors?.primary, brand?.colors?.accent, ...SWATCHES].filter(Boolean).map((x) => x.toLowerCase()))].slice(0, 9);
+  const run = (name, value) => (e) => {
+    e.preventDefault();
+    const root = editor();
+    if (root) keepSelection(root, () => document.execCommand(name, false, value));
+  };
+  const btn = 'grid h-8 min-w-8 place-items-center rounded-lg px-2 text-sm text-ink hover:bg-zone';
+  return (
+    <div className="pointer-events-auto absolute z-30 flex items-center gap-0.5 rounded-xl border border-line bg-card p-1 shadow-pop" style={style} onPointerDown={(e) => e.stopPropagation()}>
+      <button type="button" onMouseDown={toggle('b')} className={`${btn} font-black`} title="Fet (⌘B)">
+        B
+      </button>
+      <button type="button" onMouseDown={toggle('i')} className={`${btn} italic`} title="Kursiv (⌘I)">
+        I
+      </button>
+      <button type="button" onMouseDown={toggle('u')} className={`${btn} underline`} title="Understreket (⌘U)">
+        U
+      </button>
+      <span className="mx-1 h-5 w-px bg-line" />
+      {colors.map((col) => (
+        <button key={col} type="button" onMouseDown={run('foreColor', col)} title={`Farge ${col}`} className="grid h-8 w-6 place-items-center rounded-lg hover:bg-zone">
+          <span className="h-4 w-4 rounded-full border border-black/20" style={{ background: col }} />
+        </button>
+      ))}
+      <span className="mx-1 h-5 w-px bg-line" />
+      <button type="button" onMouseDown={run('insertUnorderedList')} className={btn} title="Punktliste">
+        • Liste
+      </button>
+      <button type="button" onMouseDown={run('insertOrderedList')} className={btn} title="Nummerert liste">
+        1. Liste
+      </button>
+      <button type="button" onMouseDown={run('removeFormat')} className={`${btn} text-muted`} title="Fjern formatering på det som er markert">
+        Fjern
+      </button>
+    </div>
   );
 }
 
@@ -343,7 +424,7 @@ export default function Stage({
               {editingId === el.id ? (
                 <TextEditor
                   el={el}
-                  onChange={(text) => onTextLive(el.id, text)}
+                  onChange={(patch) => onTextLive(el.id, patch)}
                   onDone={() => {
                     onTextCommit(el.id);
                     setEditingId(null);
@@ -434,6 +515,14 @@ export default function Stage({
           {groupBox && (
             <div className="absolute border border-dashed" style={{ ...px(groupBox), borderColor: me?.color || 'rgb(var(--c-brand))' }} />
           )}
+
+          {/* verktøylinje for tekst som redigeres */}
+          {editingId && (() => {
+            const el = elements.find((x) => x.id === editingId);
+            if (!el || el.kind !== 'text') return null;
+            const b = px(el);
+            return <TextToolbar style={{ left: Math.max(4, b.left), top: Math.max(4, b.top - 50) }} />;
+          })()}
 
           {/* håndtak (ett element) */}
           {single && !locks.has(single.id) && editingId !== single.id && (() => {

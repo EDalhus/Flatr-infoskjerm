@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { MODES as ENTUR_MODES } from '../../../lib/entur.js';
 import { CropModal, FocusPicker, saveCropped } from './ImageTools.jsx';
+import { activeRich } from '../../../lib/richText.js';
 
 const RSS_PRESETS = [
   { label: 'NRK – Toppsaker', url: 'https://www.nrk.no/toppsaker.rss' },
@@ -659,8 +660,15 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
     const fill = c.fill && c.fill.type === 'gradient' ? c.fill : null;
     return (
       <div className="grid gap-3">
-        <Field label="Tekst">
-          <Textarea rows={3} value={c.text || ''} onChange={(e) => set({ text: e.target.value })} />
+        <Field
+          label="Tekst"
+          hint={
+            activeRich(c)
+              ? 'Teksten har lister eller formatering. Dobbeltklikk teksten på lerretet for å endre den – endrer du den her, forsvinner formateringen.'
+              : 'Dobbeltklikk teksten på lerretet for punktlister og fet, kursiv eller farget skrift.'
+          }
+        >
+          <Textarea rows={3} value={c.text || ''} onChange={(e) => set({ text: e.target.value, rich: null })} />
         </Field>
         <Check label="Krymp teksten så den får plass i boksen" checked={c.autoFit !== false} onChange={(v) => set({ autoFit: v })} />
 

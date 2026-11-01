@@ -12,6 +12,8 @@ import RssSlide from './slides/RssSlide.jsx';
 import CalendarSlide from './slides/CalendarSlide.jsx';
 import CarouselSlide from './slides/CarouselSlide.jsx';
 import AppSlide from './slides/AppSlide.jsx';
+import RichText from './RichText.jsx';
+import { activeRich } from '../lib/richText.js';
 
 /**
  * Krymper teksten (ned til 40 %, som på Apple TV) når den ikke får plass i
@@ -61,7 +63,8 @@ function TextEl({ config }) {
   const c = config || {};
   const outerRef = useRef(null);
   const innerRef = useRef(null);
-  const fit = useFitText(outerRef, innerRef, [c.text, c.size, c.font, c.weight, c.lineHeight, c.tracking], c.autoFit !== false);
+  const rich = activeRich(c);
+  const fit = useFitText(outerRef, innerRef, [c.text, c.rich, c.size, c.font, c.weight, c.lineHeight, c.tracking], c.autoFit !== false);
   const alignItems =
     c.valign === 'middle' ? 'center' : c.valign === 'bottom' ? 'flex-end' : 'flex-start';
   const decoration = [c.underline && 'underline', c.strike && 'line-through']
@@ -95,9 +98,7 @@ function TextEl({ config }) {
   return (
     <div ref={outerRef} className="flex h-full w-full overflow-hidden" style={{ alignItems }}>
       <div className="w-full whitespace-pre-wrap break-words" style={style}>
-        <span ref={innerRef} className="block">
-          {c.text ?? ''}
-        </span>
+        <div ref={innerRef}>{rich ? <RichText blocks={rich} weight={c.weight ?? 700} align={c.align} /> : (c.text ?? '')}</div>
       </div>
     </div>
   );
