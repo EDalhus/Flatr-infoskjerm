@@ -177,7 +177,7 @@ export function backgroundStyle(bg) {
       // Anførselstegn og skråstreker i adressen kan ikke bryte ut av url("…").
       backgroundImage: `url("${url.replace(/["\\\n\r]/g, encodeURIComponent)}")`,
       backgroundSize: b.fit === 'contain' ? 'contain' : 'cover',
-      backgroundPosition: 'center',
+      backgroundPosition: b.focus ? `${b.focus.x}% ${b.focus.y}%` : 'center',
       backgroundRepeat: 'no-repeat',
       backgroundColor: b.color || '#0f2733'
     };

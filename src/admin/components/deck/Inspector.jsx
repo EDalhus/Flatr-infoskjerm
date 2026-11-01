@@ -8,6 +8,7 @@ import {
 } from '../../../lib/deck.js';
 import { Icon, Field, Input, Select, Button, ButtonGroup, ColorInput, Segmented } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
+import { FocusPicker } from './ImageTools.jsx';
 import DaypartFields from '../DaypartFields.jsx';
 import ElementConfigFields from './ElementConfigFields.jsx';
 import DynamicBackground from '../../../viewer/DynamicBackground.jsx';
@@ -235,6 +236,11 @@ export function SlideInspector({ slide, onChange, onDuplicate, onDelete, onSaveT
               <option value="cover">Fyll flaten</option>
               <option value="contain">Vis hele</option>
             </Select>
+            {bg.url && (bg.fit || 'cover') === 'cover' && (
+              <div className="mt-3">
+                <FocusPicker url={bg.url} value={bg.focus} onChange={(focus) => setBg({ focus })} />
+              </div>
+            )}
           </div>
         )}
       </div>

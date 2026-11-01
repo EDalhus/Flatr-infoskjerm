@@ -117,7 +117,8 @@ function ImageEl({ config }) {
       src={c.url}
       alt=""
       className={`h-full w-full ${c.fit === 'cover' ? 'object-cover' : 'object-contain'}`}
-      style={{ borderRadius: c.radius || 0 }}
+      // Fokuspunktet synes alltid når bildet fyller flaten og må beskjæres.
+      style={{ borderRadius: c.radius || 0, objectPosition: c.focus ? `${c.focus.x}% ${c.focus.y}%` : undefined }}
     />
   );
 }

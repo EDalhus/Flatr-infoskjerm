@@ -91,6 +91,7 @@ const ICONS = {
     </>
   ),
   layers: <path d="m12 3 9 5-9 5-9-5 9-5zM3 14l9 5 9-5M3 18l9 5 9-5" />,
+  crop: <path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14" />,
   text: <path d="M5 5h14M12 5v14M9 19h6" />,
   square: <rect x="4" y="4" width="16" height="16" rx="2" />,
   alignLeft: <path d="M4 6h16M4 12h10M4 18h13" />,

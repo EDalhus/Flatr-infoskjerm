@@ -39,7 +39,12 @@ export default function SlideThumb({ slide, orientation }) {
                 {c.text}
               </div>
             ) : el.kind === 'image' && c.url ? (
-              <img src={c.url} alt="" className="h-full w-full object-contain" />
+              <img
+                src={c.url}
+                alt=""
+                className={`h-full w-full ${c.fit === 'cover' ? 'object-cover' : 'object-contain'}`}
+                style={{ objectPosition: c.focus ? `${c.focus.x}% ${c.focus.y}%` : undefined }}
+              />
             ) : el.kind === 'shape' ? (
               <div
                 className="h-full w-full"

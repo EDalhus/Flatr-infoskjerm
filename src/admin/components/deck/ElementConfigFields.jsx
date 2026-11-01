@@ -1,12 +1,13 @@
 import { PROGRAM_MODES, MESSAGE_EMPHASIS } from '../../../lib/slides.js';
 import { FONTS, FONT_WEIGHTS } from '../../../lib/deck.js';
 import { isoToLocalInput, localInputToIso } from '../../../lib/time.js';
-import { Field, Input, Select, Textarea, Segmented, ButtonGroup, ColorInput } from '../ui.jsx';
+import { Field, Input, Select, Textarea, Segmented, ButtonGroup, ColorInput, Button, Icon } from '../ui.jsx';
 import { MediaField } from '../MediaPicker.jsx';
 import { STOCK_GROUPS } from '../../../lib/stock.js';
 import { useEffect, useState } from 'react';
 import { api } from '../../../lib/api.js';
 import { MODES as ENTUR_MODES } from '../../../lib/entur.js';
+import { CropModal, FocusPicker, saveCropped } from './ImageTools.jsx';
 
 const RSS_PRESETS = [
   { label: 'NRK – Toppsaker', url: 'https://www.nrk.no/toppsaker.rss' },
@@ -544,7 +545,56 @@ const Check = ({ label, checked, onChange }) => (
 );
 
 /** Type-spesifikke felter for et canvas-element. `cfg` = element.config, `set(patch)`. */
-export default function ElementConfigFields({ kind, cfg, set, categories = [], slides = [] }) {
+/** Bilde: velg fra biblioteket, beskjær og roter, tilpasning og fokuspunkt. */
+function ImageFields({ c, set, boxRatio }) {
+  const [cropping, setCropping] = useState(false);
+  const original = c.original?.url || c.url;
+  return (
+    <div className="grid gap-3">
+      <MediaField value={c.url} onChange={(url) => set({ url, original: null, focus: null })} />
+      {c.url && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setCropping(true)}>
+            <Icon name="crop" className="h-3.5 w-3.5" />
+            Beskjær og roter
+          </Button>
+          {c.original && (
+            <button type="button" onClick={() => set({ url: c.original.url, original: null, focus: null })} className="text-xs font-semibold text-muted hover:text-ink">
+              Bruk originalen
+            </button>
+          )}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Tilpasning">
+          <Select value={c.fit || 'contain'} onChange={(e) => set({ fit: e.target.value })}>
+            <option value="contain">Vis hele bildet</option>
+            <option value="cover">Fyll flaten</option>
+          </Select>
+        </Field>
+        <Field label="Hjørnerunding (px)">
+          <Input type="number" min={0} value={c.radius ?? 0} onChange={(e) => set({ radius: Number(e.target.value) || 0 })} />
+        </Field>
+      </div>
+      {c.url && c.fit === 'cover' && <FocusPicker url={c.url} value={c.focus} onChange={(focus) => set({ focus })} />}
+      {cropping && (
+        <CropModal
+          src={original}
+          initial={c.original}
+          boxRatio={boxRatio}
+          onClose={() => setCropping(false)}
+          onDone={async (res) => {
+            const url = await saveCropped(res, original);
+            set({ url, original: { url: original, crop: res.crop, rotate: res.rotate }, focus: null });
+            setCropping(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function ElementConfigFields({ kind, cfg, set, categories = [], slides = [], boxRatio }) {
   const c = cfg || {};
 
   if (kind === 'button') {
@@ -738,29 +788,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
     );
   }
 
-  if (kind === 'image') {
-    return (
-      <div className="grid gap-3">
-        <MediaField value={c.url} onChange={(url) => set({ url })} />
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Tilpasning">
-            <Select value={c.fit || 'contain'} onChange={(e) => set({ fit: e.target.value })}>
-              <option value="contain">Vis hele bildet</option>
-              <option value="cover">Fyll flaten</option>
-            </Select>
-          </Field>
-          <Field label="Hjørnerundng (px)">
-            <Input
-              type="number"
-              min={0}
-              value={c.radius ?? 0}
-              onChange={(e) => set({ radius: Number(e.target.value) || 0 })}
-            />
-          </Field>
-        </div>
-      </div>
-    );
-  }
+  if (kind === 'image') return <ImageFields c={c} set={set} boxRatio={boxRatio} />;
 
   if (kind === 'shape') {
     return (
@@ -775,7 +803,7 @@ export default function ElementConfigFields({ kind, cfg, set, categories = [], s
         <Field label="Farge">
           <ColorInput value={c.fill || '#1f5566'} onChange={(e) => set({ fill: e.target.value })} />
         </Field>
-        <Field label="Hjørnerundng (px)">
+        <Field label="Hjørnerunding (px)">
           <Input
             type="number"
             min={0}

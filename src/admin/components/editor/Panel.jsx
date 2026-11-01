@@ -190,7 +190,7 @@ function ElementDesign({ el, orientation, categories, slides, onPatch, onConfig,
       </Section>
 
       <section className="px-4 py-4">
-        <ElementConfigFields kind={el.kind} cfg={el.config} set={onConfig} categories={categories} slides={slides} />
+        <ElementConfigFields kind={el.kind} cfg={el.config} set={onConfig} categories={categories} slides={slides} boxRatio={(el.w * base.w) / (el.h * base.h)} />
       </section>
     </>
   );
